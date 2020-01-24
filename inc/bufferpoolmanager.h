@@ -10,6 +10,10 @@
 
 #include<rwlock.h>
 
+// the provided implementation of the bufferpool is a LRU cache
+// for the unordered pages of a heap file
+// with a fixed number of bucket count
+
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
@@ -19,60 +23,59 @@ struct bufferpool
 
 	// this is in memory hashmap of directory pages in memory
 	// page_id (of directory pages) vs page_entry
-	// hashmap* directory_page_entries;
+	hashmap* directory_page_entries;
+	// lock
+	rwlock* directory_page_entries_lock;
 
 	// this is in memory hashmap of data pages in memory
 	// page_id (of data pages) vs page_entry
-	// hashmap* data_page_entries;
+	hashmap* data_page_entries;
+	// lock
+	rwlock* data_page_entries_lock;
 
 	// this is the maximum number of pages that will exist in buffer pool cache at any moment
-	// uint32_t maximum_pages;
+	uint32_t maximum_pages_in_cache;
 
 	// this is in memory linkedlist of dirty pages of the buffer pool cache
 	// the page is put at the top of this queue, after you have written it
-	// linkedlist* dirty_page_entries;
+	linkedlist* dirty_page_entries;
+	// lock
+	rwlock* dirty_page_entries_lock;
 };
 
 typedef struct page_entry page_entry;
 struct page_entry
 {
-	// this lock ensures only 1 thread attempts to read or write the opage to the disk
-	// rwlock* page_entry_lock;
+	// this lock ensures only 1 thread attempts to read or write the page to the disk
+	rwlock* page_entry_lock;
 
 	// if the page is dirty, this byte is set to 1
 	// else 0
-	// uint8_t is_dirty;
-
-	// if the page was just created and it does not exist on disk
-	// i.e. not written even once
-	// then this byte will be 1
-	// else 0
-	// uint8_t on_disk;
-
-	// this lock ensures only 1 thread attempts to read or write the opage to the disk
-	// rwlock* on_disk_lock;
+	uint8_t is_dirty;
 
 	// pointer to the in memory copy of the page
-	// void* page;
-
-	// reader writer lock on the page
-	// rwlock* page_lock;
+	void* page;
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size);
 
-// creates a new entry in the directory page, of the buffer pool
-// creates a new entry in the data_pages hashmap, saves the new blank page to disk
+// creates a new entry in the directory page, of the buffer pool, and force writes it to disk
+// creates a new entry in the data_pages hashmap, 
+// memory to this page is only allocated, if a get_page_to_* method is called on that page
 uint32_t get_new_page(bufferpool* buffp);
 
-// lock the page for reading
-// multiple threads can read the same page simultaneously
+// locks the page for reading
+// multiple threads can read the same page simultaneously,
+// but no other write thread will be allowed
+// if the page_entry->page == NULL, allocate memory and reset all bits in page
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id);
 
 // lock the page for writing
 // multiple threads will not be allowed to write the same page simultaneously
-// if you want to read and then write, you must release the page first 
+// if you want to read and then write, you must release the page first,
+// and then again acquire for writing
+// if the page_entry->page == NULL, allocate memory and reset all bits in page
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
 
 // if a page is cache missed by any of get_page_to_* function,
