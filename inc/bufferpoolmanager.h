@@ -5,6 +5,11 @@
 #include<stdlib.h>
 #include<stdint.h>
 
+#include<hashmap.h>
+#include<linkedlist.h>
+
+#include<rwlock.h>
+
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
@@ -31,6 +36,9 @@ struct bufferpool
 typedef struct page_entry page_entry;
 struct page_entry
 {
+	// this lock ensures only 1 thread attempts to read or write the opage to the disk
+	// rwlock* page_entry_lock;
+
 	// if the page is dirty, this byte is set to 1
 	// else 0
 	// uint8_t is_dirty;
@@ -51,10 +59,11 @@ struct page_entry
 	// rwlock* page_lock;
 };
 
-
-
+// creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size);
 
+// creates a new entry in the directory page, of the buffer pool
+// creates a new entry in the data_pages hashmap, saves the new blank page to disk
 uint32_t get_new_page(bufferpool* buffp);
 
 // lock the page for reading
