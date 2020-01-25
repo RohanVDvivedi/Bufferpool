@@ -43,20 +43,6 @@ struct bufferpool
 	rwlock* dirty_page_entries_lock;
 };
 
-typedef struct page_entry page_entry;
-struct page_entry
-{
-	// this lock ensures only 1 thread attempts to read or write the page to the disk
-	rwlock* page_entry_lock;
-
-	// if the page is dirty, this byte is set to 1
-	// else 0
-	uint8_t is_dirty;
-
-	// pointer to the in memory copy of the page
-	void* page;
-};
-
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size);
 
@@ -64,6 +50,9 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 // creates a new entry in the data_pages hashmap, 
 // memory to this page is only allocated, if a get_page_to_* method is called on that page
 uint32_t get_new_page(bufferpool* buffp);
+
+// this instructs the buffer pool manager to prefetch, pages_count number of pges from the given page_id
+void pre_fetch_pages_from(bufferpool* buffp, uint32_t page_id, uint32_t pages_count);
 
 // locks the page for reading
 // multiple threads can read the same page simultaneously,
