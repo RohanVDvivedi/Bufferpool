@@ -52,13 +52,12 @@ struct bufferpool
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
-// the page size must be a multiple of block size and must not be 0, else we take page_size = ((page_size % block_size) + 1) * block_size
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size);
+bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache);
 
-// creates a new entry in the directory page, of the buffer pool, and force writes it to disk
-// creates a new entry in the data_pages hashmap, 
-// memory to this page is only allocated, if a get_page_to_* method is called on that page
-uint32_t get_new_page(bufferpool* buffp);
+// creates a new entry in the directory page, of the buffer pool, 
+// and force writes the directory page to the disk
+// creates a new entry in the data_pages hashmap
+uint32_t get_new_page(bufferpool* buffp, uint32_t page_size);
 
 // this instructs the buffer pool manager to prefetch, pages_count number of pges from the given page_id
 void pre_fetch_pages_from(bufferpool* buffp, uint32_t page_id, uint32_t pages_count);
@@ -93,7 +92,5 @@ int force_write_to_disk(bufferpool* buffp, uint32_t page_id);
 // if the cached_page was fetched for reading, we release the reader lock
 // if the cached_page was fetched for writing, we queue the page to the top in the dirty_pages linked list, we release the writer lock
 void release_page(bufferpool* buffp, uint32_t page_id);
-
-
 
 #endif
