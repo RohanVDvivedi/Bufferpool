@@ -17,6 +17,10 @@
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
+	// this is the file discriptor of the database file
+	// the current system allows only 1 file per database
+	int fd;
+
 	// we use separate page caches for directory and data pages
 	// because directory pages are expected to have lots and lots of reads,
 	// and must be always available, since most queries will start with them
