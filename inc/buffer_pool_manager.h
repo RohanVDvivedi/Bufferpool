@@ -35,15 +35,24 @@ struct bufferpool
 
 	// this is the maximum number of pages that will exist in buffer pool cache at any moment
 	uint32_t maximum_pages_in_cache;
+	// lock
+	rwlock* maximum_pages_in_cache_lock;
 
 	// this is in memory linkedlist of dirty pages of the buffer pool cache
-	// the page is put at the top of this queue, after you have written it
+	// the page entry is put at the top of this queue, after you have written it
 	linkedlist* dirty_page_entries;
 	// lock
 	rwlock* dirty_page_entries_lock;
+
+	// this is in memory linkedlist of empty pages of the buffer pool cache
+	// the page entry is plucked from the top of this queue, once it is free
+	linkedlist* empty_page_entries;
+	// lock
+	rwlock* empty_page_entries_lock;
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
+// the page size must be a multiple of block size and must not be 0, else we take page_size = ((page_size % block_size) + 1) * block_size
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size);
 
 // creates a new entry in the directory page, of the buffer pool, and force writes it to disk
