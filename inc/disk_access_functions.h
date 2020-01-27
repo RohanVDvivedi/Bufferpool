@@ -5,8 +5,12 @@
 #include<unistd.h>
 #include<stdint.h>
 
-#if defined __APPLE__
+#if defined __linux__
+	#define O_DIRECT O_DIRECT
+#elif defined __APPLE__
 	#define O_DIRECT F_NOCACHE
+#elif defined _WIN64
+	#define O_DIRECT FILE_FLAG_NO_BUFFERING
 #endif
 
 // open db file in read/write mode, we will read write directly to the disk, by passing the os page cache
