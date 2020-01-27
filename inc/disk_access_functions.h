@@ -1,0 +1,6 @@
+#ifndef DISK_ACCESS_FUNCTIONS_H
+#define DISK_ACCESS_FUNCTIONS_H
+
+
+
+#endif
