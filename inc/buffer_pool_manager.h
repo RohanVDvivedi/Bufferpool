@@ -19,28 +19,24 @@ struct bufferpool
 {
 	// this is the file discriptor of the database file
 	// the current system allows only 1 file per database
-	int fd;
+	int db_fd;
 
-	// we use separate page caches for directory and data pages
-	// because directory pages are expected to have lots and lots of reads,
-	// and must be always available, since most queries will start with them
-
-	// this is in memory hashmap of directory pages in memory
-	// page_id (of directory pages) vs page_entry
-	hashmap* directory_page_entries;
-	// lock
-	rwlock* directory_page_entries_lock;
-
-	// this is in memory hashmap of data pages in memory
-	// page_id (of data pages) vs page_entry
-	hashmap* data_page_entries;
-	// lock
-	rwlock* data_page_entries_lock;
+	// this is the total memory, as managed by the buffer pool
+	// the address holds memory equal to maximum pages in cache * number_of_blocks_per_page * size_of_block of the hardware
+	void* memory;
 
 	// this is the maximum number of pages that will exist in buffer pool cache at any moment
 	uint32_t maximum_pages_in_cache;
+
+	// this will define the size of the page, a standard block size is 512 bytes
+	// people generally go with 8 blocks per page
+	uint32_t number_of_blocks_per_page;
+
+	// this is in memory hashmap of data pages in memory
+	// page_id vs page_entry
+	hashmap* data_page_entries;
 	// lock
-	rwlock* maximum_pages_in_cache_lock;
+	rwlock* data_page_entries_lock;
 
 	// this is in memory linkedlist of dirty pages of the buffer pool cache
 	// the page entry is put at the top of this queue, after you have written it
@@ -56,15 +52,15 @@ struct bufferpool
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache);
+bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t number_of_blocks_per_page);
 
 // creates a new entry in the directory page, of the buffer pool, 
 // and force writes the directory page to the disk
 // creates a new entry in the data_pages hashmap
-uint32_t get_new_page(bufferpool* buffp, uint32_t page_size);
+uint32_t get_new_page(bufferpool* buffp);
 
 // this instructs the buffer pool manager to prefetch, pages_count number of pges from the given page_id
-void pre_fetch_pages_from(bufferpool* buffp, uint32_t page_id, uint32_t pages_count);
+void pre_fetch_pages(bufferpool* buffp, uint32_t page_id, uint32_t pages_count);
 
 // locks the page for reading
 // multiple threads can read the same page simultaneously,
@@ -79,11 +75,6 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id);
 // if the page_entry->page == NULL, allocate memory and reset all bits in page
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
 
-// if a page is cache missed by any of get_page_to_* function,
-// we write the last page from the dirty pages to the disk
-// cache the new requested page in memory,
-// create its entry in the buffer pool and return its pointer
-
 // this function will force write a dirty page to disk
 // only a return of 1 from this function, will ensure a successfull write
 // 0 is returned for write failure
@@ -96,5 +87,8 @@ int force_write_to_disk(bufferpool* buffp, uint32_t page_id);
 // if the cached_page was fetched for reading, we release the reader lock
 // if the cached_page was fetched for writing, we queue the page to the top in the dirty_pages linked list, we release the writer lock
 void release_page(bufferpool* buffp, uint32_t page_id);
+
+// deletes the buffer pool manager, that will maintain a heap file given by the name heap_file_name
+void delete_bufferpool(bufferpool* buffp);
 
 #endif
