@@ -44,6 +44,5 @@ int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint
 
 int close_db_file(int db_fd)
 {
-	close(db_fd);
-	return 1;
+	return close(db_fd);
 }
