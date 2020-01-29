@@ -42,6 +42,14 @@ uint32_t get_block_size(dbfile* dbfile_p)
 	return dbfile_p->dbfstat.st_blksize;
 }
 
+int add_blocks_to_file(dbfile* dbfile_p, uint32_t num_blocks)
+{
+	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+	int result = ftruncate(dbfile_p->db_fd, ((get_block_count(dbfile_p) + num_blocks) * get_block_size(dbfile_p)) );
+	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+	return result;
+}
+
 int close_dbfile(dbfile* dbfile_p)
 {
 	if(close_db_file(dbfile_p->db_fd) == 0)
