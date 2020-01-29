@@ -7,6 +7,7 @@
 
 #include<rwlock.h>
 
+#include<dbfile.h>
 #include<disk_access_functions.h>
 
 // in general
@@ -19,21 +20,15 @@ struct page_entry
 	// this lock ensures only 1 thread attempts to read or write the page to the disk
 	rwlock* page_entry_lock;
 
-	// this is the database file discriptor
-	int db_fd;
-
-	// this is the identifier for this page
-	uint32_t page_id;
+	// this is the database file, to which the page_entry belongs to
+	dbfile* dbfile_p;
 
 	// this is identifier of the first block of this page
 	// remember: every page is built of same number of consecutive blocks
 	uint32_t block_id;
 
-	// this is the number of blocks, that makes up this page
-	uint32_t blocks_count;
-
-	// this is the size of each block in bytes, that makes up this page
-	uint32_t block_size;
+	// this is the number of blocks, that make up this page
+	uint32_t number_of_blocks_in_page;
 
 	// pointer to the in memory copy of the page
 	void* page;
@@ -50,17 +45,13 @@ struct page_entry
 	uint8_t priority;
 };
 
-page_entry* get_page_entry(int db_fd, uint32_t block_size, void* page);
+page_entry* get_page_entry(dbfile* dbfile_p, void* page, uint32_t number_of_blocks_in_page);
 
-// below method helps us, point this page_entry to
-// a given page whose id is page_id, its first block is at block_id 
-// and it has blocks_count number of consecutive blocks,
-// each of which has block_size number of bytes
-void init_page_entry(page_entry* page_ent, uint32_t page_id, uint32_t block_id, uint32_t blocks_count);
+uint32_t get_page_id(page_entry* page_ent);
 
-int read_page_from_disk(page_entry* page_ent);
+int read_page_from_disk(page_entry* page_ent, uint32_t page_id);
 
-int write_page_to_disk(page_entry* page_ent);
+int write_page_to_disk(page_entry* page_ent, uint32_t page_id);
 
 void delete_page_entry(page_entry* page_ent);
 

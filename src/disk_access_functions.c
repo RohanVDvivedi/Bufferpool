@@ -20,10 +20,10 @@ int open_db_file(char* heap_file_name)
 	return db_fd;
 }
 
-int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_size, uint32_t blocks_count)
+int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size)
 {
 	off_t start_offset = block_id * block_size;
-	ssize_t bytes_read = pread(db_fd, blocks_in_main_memory, blocks_count * block_size, start_offset);
+	ssize_t bytes_read = pread(db_fd, blocks_in_main_memory, block_count * block_size, start_offset);
 	if(bytes_read <= 0)
 	{
 		return -1;
@@ -31,10 +31,10 @@ int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint3
 	return bytes_read;
 }
 
-int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_size, uint32_t blocks_count)
+int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size)
 {
 	off_t start_offset = block_id * block_size;
-	ssize_t bytes_written = pwrite(db_fd, blocks_in_main_memory, blocks_count * block_size, start_offset);
+	ssize_t bytes_written = pwrite(db_fd, blocks_in_main_memory, block_count * block_size, start_offset);
 	if(bytes_written <= 0)
 	{
 		return -1;

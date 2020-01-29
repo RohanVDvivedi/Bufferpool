@@ -1,18 +1,15 @@
 #include<page_entry.h>
 
-page_entry* get_page_entry(int db_fd, uint32_t block_size, void* page)
+page_entry* get_page_entry(dbfile* dbfile_p, void* page, uint32_t number_of_blocks_in_page)
 {
 	page_entry* page_ent = (page_entry*) malloc(sizeof(page_entry));
 
 	page_ent->page_entry_lock = get_rwlock();
 
-	page_ent->db_fd = db_fd;
+	page_ent->dbfile_p = dbfile_p;
 
-	page_ent->page_id = 0;
 	page_ent->block_id = 0;
-	page_ent->blocks_count = 0;
-
-	page_ent->block_size = block_size;
+	page_ent->number_of_blocks_in_page = number_of_blocks_in_page;
 
 	page_ent->page = page;
 
@@ -22,21 +19,21 @@ page_entry* get_page_entry(int db_fd, uint32_t block_size, void* page)
 	return page_ent;
 }
 
-void init_page_entry(page_entry* page_ent, uint32_t page_id, uint32_t block_id, uint32_t blocks_count)
+uint32_t get_page_id(page_entry* page_ent)
 {
-	page_ent->page_id = page_id;
-	page_ent->block_id = block_id;
-	page_ent->blocks_count = blocks_count;
+	return page_ent->block_id / get_block_size(page_ent->dbfile_p);
 }
 
-int read_page_from_disk(page_entry* page_ent)
+int read_page_from_disk(page_entry* page_ent, uint32_t page_id)
 {
-	return read_blocks(page_ent->db_fd, page_ent->page, page_ent->block_id, page_ent->block_size, page_ent->blocks_count);
+	page_ent->block_id = page_id * get_block_size(page_ent->dbfile_p);
+	return read_blocks(page_ent->dbfile_p->db_fd, page_ent->page, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
 }
 
-int write_page_to_disk(page_entry* page_ent)
+int write_page_to_disk(page_entry* page_ent, uint32_t page_id)
 {
-	return write_blocks(page_ent->db_fd, page_ent->page, page_ent->block_id, page_ent->block_size, page_ent->blocks_count);
+	page_ent->block_id = page_id * get_block_size(page_ent->dbfile_p);
+	return write_blocks(page_ent->dbfile_p->db_fd, page_ent->page, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
 }
 
 void delete_page_entry(page_entry* page_ent)

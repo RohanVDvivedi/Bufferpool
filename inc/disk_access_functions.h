@@ -27,11 +27,11 @@ int open_db_file(char* heap_file_name);
 
 // reads blocks of file on disk starting at block_id * block_size to ((block_id + blocks_count) * block_size) - 1 to blocks_in_main_memory
 // returs 0 for success, -1 on error
-int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_size, uint32_t blocks_count);
+int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size);
 
 // writes blocks of file on disk starting at block_id * block_size to ((block_id + blocks_count) * block_size) - 1 with blocks_in_main_memory
 // returs 0 for success, -1 on error
-int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_size, uint32_t blocks_count);
+int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size);
 
 // close the given open file discriptor of the
 // returns 0 on success, else returns 1
