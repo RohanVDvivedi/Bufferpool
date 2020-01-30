@@ -41,7 +41,8 @@ uint32_t get_block_count(dbfile* dbfile_p)
 
 uint32_t get_block_size(dbfile* dbfile_p)
 {
-	return dbfile_p->dbfstat.st_blksize;
+	//return dbfile_p->dbfstat.st_blksize;
+	return 512;
 }
 
 uint32_t get_size(dbfile* dbfile_p)
