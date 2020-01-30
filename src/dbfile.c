@@ -11,6 +11,7 @@ dbfile* create_dbfile(char* filename)
 	}
 	else
 	{
+		ftruncate(dbfile_p->db_fd, 0);
 		fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	}
 	return dbfile_p;

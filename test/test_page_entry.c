@@ -10,7 +10,12 @@
 int main()
 {
 	dbfile* dbf = create_dbfile("./test.db");
+
+	printf("block count : %u, block_size : %u\n", get_block_count(dbf), get_block_size(dbf));
+
 	add_blocks_to_file(dbf, BLOCKS_PER_PAGE);
+
+	printf("block count : %u, block_size : %u\n", get_block_count(dbf), get_block_size(dbf));
 
 	// dbfile* dbf = open_dbfile("./test.db");
 
