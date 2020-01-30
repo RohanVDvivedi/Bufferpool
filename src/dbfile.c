@@ -11,7 +11,8 @@ dbfile* create_dbfile(char* filename)
 	}
 	else
 	{
-		fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+		int result = fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+		printf("fstat : %d\n", result);
 	}
 	return dbfile_p;
 }
@@ -27,7 +28,8 @@ dbfile* open_dbfile(char* filename)
 	}
 	else
 	{
-		fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+		int result = fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+		printf("fstat : %d\n", result);
 	}
 	return dbfile_p;
 }
@@ -42,19 +44,26 @@ uint32_t get_block_size(dbfile* dbfile_p)
 	return dbfile_p->dbfstat.st_blksize;
 }
 
+uint32_t get_size(dbfile* dbfile_p)
+{
+	return dbfile_p->dbfstat.st_size;
+}
+
 int add_blocks_to_file(dbfile* dbfile_p, uint32_t num_blocks)
 {
-	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	int result = ftruncate(dbfile_p->db_fd, ((get_block_count(dbfile_p) + num_blocks) * get_block_size(dbfile_p)) );
-	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+	printf("ftruncate : %d\n", result);
+	result = fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+	printf("fstat : %d\n", result);
 	return result;
 }
 
 int resize_file(dbfile* dbfile_p, uint32_t num_blocks)
 {
-	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	int result = ftruncate(dbfile_p->db_fd, num_blocks * get_block_size(dbfile_p) );
-	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+	printf("ftruncate : %d\n", result);
+	result = fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+	printf("fstat : %d\n", result);
 	return result;
 }
 

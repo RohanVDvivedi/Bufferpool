@@ -6,7 +6,7 @@ int create_db_file(char* heap_file_name)
 	{
 		return -1;
 	}
-	int db_fd = open(heap_file_name, STANDARD_DB_FILE_FLAGS | O_TRUNC | O_CREAT | O_EXCL, "rw");
+	int db_fd = open(heap_file_name, STANDARD_DB_FILE_FLAGS | O_TRUNC | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	return db_fd;
 }
 
@@ -16,7 +16,7 @@ int open_db_file(char* heap_file_name)
 	{
 		return -1;
 	}
-	int db_fd = open(heap_file_name, STANDARD_DB_FILE_FLAGS, "rw");
+	int db_fd = open(heap_file_name, STANDARD_DB_FILE_FLAGS);
 	return db_fd;
 }
 
