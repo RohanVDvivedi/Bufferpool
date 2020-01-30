@@ -11,7 +11,6 @@ dbfile* create_dbfile(char* filename)
 	}
 	else
 	{
-		ftruncate(dbfile_p->db_fd, 0);
 		fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	}
 	return dbfile_p;
@@ -47,6 +46,14 @@ int add_blocks_to_file(dbfile* dbfile_p, uint32_t num_blocks)
 {
 	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	int result = ftruncate(dbfile_p->db_fd, ((get_block_count(dbfile_p) + num_blocks) * get_block_size(dbfile_p)) );
+	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+	return result;
+}
+
+int resize_file(dbfile* dbfile_p, uint32_t num_blocks)
+{
+	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+	int result = ftruncate(dbfile_p->db_fd, num_blocks * get_block_size(dbfile_p) );
 	fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	return result;
 }

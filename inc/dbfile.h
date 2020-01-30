@@ -31,6 +31,9 @@ uint32_t get_block_size(dbfile* dbfile_p);
 // adds num_blocks number of blocks to the end of the database file
 int add_blocks_to_file(dbfile* dbfile_p, uint32_t num_blocks);
 
+// resize the file to contain a fixed number of blocks
+int resize_file(dbfile* dbfile_p, uint32_t num_blocks);
+
 int close_dbfile(dbfile* dbfile_p);
 
 #endif
