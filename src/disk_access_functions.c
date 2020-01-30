@@ -30,10 +30,11 @@ int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint3
 	}
 	return bytes_read;
 }
-
+#include<stdio.h>
 int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size)
 {
 	off_t start_offset = block_id * block_size;
+	printf("starting at : %lld, bytes to write : %u\n", start_offset, block_count * block_size);
 	ssize_t bytes_written = pwrite(db_fd, blocks_in_main_memory, block_count * block_size, start_offset);
 	if(bytes_written <= 0)
 	{

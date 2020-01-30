@@ -26,7 +26,7 @@ int main()
 
 
 	// page read write logic ********
-	char* str = "Hello this world id jhandu !!";
+	char* str = "Hello this world is jhandu !!";
 	memcpy(page_mem, str, strlen(str));
 	write_page_to_disk(page_ent, 0);
 
