@@ -46,17 +46,17 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->dirty_page_entries = get_linkedlist(SIMPLE, NULL);
 	buffp->dirty_page_entries_lock = get_rwlock();
 
-	buffp->empty_page_entries = get_linkedlist(SIMPLE, NULL);
-	buffp->empty_page_entries_lock = get_rwlock();
+	buffp->clean_page_entries = get_linkedlist(SIMPLE, NULL);
+	buffp->clean_page_entries_lock = get_rwlock();
 
-	// initialize empty page entries
+	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
 		void* page_memory = buffp->memory + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = get_page_entry(buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
-		write_lock(buffp->empty_page_entries_lock);
-		insert_head(buffp->empty_page_entries, page_ent);
-		write_unlock(buffp->empty_page_entries_lock);
+		write_lock(buffp->clean_page_entries_lock);
+		insert_head(buffp->clean_page_entries, page_ent);
+		write_unlock(buffp->clean_page_entries_lock);
 	}
 
 	return buffp;
@@ -72,8 +72,8 @@ void delete_bufferpool(bufferpool* buffp)
 	delete_linkedlist(buffp->dirty_page_entries);
 	delete_rwlock(buffp->dirty_page_entries_lock);
 
-	delete_linkedlist(buffp->empty_page_entries);
-	delete_rwlock(buffp->empty_page_entries_lock);
+	delete_linkedlist(buffp->clean_page_entries);
+	delete_rwlock(buffp->clean_page_entries_lock);
 	free(buffp);
 }
 

@@ -46,11 +46,11 @@ struct bufferpool
 	// lock
 	rwlock* dirty_page_entries_lock;
 
-	// this is in memory linkedlist of empty pages of the buffer pool cache
-	// the page entry is plucked from the top of this queue, once it is free
-	linkedlist* empty_page_entries;
+	// this is in memory linkedlist of clean pages of the buffer pool cache
+	// the page entry is plucked from the top of this queue, to read a new page from disk
+	linkedlist* clean_page_entries;
 	// lock
-	rwlock* empty_page_entries_lock;
+	rwlock* clean_page_entries_lock;
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
