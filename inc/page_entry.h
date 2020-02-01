@@ -14,6 +14,10 @@
 // page_id = block_id / blocks_count
 // page_size (in bytes) = blocks_count * block_size (in bytes)
 
+// the priority of the page suggests its importance,
+// higher the priority value page, tends to stay more in cache memory, 
+// and gets preferred in getting written to disk
+
 typedef struct page_entry page_entry;
 struct page_entry
 {
