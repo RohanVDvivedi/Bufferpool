@@ -10,6 +10,9 @@
 
 #include<rwlock.h>
 
+#include<dbfile.h>
+#include<page_entry.h>
+
 // the provided implementation of the bufferpool is a LRU cache
 // for the unordered pages of a heap file
 // with a fixed number of bucket count
@@ -17,9 +20,8 @@
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
-	// this is the file discriptor of the database file
-	// the current system allows only 1 file per database
-	int db_fd;
+	// this is the database file, the current implementation allows only 1 file per database
+	dbfile* db_file;
 
 	// this is the total memory, as managed by the buffer pool
 	// the address holds memory equal to maximum pages in cache * number_of_blocks_per_page * size_of_block of the hardware

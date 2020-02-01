@@ -38,5 +38,6 @@ int write_page_to_disk(page_entry* page_ent, uint32_t page_id)
 
 void delete_page_entry(page_entry* page_ent)
 {
+	delete_rwlock(page_ent->page_entry_lock);
 	free(page_ent);
 }
