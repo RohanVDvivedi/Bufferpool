@@ -35,27 +35,30 @@ struct page_entry
 	uint32_t number_of_blocks_in_page;
 
 	// pointer to the in memory copy of the page
-	void* page;
+	void* page_memory;
+	// if the page is dirty, this byte is set to 1, else 0
+	// if a page is dirty, it is yet to be written to disk
+	uint8_t is_dirty;
+	// this lock ensures only 1 thread attempts to read or write the page to the disk
+	rwlock* page_memory_lock;
 
 	// properties of the page
 
-	// if the page is dirty, this byte is set to 1, else 0
-	uint8_t is_dirty;
-
 	// this is the priority of the page inside buffer pool cache
 	// higher the priority, higher are the chances of the page to stay in cache
+	// and gets preferred in getting written to disk
 	// lower priority pages are evicted first,
 	// when the buffer pool does not have free memory
 	uint8_t priority;
 };
 
-page_entry* get_page_entry(dbfile* dbfile_p, void* page, uint32_t number_of_blocks_in_page);
+page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_of_blocks_in_page);
 
 uint32_t get_page_id(page_entry* page_ent);
 
 int read_page_from_disk(page_entry* page_ent, uint32_t page_id);
 
-int write_page_to_disk(page_entry* page_ent, uint32_t page_id);
+int write_page_to_disk(page_entry* page_ent);
 
 void delete_page_entry(page_entry* page_ent);
 

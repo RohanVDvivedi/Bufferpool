@@ -3,7 +3,7 @@
 unsigned long long int hash_page_id(const void* key)
 {
 	uint32_t page_id = *((const uint32_t*)key);
-	unsigned long long int hash = (page_id | page_id << 10 | page_id >> 11) + page_id;
+	unsigned long long int hash = ((page_id | page_id << 10 | page_id >> 11) + 2 * page_id + 1) * (2 * page_id + 1);
 	return hash;
 }
 
@@ -60,6 +60,93 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	}
 
 	return buffp;
+}
+
+/*
+	fetch_type 
+	0 => fetch page from anywhere, either cache or from disk
+	1 => fetch page from cache only, if the page is not in cache return NULL
+	2 => fetch page from disk only, if the page is present in cache and is dirty, flush it to disk first
+*/
+page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type)
+{
+	page_entry* page_ent = NULL;
+
+	read_lock(buffp->data_page_entries_lock);
+	page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
+	read_unlock(buffp->data_page_entries_lock);
+
+	if(page_ent == NULL)
+	{
+		write_lock(buffp->data_page_entries_lock);
+		page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
+		if(page_ent == NULL)
+		{
+			// read page from disk
+		}
+		write_unlock(buffp->data_page_entries_lock);
+	}
+
+	if(page_ent->is_dirty)
+	{
+		// remove the page from dirty pages linked list
+	}
+	else
+	{
+		// remove the page from clean pages linked list
+	}
+
+	return page_ent;
+}
+
+void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
+	read_lock(page_ent->page_memory_lock);
+	return page_ent->page_memory;
+}
+
+void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
+	write_lock(page_ent->page_entry_lock);
+	return page_ent->page_memory;
+}
+
+void release_page_read(bufferpool* buffp, uint32_t page_id)
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+	read_unlock(page_ent->page_memory_lock);
+	if(page_ent->is_dirty)
+	{
+		// put the page at the top of dirty pages linked list
+	}
+	else
+	{
+		// put the page at the top of clean pages linked list
+	}
+}
+
+void release_page_write(bufferpool* buffp, uint32_t page_id)
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+	write_unlock(page_ent->page_memory_lock);
+	page_ent->is_dirty = 1;
+	// put the page at the top of dirty pages linked list
+}
+
+int force_write_to_disk(bufferpool* buffp, uint32_t page_id)
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+	return write_page_to_disk(page_ent);
+}
+
+void release_page(bufferpool* buffp, uint32_t page_id)
+{
+	// if get_page_to_read was called
+	release_page_read(buffp, page_id);
+	// else if get_page_to_write was called
+	release_page_write(buffp, page_id);
 }
 
 void delete_bufferpool(bufferpool* buffp)
