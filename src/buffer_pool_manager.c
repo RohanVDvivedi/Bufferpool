@@ -130,8 +130,8 @@ void release_page_read(bufferpool* buffp, uint32_t page_id)
 void release_page_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
-	write_unlock(page_ent->page_memory_lock);
 	page_ent->is_dirty = 1;
+	write_unlock(page_ent->page_memory_lock);
 	// put the page at the top of dirty pages linked list
 }
 
