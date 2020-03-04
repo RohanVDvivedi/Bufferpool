@@ -67,34 +67,64 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	fetch_type 
 	0 => fetch page from anywhere, either cache or from disk
 	1 => fetch page from cache only, if the page is not in cache return NULL
-	2 => fetch page from disk only, if the page is present in cache and is dirty, flush it to disk first
 */
 page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type)
 {
 	page_entry* page_ent = NULL;
 
+	// search of the page in buffer pool
 	read_lock(buffp->data_page_entries_lock);
-	page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
+		page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
 	read_unlock(buffp->data_page_entries_lock);
 
-	if(page_ent == NULL)
+	// if it does not exist in buffer pool, we might have to read it from disk first
+	if(page_ent == NULL && fetch_type == 0)
 	{
 		write_lock(buffp->data_page_entries_lock);
-		page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
-		if(page_ent == NULL)
-		{
-			// read page from disk
-		}
-		write_unlock(buffp->data_page_entries_lock);
-	}
 
-	if(page_ent->is_dirty)
-	{
-		// remove the page from dirty pages linked list
-	}
-	else
-	{
-		// remove the page from clean pages linked list
+			// it is better to recheck the existence of page after acquiring lock, to avoid re dos
+			page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
+
+			int is_disk_write_required = 0;
+			int is_disk_read_required = 0;
+
+			if(page_ent == NULL)
+			{
+				write_lock(buffp->clean_page_entries_lock);
+					page_ent = get_tail_data(buffp->clean_page_entries);
+					if(page_ent != NULL)
+					{
+						is_disk_read_required = 1;
+						remove_tail(buffp->clean_page_entries);
+						insert_entry_in_hash(buffp->data_page_entries, &page_id, &page_ent);
+					}
+				write_unlock(buffp->clean_page_entries_lock);
+
+				write_lock(buffp->dirty_page_entries_lock);
+					page_ent = get_tail_data(buffp->dirty_page_entries);
+					if(page_ent != NULL)
+					{
+						is_disk_write_required = 1;
+						is_disk_access_required = 1;
+						remove_tail(buffp->dirty_page_entries);
+						insert_entry_in_hash(buffp->data_page_entries, &page_id, &page_ent);
+					}
+				write_unlock(buffp->dirty_page_entries_lock);
+			}
+
+		write_unlock(buffp->data_page_entries_lock);
+
+		// write to disk first because the page entry is dirty
+		if(is_disk_write_required)
+		{
+			write_page_to_disk(page_ent);
+		}
+
+		// read the new page entry with the data from disk page
+		if(is_disk_read_required)
+		{
+			read_page_from_disk(page_ent, page_id);
+		}
 	}
 
 	return page_ent;
@@ -118,17 +148,20 @@ void release_page_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
 	read_lock(page_ent->page_entry_lock);
-	int is_dirty_page = page_ent->is_dirty;
-	read_unlock(page_ent->page_entry_lock);
 	read_unlock(page_ent->page_memory_lock);
-
-	if(is_dirty_page)
+	if(page_ent->is_dirty)
 	{
-		// put the page at the top of dirty pages linked list
+		read_unlock(page_ent->page_entry_lock);
+		write_lock(buffp->dirty_page_entries_lock);
+		insert_head(buffp->dirty_page_entries, page_ent);
+		write_unlock(buffp->dirty_page_entries_lock);
 	}
 	else
 	{
-		// put the page at the top of clean pages linked list
+		read_unlock(page_ent->page_entry_lock);
+		write_lock(buffp->clean_page_entries_lock);
+		insert_head(buffp->clean_page_entries, page_ent);
+		write_unlock(buffp->clean_page_entries_lock);
 	}
 }
 
@@ -136,11 +169,14 @@ void release_page_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
 	write_lock(page_ent->page_entry_lock);
+	write_unlock(page_ent->page_memory_lock);
 	page_ent->is_dirty = 1;
 	write_unlock(page_ent->page_entry_lock);
-	write_unlock(page_ent->page_memory_lock);
 
-	// put the page at the top of dirty pages linked list
+	read_unlock(page_ent->page_entry_lock);
+	write_lock(buffp->dirty_page_entries_lock);
+	insert_head(buffp->dirty_page_entries, page_ent);
+	write_unlock(buffp->dirty_page_entries_lock);
 }
 
 int force_write_to_disk(bufferpool* buffp, uint32_t page_id)

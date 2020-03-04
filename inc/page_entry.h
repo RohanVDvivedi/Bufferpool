@@ -56,7 +56,17 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 
 uint32_t get_page_id(page_entry* page_ent);
 
-int read_page_from_disk(page_entry* page_ent, uint32_t page_id);
+void set_page_id(page_entry* page_ent, uint32_t page_id);
+
+void acquire_read_lock(page_entry* page_ent);
+
+void acquire_write_lock(page_entry* page_ent);
+
+void release_read_lock(page_entry* page_ent);
+
+void release_write_lock(page_entry* page_ent);
+
+int read_page_from_disk(page_entry* page_ent);
 
 int write_page_to_disk(page_entry* page_ent);
 

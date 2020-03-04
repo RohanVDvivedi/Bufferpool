@@ -32,43 +32,42 @@ uint32_t get_page_id(page_entry* page_ent)
 	return page_ent->block_id / get_block_size(page_ent->dbfile_p);
 }
 
-// reading new page from disk is a complex task, and any or all threads are required to loose hold of the page, to allow us to do that
-int read_page_from_disk(page_entry* page_ent, uint32_t page_id)
+void set_page_id(page_entry* page_ent, uint32_t page_id)
 {
-	int io_result = -1;
-	write_lock(page_ent->page_entry_lock);
-		if(get_page_id(page_ent)!=page_id && !page_ent->is_dirty)
-		{
-			write_lock(page_ent->page_memory_lock);
-				io_result = read_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
-			write_unlock(page_ent->page_memory_lock);
-			if(io_result != -1)
-			{
-				page_ent->block_id = page_id * get_block_size(page_ent->dbfile_p);
-			}
-		}
-	write_unlock(page_ent->page_entry_lock);
-	return io_result;
+	page_ent->block_id = page_id * get_block_size(page_ent->dbfile_p);
+}
+
+void acquire_read_lock(page_entry* page_ent)
+{
+
+}
+
+void acquire_write_lock(page_entry* page_ent)
+{
+
+}
+
+void release_read_lock(page_entry* page_ent)
+{
+
+}
+
+void release_write_lock(page_entry* page_ent)
+{
+	
+}
+
+// reading new page from disk is a complex task, and any or all threads are required to loose hold of the page, to allow us to do that
+int read_page_from_disk(page_entry* page_ent)
+{
+	return read_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
 }
 
 // If external computation threads already have page entry memory lock,
 // then writing to disk is not affected, at all because the writing to disk, requires us to take read lock on the page memory
 int write_page_to_disk(page_entry* page_ent)
 {
-	int io_result = -1;
-	write_lock(page_ent->page_entry_lock);
-		if(page_ent->is_dirty)
-		{
-			read_lock(page_ent->page_memory_lock);
-				io_result = write_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
-			read_unlock(page_ent->page_memory_lock);
-			if(io_result != -1)
-			{
-				page_ent->is_dirty = 0;
-			}
-		}
-	write_unlock(page_ent->page_entry_lock);
-	return io_result;
+	return write_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
 }
 
 void delete_page_entry(page_entry* page_ent)
