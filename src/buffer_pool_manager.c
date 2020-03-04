@@ -80,51 +80,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 	// if it does not exist in buffer pool, we might have to read it from disk first
 	if(page_ent == NULL && fetch_type == 0)
 	{
-		write_lock(buffp->data_page_entries_lock);
-
-			// it is better to recheck the existence of page after acquiring lock, to avoid re dos
-			page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
-
-			int is_disk_write_required = 0;
-			int is_disk_read_required = 0;
-
-			if(page_ent == NULL)
-			{
-				write_lock(buffp->clean_page_entries_lock);
-					page_ent = get_tail_data(buffp->clean_page_entries);
-					if(page_ent != NULL)
-					{
-						is_disk_read_required = 1;
-						remove_tail(buffp->clean_page_entries);
-						insert_entry_in_hash(buffp->data_page_entries, &page_id, &page_ent);
-					}
-				write_unlock(buffp->clean_page_entries_lock);
-
-				write_lock(buffp->dirty_page_entries_lock);
-					page_ent = get_tail_data(buffp->dirty_page_entries);
-					if(page_ent != NULL)
-					{
-						is_disk_write_required = 1;
-						is_disk_access_required = 1;
-						remove_tail(buffp->dirty_page_entries);
-						insert_entry_in_hash(buffp->data_page_entries, &page_id, &page_ent);
-					}
-				write_unlock(buffp->dirty_page_entries_lock);
-			}
-
-		write_unlock(buffp->data_page_entries_lock);
-
-		// write to disk first because the page entry is dirty
-		if(is_disk_write_required)
-		{
-			write_page_to_disk(page_ent);
-		}
-
-		// read the new page entry with the data from disk page
-		if(is_disk_read_required)
-		{
-			read_page_from_disk(page_ent, page_id);
-		}
+		
 	}
 
 	return page_ent;
@@ -133,50 +89,27 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
-	read_lock(page_ent->page_memory_lock);
+	acquire_read_lock(page_ent);
 	return page_ent->page_memory;
 }
 
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
-	write_lock(page_ent->page_memory_lock);
+	acquire_write_lock(page_ent);
 	return page_ent->page_memory;
 }
 
 void release_page_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
-	read_lock(page_ent->page_entry_lock);
-	read_unlock(page_ent->page_memory_lock);
-	if(page_ent->is_dirty)
-	{
-		read_unlock(page_ent->page_entry_lock);
-		write_lock(buffp->dirty_page_entries_lock);
-		insert_head(buffp->dirty_page_entries, page_ent);
-		write_unlock(buffp->dirty_page_entries_lock);
-	}
-	else
-	{
-		read_unlock(page_ent->page_entry_lock);
-		write_lock(buffp->clean_page_entries_lock);
-		insert_head(buffp->clean_page_entries, page_ent);
-		write_unlock(buffp->clean_page_entries_lock);
-	}
+	release_read_lock(page_ent);
 }
 
 void release_page_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
-	write_lock(page_ent->page_entry_lock);
-	write_unlock(page_ent->page_memory_lock);
-	page_ent->is_dirty = 1;
-	write_unlock(page_ent->page_entry_lock);
-
-	read_unlock(page_ent->page_entry_lock);
-	write_lock(buffp->dirty_page_entries_lock);
-	insert_head(buffp->dirty_page_entries, page_ent);
-	write_unlock(buffp->dirty_page_entries_lock);
+	release_write_lock(page_ent);
 }
 
 int force_write_to_disk(bufferpool* buffp, uint32_t page_id)
