@@ -110,15 +110,19 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
-	write_lock(page_ent->page_entry_lock);
+	write_lock(page_ent->page_memory_lock);
 	return page_ent->page_memory;
 }
 
 void release_page_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+	read_lock(page_ent->page_entry_lock);
+	int is_dirty_page = page_ent->is_dirty;
+	read_unlock(page_ent->page_entry_lock);
 	read_unlock(page_ent->page_memory_lock);
-	if(page_ent->is_dirty)
+
+	if(is_dirty_page)
 	{
 		// put the page at the top of dirty pages linked list
 	}
@@ -131,8 +135,11 @@ void release_page_read(bufferpool* buffp, uint32_t page_id)
 void release_page_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+	write_lock(page_ent->page_entry_lock);
 	page_ent->is_dirty = 1;
+	write_unlock(page_ent->page_entry_lock);
 	write_unlock(page_ent->page_memory_lock);
+
 	// put the page at the top of dirty pages linked list
 }
 
