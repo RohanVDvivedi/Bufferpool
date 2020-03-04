@@ -1,12 +1,19 @@
 #ifndef DISK_ACCESS_FUNCTIONS_H
 #define DISK_ACCESS_FUNCTIONS_H
 
+#if defined __linux__
+	#define _GNU_SOURCE
+#endif
+
+#include<sys/types.h>
+#include<sys/stat.h>
 #include<fcntl.h>
 #include<unistd.h>
 #include<stdint.h>
 
+
 #if defined __linux__
-	#define O_DIRECT O_DIRECT
+	// no redefinition required
 #elif defined __APPLE__
 	#define O_DIRECT F_NOCACHE
 #elif defined _WIN64
