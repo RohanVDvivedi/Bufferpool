@@ -74,7 +74,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 
 	// search of the page in buffer pool
 	read_lock(buffp->data_page_entries_lock);
-		page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
+	page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
 	read_unlock(buffp->data_page_entries_lock);
 
 	// if it does not exist in buffer pool, we might have to read it from disk first
@@ -84,6 +84,11 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 	}
 
 	return page_ent;
+}
+
+static void mark_page_as_used(page_entry* page_ent)
+{
+
 }
 
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
@@ -115,15 +120,11 @@ void release_page_write(bufferpool* buffp, uint32_t page_id)
 int force_write_to_disk(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+	if(page_ent == NULL)
+	{
+		return;
+	}
 	return write_page_to_disk(page_ent);
-}
-
-void release_page(bufferpool* buffp, uint32_t page_id)
-{
-	// if get_page_to_read was called
-	release_page_read(buffp, page_id);
-	// else if get_page_to_write was called
-	release_page_write(buffp, page_id);
 }
 
 void delete_bufferpool(bufferpool* buffp)

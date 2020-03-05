@@ -67,28 +67,23 @@ void pre_fetch_pages(bufferpool* buffp, uint32_t page_id, uint32_t pages_count);
 // locks the page for reading
 // multiple threads can read the same page simultaneously,
 // but no other write thread will be allowed
-// if the page_entry->page == NULL, allocate memory and reset all bits in page
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id);
 
 // lock the page for writing
 // multiple threads will not be allowed to write the same page simultaneously
-// if you want to read and then write, you must release the page first,
-// and then again acquire for writing
-// if the page_entry->page == NULL, allocate memory and reset all bits in page
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
 
 // this function will force write a dirty page to disk
-// only a return of 1 from this function, will ensure a successfull write
-// 0 is returned for write failure
-// it will remove the page from the dirty pages (even if it is any where in the middle)
-// and write it to disk
+// only a return of 0 from this function, will ensure a successfull write
+// -1 is returned for write failure
 int force_write_to_disk(bufferpool* buffp, uint32_t page_id);
 
 // this will unlock the page,
 // call this function only after calling, any one of get_page_to_* functions, on the page
 // if the cached_page was fetched for reading, we release the reader lock
 // if the cached_page was fetched for writing, we queue the page to the top in the dirty_pages linked list, we release the writer lock
-void release_page(bufferpool* buffp, uint32_t page_id);
+void release_page_read(bufferpool* buffp, uint32_t page_id);
+void release_page_write(bufferpool* buffp, uint32_t page_id);
 
 // deletes the buffer pool manager, that will maintain a heap file given by the name heap_file_name
 void delete_bufferpool(bufferpool* buffp);

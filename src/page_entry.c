@@ -33,6 +33,15 @@ uint32_t get_page_id(page_entry* page_ent)
 	read_lock(page_ent->page_entry_lock);
 	uint32_t page_id = page_ent->block_id / get_block_size(page_ent->dbfile_p);
 	read_unlock(page_ent->page_entry_lock);
+	return page_id;
+}
+
+int is_dirty_page(page_entry* page_ent)
+{
+	read_lock(page_ent->page_entry_lock);
+	int is_dirty = page_ent->is_dirty;
+	read_unlock(page_ent->page_entry_lock);
+	return is_dirty;
 }
 
 void acquire_read_lock(page_entry* page_ent)
