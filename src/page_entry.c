@@ -10,6 +10,7 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 
 	page_ent->dbfile_p = dbfile_p;
 
+	page_ent->page_id = 0;
 	page_ent->block_id = 0;
 	page_ent->number_of_blocks_in_page = number_of_blocks_in_page;
 
@@ -70,20 +71,29 @@ void release_write_lock(page_entry* page_ent)
 int read_page_from_disk(page_entry* page_ent, uint32_t page_id)
 {
 	int io_result = -1;
-	write_lock(page_ent->page_entry_lock);
+
+	// take read lock, to check if disk access is required on the page entry
+	read_lock(page_ent->page_entry_lock);
 	int block_id = page_id * get_block_size(page_ent->dbfile_p);
 	if(page_ent->is_dirty || page_ent->block_id == block_id)
 	{
-		goto EXIT_R;
+		read_unlock(page_ent->page_entry_lock);
+		return io_result;
 	}
-	write_lock(page_ent->page_memory_lock);
-	io_result = read_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
-	if(io_result != -1)
+	read_unlock(page_ent->page_entry_lock);
+
+	write_lock(page_ent->page_entry_lock);
+	if(!page_ent->is_dirty && page_ent->block_id != block_id)
 	{
-		page_ent->block_id = block_id;
+		write_lock(page_ent->page_memory_lock);
+		io_result = read_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
+		if(io_result != -1)
+		{
+			page_ent->page_id = page_id;
+			page_ent->block_id = block_id;
+		}
+		write_unlock(page_ent->page_memory_lock);
 	}
-	write_unlock(page_ent->page_memory_lock);
-	EXIT_R:;
 	write_unlock(page_ent->page_entry_lock);
 	return io_result;
 }
@@ -91,19 +101,27 @@ int read_page_from_disk(page_entry* page_ent, uint32_t page_id)
 int write_page_to_disk(page_entry* page_ent)
 {
 	int io_result = -1;
-	write_lock(page_ent->page_entry_lock);
+
+	// take read lock, to check if disk access is required on the page entry
+	read_lock(page_ent->page_entry_lock);
 	if(!page_ent->is_dirty)
 	{
-		goto EXIT_W;
+		read_unlock(page_ent->page_entry_lock);
+		return io_result;
 	}
-	read_lock(page_ent->page_memory_lock);
-	io_result = write_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
-	if(io_result != -1)
+	read_unlock(page_ent->page_entry_lock);
+
+	write_lock(page_ent->page_entry_lock);
+	if(page_ent->is_dirty)
 	{
-		page_ent->is_dirty = 0;
+		read_lock(page_ent->page_memory_lock);
+		io_result = write_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
+		if(io_result != -1)
+		{
+			page_ent->is_dirty = 0;
+		}
+		read_unlock(page_ent->page_memory_lock);
 	}
-	read_unlock(page_ent->page_memory_lock);
-	EXIT_W:;
 	write_unlock(page_ent->page_entry_lock);
 	return io_result;
 }

@@ -27,6 +27,9 @@ struct page_entry
 	// this is the database file, to which the page_entry belongs to
 	dbfile* dbfile_p;
 
+	// this is the page id, we store in the hashmap, of the buffer pool
+	uint32_t page_id;
+
 	// this is identifier of the first block of this page
 	// remember: every page is built of same number of consecutive blocks
 	uint32_t block_id;
@@ -57,10 +60,6 @@ struct page_entry
 };
 
 page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_of_blocks_in_page);
-
-uint32_t get_page_id(page_entry* page_ent);
-
-int is_dirty_page(page_entry* page_ent);
 
 void acquire_read_lock(page_entry* page_ent);
 
@@ -113,6 +112,6 @@ void delete_page_entry(page_entry* page_ent);
 	2. write_page_to_disk() will fail if the page is not dirty
 	no need to panic if the above cases happen
 
-	Do not access any of the attributes of the page_entry, unless it is returned by the functions of this source file
-	this structure will protect itself and ensure thread safety, do not explicityly acquire locks contained inside this structure
+	Do not access any of the attributes of the page_entry without taking page_entry_lock or unless it is returned by the functions of this source file
+	the functions in this structure will protect itself and ensure thread safety, do not explicityly acquire page_entry_lock for using the functions in the source file
 */

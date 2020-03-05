@@ -13,6 +13,10 @@ lru* get_lru()
 	return lru_p;
 }
 
+page_entry* get_replacable_page(lru* lru_p)
+{
+}
+
 void remove_from_lru(lru* lru_p, page_entry* page_ent)
 {
 }
