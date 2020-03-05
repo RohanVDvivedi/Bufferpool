@@ -47,11 +47,6 @@ struct bufferpool
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t number_of_blocks_per_page);
 
-// creates a new entry in the directory page, of the buffer pool, 
-// and force writes the directory page to the disk
-// creates a new entry in the data_pages hashmap
-uint32_t get_new_page(bufferpool* buffp);
-
 // this instructs the buffer pool manager to prefetch, pages_count number of pges from the given page_id
 void pre_fetch_pages(bufferpool* buffp, uint32_t page_id, uint32_t pages_count);
 
@@ -63,11 +58,6 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id);
 // lock the page for writing
 // multiple threads will not be allowed to write the same page simultaneously
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
-
-// this function will force write a dirty page to disk
-// only a return of 0 from this function, will ensure a successfull write
-// -1 is returned for write failure
-int force_write_to_disk(bufferpool* buffp, uint32_t page_id);
 
 // this will unlock the page,
 // call this functions only after calling, any one of get_page_to_* functions respectively, on the page id

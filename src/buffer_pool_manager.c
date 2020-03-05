@@ -71,6 +71,8 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 	page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
 	read_unlock(buffp->data_page_entries_lock);
 
+	int disk_access_required = 0;
+
 	// if it does not exist in buffer pool, we might have to read it from disk first
 	if(page_ent == NULL && fetch_type == 0)
 	{
@@ -78,24 +80,24 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 		page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
 		if(page_ent == NULL)
 		{
-			int disk_access_required = 0;
-			page_entry* page_ent = get_replacable_page(buffp->lru_p);
+			page_ent = get_swapable_page(buffp->lru_p);
 			delete_entry_from_hash(buffp->data_page_entries, &(page_ent->page_id), NULL, NULL);
-
-			// just changes the page_id of the entry, we do not read it from disk,
-			// this is just pseudo read, so we will kind of read it from disk at a later point in time
-			write_lock(page_ent->page_entry_lock);
-			page_ent->page_id = page_id;
-			write_unlock(page_ent->page_entry_lock);
-
+			pthread_mutex_lock(&(page_ent->page_entry_lock));
+			update_page_id(page_ent, page_id);
+			pthread_mutex_unlock(&(page_ent->page_entry_lock));
 			insert_entry_in_hash(buffp->data_page_entries, &(page_ent->page_id), page_ent);
+			acquire_write_lock(page_ent);
+			disk_access_required = 1;
 		}
 		write_unlock(buffp->data_page_entries_lock);
 	}
 
-	// this function will take care that you are not reaccessing the disk
-	// and that you have the correct block, read in your page entry buffer, so take a chill pill
-	read_page_from_disk(page_ent, page_id);
+	// disk access can take time so we do it outside of the lock of the buffer pool hashmap
+	if(disk_access_required)
+	{
+		read_page_from_disk(page_ent);
+		release_write_lock(page_ent);
+	}
 
 	return page_ent;
 }
@@ -103,7 +105,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
-	remove_from_lru(buffp->lru_p, page_ent);
+	mark_as_recently_used(buffp->lru_p, page_ent);
 	acquire_read_lock(page_ent);
 	return page_ent->page_memory;
 }
@@ -112,14 +114,16 @@ void release_page_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
 	release_read_lock(page_ent);
-	mark_as_recently_used(buffp->lru_p, page_ent);
 }
 
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
-	remove_from_lru(buffp->lru_p, page_ent);
+	mark_as_recently_used(buffp->lru_p, page_ent);
 	acquire_write_lock(page_ent);
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+	page_ent->is_dirty = 1;
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	return page_ent->page_memory;
 }
 
@@ -127,26 +131,13 @@ void release_page_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
 	release_write_lock(page_ent);
-	mark_as_recently_used(buffp->lru_p, page_ent);
-}
-
-int force_write_to_disk(bufferpool* buffp, uint32_t page_id)
-{
-	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
-	if(page_ent == NULL)
-	{
-		return -1;
-	}
-	return write_page_to_disk(page_ent);
 }
 
 void delete_bufferpool(bufferpool* buffp)
 {
 	free(buffp->memory);
-	
 	delete_hashmap(buffp->data_page_entries);
 	delete_rwlock(buffp->data_page_entries_lock);
-
 	free(buffp);
 }
 
