@@ -15,10 +15,11 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 
 	page_ent->priority = 0;
 
+	// if this bit is set, you need to write this page to disk
 	page_ent->is_dirty = 0;
 
 	page_ent->page_memory = page_memory;
-	// this lock protects the page memory only
+	// this lock protects the page memory
 	// all other attributes of this struct are protected by the page_entry_lock
 	// if threads want to access page memory for the disk, they only need to have page_memory_lock,
 	// they need not have page_entry_lock for the corresponding page
@@ -29,12 +30,9 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 
 uint32_t get_page_id(page_entry* page_ent)
 {
-	return page_ent->block_id / get_block_size(page_ent->dbfile_p);
-}
-
-void set_page_id(page_entry* page_ent, uint32_t page_id)
-{
-	page_ent->block_id = page_id * get_block_size(page_ent->dbfile_p);
+	read_lock(page_ent->page_entry_lock);
+	uint32_t page_id = page_ent->block_id / get_block_size(page_ent->dbfile_p);
+	read_unlock(page_ent->page_entry_lock);
 }
 
 void acquire_read_lock(page_entry* page_ent)
@@ -49,7 +47,10 @@ void release_read_lock(page_entry* page_ent)
 
 void acquire_write_lock(page_entry* page_ent)
 {
+	write_lock(page_ent->page_entry_lock);
 	write_lock(page_ent->page_memory_lock);
+	page_ent->is_dirty = 1;
+	write_unlock(page_ent->page_entry_lock);
 }
 
 void release_write_lock(page_entry* page_ent)
@@ -57,24 +58,44 @@ void release_write_lock(page_entry* page_ent)
 	write_unlock(page_ent->page_memory_lock);
 }
 
-// reading new page from disk is a complex task, and any or all threads are required to loose hold of the page, to allow us to do that
-int read_page_from_disk(page_entry* page_ent)
+int read_page_from_disk(page_entry* page_ent, uint32_t page_id)
 {
 	int io_result = -1;
+	write_lock(page_ent->page_entry_lock);
+	int block_id = page_id * get_block_size(page_ent->dbfile_p);
+	if(page_ent->is_dirty || page_ent->block_id == block_id)
+	{
+		goto EXIT_R;
+	}
 	write_lock(page_ent->page_memory_lock);
-	io_result = read_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
+	io_result = read_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
+	if(io_result != -1)
+	{
+		page_ent->block_id = block_id;
+	}
 	write_unlock(page_ent->page_memory_lock);
+	EXIT_R:;
+	write_unlock(page_ent->page_entry_lock);
 	return io_result;
 }
 
-// If external computation threads already have page entry memory lock,
-// then writing to disk is not affected, at all because the writing to disk, requires us to take read lock on the page memory
 int write_page_to_disk(page_entry* page_ent)
 {
 	int io_result = -1;
+	write_lock(page_ent->page_entry_lock);
+	if(!page_ent->is_dirty)
+	{
+		goto EXIT_W;
+	}
 	read_lock(page_ent->page_memory_lock);
 	io_result = write_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
+	if(io_result != -1)
+	{
+		page_ent->is_dirty = 0;
+	}
 	read_unlock(page_ent->page_memory_lock);
+	EXIT_W:;
+	write_unlock(page_ent->page_entry_lock);
 	return io_result;
 }
 

@@ -93,17 +93,17 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 	return page_ent->page_memory;
 }
 
+void release_page_read(bufferpool* buffp, uint32_t page_id)
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+	release_read_lock(page_ent);
+}
+
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
 	acquire_write_lock(page_ent);
 	return page_ent->page_memory;
-}
-
-void release_page_read(bufferpool* buffp, uint32_t page_id)
-{
-	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
-	release_read_lock(page_ent);
 }
 
 void release_page_write(bufferpool* buffp, uint32_t page_id)
@@ -141,3 +141,10 @@ void delete_bufferpool(bufferpool* buffp)
 	free(buffp);
 }
 
+/*
+ buffer pool man this is the struct that you will use,
+ do not access any of the structures of the buffer_pool_manager
+ unless it is returned by the functions in this source file
+ keep, always release the page you get get/acquire,
+ deleting bufferpool is not mandatory if you are closing the app in the end any way
+*/
