@@ -44,20 +44,14 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->data_page_entries = get_hashmap(buffp->maximum_pages_in_cache, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
 	buffp->data_page_entries_lock = get_rwlock();
 
-	buffp->dirty_page_entries = get_linkedlist(SIMPLE, NULL);
-	buffp->dirty_page_entries_lock = get_rwlock();
-
-	buffp->clean_page_entries = get_linkedlist(SIMPLE, NULL);
-	buffp->clean_page_entries_lock = get_rwlock();
+	buffp->lru_p = get_lru();
 
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
 		void* page_memory = buffp->memory + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = get_page_entry(buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
-		write_lock(buffp->clean_page_entries_lock);
-		insert_head(buffp->clean_page_entries, page_ent);
-		write_unlock(buffp->clean_page_entries_lock);
+		mark_as_used(buffp->lru_p, page_ent);
 	}
 
 	return buffp;
@@ -80,21 +74,29 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 	// if it does not exist in buffer pool, we might have to read it from disk first
 	if(page_ent == NULL && fetch_type == 0)
 	{
-		
+		write_lock(buffp->data_page_entries_lock);
+		page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
+		if(page_ent == NULL)
+		{
+
+		}
+		write_unlock(buffp->data_page_entries_lock);
+	}
+	
+	if(page_ent != NULL)
+	{
+		// remove the page from, clean or dirty pages list
+		remove_from_lru(buffp->lru_p, page_ent);
 	}
 
 	return page_ent;
-}
-
-static void mark_page_as_used(page_entry* page_ent)
-{
-
 }
 
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
 	acquire_read_lock(page_ent);
+	mark_as_recently_used(buffp->lru_p, page_ent);
 	return page_ent->page_memory;
 }
 
@@ -108,6 +110,7 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
 	acquire_write_lock(page_ent);
+	mark_as_recently_used(buffp->lru_p, page_ent);
 	return page_ent->page_memory;
 }
 
@@ -122,7 +125,7 @@ int force_write_to_disk(bufferpool* buffp, uint32_t page_id)
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
 	if(page_ent == NULL)
 	{
-		return;
+		return -1;
 	}
 	return write_page_to_disk(page_ent);
 }
@@ -134,11 +137,6 @@ void delete_bufferpool(bufferpool* buffp)
 	delete_hashmap(buffp->data_page_entries);
 	delete_rwlock(buffp->data_page_entries_lock);
 
-	delete_linkedlist(buffp->dirty_page_entries);
-	delete_rwlock(buffp->dirty_page_entries_lock);
-
-	delete_linkedlist(buffp->clean_page_entries);
-	delete_rwlock(buffp->clean_page_entries_lock);
 	free(buffp);
 }
 

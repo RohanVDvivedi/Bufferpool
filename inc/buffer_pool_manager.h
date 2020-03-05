@@ -12,6 +12,7 @@
 
 #include<dbfile.h>
 #include<page_entry.h>
+#include<least_recently_used.h>
 
 // the provided implementation of the bufferpool is a LRU cache
 // for the unordered pages of a heap file
@@ -40,17 +41,7 @@ struct bufferpool
 	// lock
 	rwlock* data_page_entries_lock;
 
-	// this is in memory linkedlist of dirty pages of the buffer pool cache
-	// the page entry is put at the top of this queue, after you have written it
-	linkedlist* dirty_page_entries;
-	// lock
-	rwlock* dirty_page_entries_lock;
-
-	// this is in memory linkedlist of clean pages of the buffer pool cache
-	// the page entry is plucked from the top of this queue, to read a new page from disk
-	linkedlist* clean_page_entries;
-	// lock
-	rwlock* clean_page_entries_lock;
+	lru* lru_p;
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
@@ -79,9 +70,7 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
 int force_write_to_disk(bufferpool* buffp, uint32_t page_id);
 
 // this will unlock the page,
-// call this function only after calling, any one of get_page_to_* functions, on the page
-// if the cached_page was fetched for reading, we release the reader lock
-// if the cached_page was fetched for writing, we queue the page to the top in the dirty_pages linked list, we release the writer lock
+// call this functions only after calling, any one of get_page_to_* functions respectively, on the page id
 void release_page_read(bufferpool* buffp, uint32_t page_id);
 void release_page_write(bufferpool* buffp, uint32_t page_id);
 
