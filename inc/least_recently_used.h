@@ -14,14 +14,12 @@ struct lru
 	// the page entry is put at the head of this queue, after you have used it
 	linkedlist* page_entries;
 	// lock, to protect it
-	rwlock* page_entries_lock;
+	pthread_mutex_t page_entries_lock;
 };
 
 lru* get_lru();
 
 // you can be assured that the returned replacable page_entry will not exist in the lru,
-// and that it is a clean page
-// this point onwards, unless you mark_as_recently_used
 page_entry* get_swapable_page(lru* lru_p);
 
 // call this method once you have acquired read or write lock on the page_entry

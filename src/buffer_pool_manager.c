@@ -81,23 +81,53 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 		if(page_ent == NULL)
 		{
 			page_ent = get_swapable_page(buffp->lru_p);
-			delete_entry_from_hash(buffp->data_page_entries, &(page_ent->page_id), NULL, NULL);
 			pthread_mutex_lock(&(page_ent->page_entry_lock));
-			update_page_id(page_ent, page_id);
+			delete_entry_from_hash(buffp->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+			page_ent->expected_page_id = page_id;
+			insert_entry_in_hash(buffp->data_page_entries, &(page_ent->expected_page_id), page_ent);
 			pthread_mutex_unlock(&(page_ent->page_entry_lock));
-			insert_entry_in_hash(buffp->data_page_entries, &(page_ent->page_id), page_ent);
-			acquire_write_lock(page_ent);
 			disk_access_required = 1;
 		}
 		write_unlock(buffp->data_page_entries_lock);
 	}
 
 	// disk access can take time so we do it outside of the lock of the buffer pool hashmap
-	if(disk_access_required)
+	// TODO
+	int page_is_dirty = 0;
+
+	acquire_read_lock(page_ent);
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+	if(page_ent->expected_page_id != page_ent->page_id && !page_ent->is_dirty)
 	{
+		update_page_id(page_ent, page_ent->expected_page_id);
 		read_page_from_disk(page_ent);
-		release_write_lock(page_ent);
 	}
+	else
+	{
+		page_is_dirty = 1;
+	}
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	release_read_lock(page_ent);
+
+	if(page_is_dirty == 0)
+	{
+		return page_ent;
+	}
+
+	acquire_write_lock(page_ent);
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+	if(page_ent->expected_page_id != page_ent->page_id)
+	{
+		if(page_ent->is_dirty)
+		{
+			write_page_to_disk(page_ent);
+			page_ent->is_dirty = 0;
+		}
+		update_page_id(page_ent, page_ent->expected_page_id);
+		read_page_from_disk(page_ent);
+	}
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	release_write_lock(page_ent);
 
 	return page_ent;
 }
