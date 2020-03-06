@@ -47,9 +47,6 @@ struct bufferpool
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t number_of_blocks_per_page);
 
-// this instructs the buffer pool manager to prefetch, pages_count number of pges from the given page_id
-void pre_fetch_pages(bufferpool* buffp, uint32_t page_id, uint32_t pages_count);
-
 // locks the page for reading
 // multiple threads can read the same page simultaneously,
 // but no other write thread will be allowed

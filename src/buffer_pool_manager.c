@@ -163,11 +163,28 @@ void release_page_write(bufferpool* buffp, uint32_t page_id)
 	release_write_lock(page_ent);
 }
 
+void delete_page_entry_wrapper(const void* key, const void* value, const void* additional_params)
+{
+	page_entry* page_ent = (page_entry*) value;
+	acquire_write_lock(page_ent);
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+	if(page_ent->is_dirty)
+	{
+		write_page_to_disk(page_ent);
+		page_ent->is_dirty = 0;
+	}
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	release_write_lock(page_ent);
+	delete_page_entry(page_ent);
+}
+
 void delete_bufferpool(bufferpool* buffp)
 {
+	for_each_entry_in_hash(buffp->data_page_entries, delete_page_entry_wrapper, NULL);
 	free(buffp->memory);
 	delete_hashmap(buffp->data_page_entries);
 	delete_rwlock(buffp->data_page_entries_lock);
+	delete_lru(buffp->lru_p);
 	free(buffp);
 }
 

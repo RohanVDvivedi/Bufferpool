@@ -8,7 +8,7 @@ lru* get_lru()
 	return lru_p;
 }
 
-page_entry* get_replacable_page(lru* lru_p)
+page_entry* get_swapable_page(lru* lru_p)
 {
 	pthread_mutex_lock(&(lru_p->page_entries_lock));
 		page_entry* page_ent = (page_entry*) get_tail_data(lru_p->page_entries);
