@@ -27,7 +27,7 @@ int main()
 
 	page_mem = get_page_to_read(bpm, 0);
 	printf("page 0 locked for read\n");
-	printf("Data %s\n", (char*)page_mem);
+	printf("Data : \t <%s>\n", (char*)page_mem);
 	printf("page 0 read done\n");
 	release_page_read(bpm, 0);
 	printf("page 0 released from read lock\n\n");
