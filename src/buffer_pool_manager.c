@@ -90,28 +90,6 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int cache_only
 	}
 
 	// disk access can take time so we do it outside of the lock of the buffer pool hashmap
-	// TODO
-	int page_is_dirty = 0;
-
-	acquire_read_lock(page_ent);
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	if(page_ent->expected_page_id != page_ent->page_id && !page_ent->is_dirty)
-	{
-		update_page_id(page_ent, page_ent->expected_page_id);
-		read_page_from_disk(page_ent);
-	}
-	else
-	{
-		page_is_dirty = 1;
-	}
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
-	release_read_lock(page_ent);
-
-	if(page_is_dirty == 0)
-	{
-		return page_ent;
-	}
-
 	acquire_write_lock(page_ent);
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 	if(page_ent->expected_page_id != page_ent->page_id)
@@ -164,7 +142,7 @@ void release_page_write(bufferpool* buffp, uint32_t page_id)
 void delete_page_entry_wrapper(const void* key, const void* value, const void* additional_params)
 {
 	page_entry* page_ent = (page_entry*) value;
-	acquire_write_lock(page_ent);
+	acquire_read_lock(page_ent);
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 	if(page_ent->is_dirty)
 	{
@@ -172,7 +150,7 @@ void delete_page_entry_wrapper(const void* key, const void* value, const void* a
 		page_ent->is_dirty = 0;
 	}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
-	release_write_lock(page_ent);
+	release_read_lock(page_ent);
 	delete_page_entry(page_ent);
 }
 
