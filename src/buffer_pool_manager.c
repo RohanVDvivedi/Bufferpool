@@ -156,8 +156,8 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 }
 
 void release_page_write(bufferpool* buffp, uint32_t page_id)
-{printf("lol\n");
-	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);printf("lol\n");
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
 	release_write_lock(page_ent);
 }
 
@@ -179,6 +179,7 @@ void delete_page_entry_wrapper(const void* key, const void* value, const void* a
 void delete_bufferpool(bufferpool* buffp)
 {
 	for_each_entry_in_hash(buffp->data_page_entries, delete_page_entry_wrapper, NULL);
+	close_dbfile(buffp->db_file);
 	free(buffp->memory);
 	delete_hashmap(buffp->data_page_entries);
 	delete_rwlock(buffp->data_page_entries_lock);
