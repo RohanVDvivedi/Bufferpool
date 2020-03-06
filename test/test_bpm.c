@@ -9,11 +9,11 @@
 
 int main()
 {
-	printf("test started\n");
+	printf("\n\ntest started\n\n");
 
 	bufferpool* bpm = get_bufferpool("./test.db", 5, BLOCKS_PER_PAGE);
 
-	printf("Bufferpool built\n");
+	printf("Bufferpool built\n\n");
 
 	void* page_mem = NULL;
 
@@ -23,20 +23,20 @@ int main()
 	memcpy(page_mem, string_temp, strlen(string_temp) + 1);
 	printf("page 0 write done\n");
 	release_page_write(bpm, 0);
-	printf("page 0 released from write lock\n");
+	printf("page 0 released from write lock\n\n");
 
 	page_mem = get_page_to_read(bpm, 0);
 	printf("page 0 locked for read\n");
 	printf("Data %s\n", (char*)page_mem);
 	printf("page 0 read done\n");
 	release_page_read(bpm, 0);
-	printf("page 0 released from read lock\n");
+	printf("page 0 released from read lock\n\n");
 
 	delete_bufferpool(bpm);
 
-	printf("Buffer pool deleted\n");
+	printf("Buffer pool deleted\n\n");
 
-	printf("test completed\n");
+	printf("test completed\n\n\n");
 
 	return 0;
 }
