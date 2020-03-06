@@ -23,8 +23,6 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	{
 		// create a database file
 		dbf = create_dbfile(heap_file_name);
-
-		// setup the database heap file here
 	}
 
 	if(dbf == NULL)
@@ -57,12 +55,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	return buffp;
 }
 
-/*
-	fetch_type 
-	0 => fetch page from anywhere, either cache or from disk
-	1 => fetch page from cache only, if the page is not in cache return NULL
-*/
-page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type)
+page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int cache_only)
 {
 	page_entry* page_ent = NULL;
 
@@ -71,10 +64,15 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int fetch_type
 	page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
 	read_unlock(buffp->data_page_entries_lock);
 
+	if(cache_only)
+	{
+		return page_ent;
+	}
+
 	int disk_access_required = 0;
 
 	// if it does not exist in buffer pool, we might have to read it from disk first
-	if(page_ent == NULL && fetch_type == 0)
+	if(page_ent == NULL)
 	{
 		write_lock(buffp->data_page_entries_lock);
 		page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
@@ -158,8 +156,8 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 }
 
 void release_page_write(bufferpool* buffp, uint32_t page_id)
-{
-	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+{printf("lol\n");
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);printf("lol\n");
 	release_write_lock(page_ent);
 }
 

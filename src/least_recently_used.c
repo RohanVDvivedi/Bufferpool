@@ -34,7 +34,7 @@ void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 	}
 	insert_head(lru_p->page_entries, page_ent);
 	page_ent->external_lru_reference = lru_p->page_entries->head;
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 }
 
