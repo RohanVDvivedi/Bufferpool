@@ -1,11 +1,14 @@
 #ifndef DBFILE_H
 #define DBFILE_H
 
-#include<stdio.h>
-#include<stdlib.h>
-
-#include<sys/types.h>
-#include<sys/stat.h>
+#include <sys/types.h>
+#include <linux/fs.h>
+#include <sys/fcntl.h> 
+#include <sys/stat.h>
+#include <sys/ioctl.h>      
+#include <unistd.h>     
+#include <stdio.h>
+#include <stdlib.h>
 
 #include<disk_access_functions.h>
 
@@ -14,6 +17,8 @@ struct dbfile
 {
 	// file discriptor of the database file
 	int db_fd;
+
+	uint32_t physical_block_size;
 
 	// this is file information
 	struct stat dbfstat;

@@ -134,9 +134,9 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 }
 
 void release_page_write(bufferpool* buffp, uint32_t page_id)
-{
-	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
-	release_write_lock(page_ent);
+{printf("lol\n");
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);printf("lol %d\n", page_ent);
+	release_write_lock(page_ent);printf("lol\n");
 }
 
 void delete_page_entry_wrapper(const void* key, const void* value, const void* additional_params)

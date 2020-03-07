@@ -39,10 +39,11 @@ uint32_t get_block_count(dbfile* dbfile_p)
 
 uint32_t get_block_size(dbfile* dbfile_p)
 {
-	// in MAC and other systems, st_blksize may not be equal to the actual hardware block size
-	// hence we hardcode it here
-	//return dbfile_p->dbfstat.st_blksize;
-	return 512;
+	if(dbfile_p->physical_block_size == 0 || dbfile_p->physical_block_size == (~0))
+	{
+		ioctl(dbfile_p->db_fd, BLKSSZGET, &dbfile_p->physical_block_size);
+	}
+	return dbfile_p->physical_block_size;
 }
 
 uint32_t get_size(dbfile* dbfile_p)
