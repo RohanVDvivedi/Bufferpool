@@ -20,13 +20,15 @@ int open_db_file(char* heap_file_name)
 	return db_fd;
 }
 
-#include <errno.h>
+#include<stdio.h>
+#include<errno.h>
 
 int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size)
 {
 	off_t start_offset = block_id * block_size;
 	ssize_t bytes_read = pread(db_fd, blocks_in_main_memory, block_count * block_size, start_offset);
-	printf("fd : %d, block_id : %u, blocks_count : %u, block_size, %u, bytes_read : %d, err : %d\n", db_fd, block_id, block_count, block_size, bytes_read, errno);
+	printf("pread params : %d, %d, %ld, %d\n", db_fd, blocks_in_main_memory, block_count * block_size, start_offset);
+	printf("fd : %d, block_id : %u, blocks_count : %u, block_size, %u, bytes_read : %ld, err : %d\n", db_fd, block_id, block_count, block_size, bytes_read, errno);
 	return bytes_read;
 }
 
@@ -34,7 +36,8 @@ int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint
 {
 	off_t start_offset = block_id * block_size;
 	ssize_t bytes_written = pwrite(db_fd, blocks_in_main_memory, block_count * block_size, start_offset);
-	printf("fd : %d, block_id : %u, blocks_count : %u, block_size, %u, bytes_written : %d, err : %d\n", db_fd, block_id, block_count, block_size, bytes_written, errno);
+	printf("pwrite params : %d, %d, %ld, %d\n", db_fd, blocks_in_main_memory, block_count * block_size, start_offset);
+	printf("fd : %d, block_id : %u, blocks_count : %u, block_size, %u, bytes_written : %ld, err : %d\n", db_fd, block_id, block_count, block_size, bytes_written, errno);
 	return bytes_written;
 }
 

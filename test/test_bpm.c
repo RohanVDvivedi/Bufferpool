@@ -5,13 +5,13 @@
 
 #include<buffer_pool_manager.h>
 
-#define BLOCKS_PER_PAGE 8
+#define BLOCKS_PER_PAGE 1
 
 int main()
 {
 	printf("\n\ntest started\n\n");
 
-	bufferpool* bpm = get_bufferpool("./test.db", 5, BLOCKS_PER_PAGE);
+	bufferpool* bpm = get_bufferpool("./test.db", 1, BLOCKS_PER_PAGE);
 
 	printf("Bufferpool built\n\n");
 
