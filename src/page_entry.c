@@ -34,7 +34,7 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 void update_page_id(page_entry* page_ent, uint32_t page_id)
 {
 	page_ent->page_id = page_id;
-	page_ent->block_id = page_id * get_block_size(page_ent->dbfile_p);
+	page_ent->block_id = page_id * page_ent->number_of_blocks_in_page;
 }
 
 void acquire_read_lock(page_entry* page_ent)
