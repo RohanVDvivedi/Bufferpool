@@ -39,16 +39,58 @@ uint32_t get_block_count(dbfile* dbfile_p)
 	return dbfile_p->dbfstat.st_blocks;
 }
 
+#include<string.h>
+#include<errno.h>
+
+int get_device(dbfile* dbfile_p)
+{
+	char minmaj[128];
+	sprintf(minmaj, "%d:%d ", (int) dbfile_p->dbfstat.st_dev >> 8, (int) dbfile_p->dbfstat.st_dev & 0xff);
+
+	FILE* f = fopen("/proc/self/mountinfo", "r");
+
+	char sline[256];
+	while(fgets(sline, 256, f))
+	{
+		char* token = strtok(sline, "-");
+		char* where = strstr(token, minmaj);
+		if(where)
+		{
+			token = strtok(NULL, " -:");
+			token = strtok(NULL, " -:");
+			printf("%s\n", token);
+			break;
+		}
+	}
+
+	fclose(f);
+	return -1;
+}
+
 uint32_t get_block_size(dbfile* dbfile_p)
 {
 	if(dbfile_p->physical_block_size == 0)
 	{
 		int physical_block_size = -1;
-		ioctl(dbfile_p->db_fd, BLKSSZGET, &physical_block_size);
+
+		get_device(dbfile_p);
+
+		int device_fd = open("/dev/sda1", O_RDONLY);
+		ioctl(device_fd, BLKSSZGET, &physical_block_size);
+		close(device_fd);
+
 		if(physical_block_size != -1)
 		{
 			dbfile_p->physical_block_size = physical_block_size;
 		}
+		else
+		{
+			printf("getting physical block size as -1, errnum %d\n", errno);
+		}
+	}
+	if(dbfile_p->physical_block_size == 0)
+	{
+		dbfile_p->physical_block_size = 512;
 	}
 	return dbfile_p->physical_block_size;
 }
