@@ -53,11 +53,11 @@ int find_device(dbfile* dbfile_p, char device[256])
 	int device_found = -1;
 	while(fgets(sline, 256, f))
 	{
-		char* token = strtok(sline, "-");
-		char* where = strstr(token, minmaj);
-		if(where)
+		char* suffix = strstr(sline, " - ");
+		char* where = strstr(sline, minmaj);
+		if(where && where <= suffix)
 		{
-			token = strtok(NULL, " -:");
+			char* token = strtok(suffix, " -:");
 			token = strtok(NULL, " -:");
 			strcpy(device, token);
 			device_found = 0;
