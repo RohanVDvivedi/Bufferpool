@@ -15,18 +15,6 @@ int compare_page_id(const void* key1, const void* key2)
 	return page_id1 > page_id2;
 }
 
-void print_key(const void* key)
-{
-	printf("%u", *((uint32_t*)key));
-}
-
-void print_value(const void* value)
-{
-	page_entry* page_ent = value;
-	printf("[%d]\n", page_ent);
-	//printf("[%d](page_id = e %u and a %u)", page_ent, page_ent->expected_page_id, page_ent->page_id);
-}
-
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t number_of_blocks_per_page)
 {
 	// try and open a dtabase file
