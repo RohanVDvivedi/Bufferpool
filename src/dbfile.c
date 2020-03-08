@@ -4,6 +4,7 @@ dbfile* create_dbfile(char* filename)
 {
 	dbfile* dbfile_p = (dbfile*) malloc(sizeof(dbfile));
 	dbfile_p->db_fd = create_db_file(filename);
+	dbfile_p->physical_block_size = 0;
 	if(dbfile_p->db_fd == -1)
 	{
 		free(dbfile_p);
@@ -20,6 +21,7 @@ dbfile* open_dbfile(char* filename)
 {
 	dbfile* dbfile_p = (dbfile*) malloc(sizeof(dbfile));
 	dbfile_p->db_fd = open_db_file(filename);
+	dbfile_p->physical_block_size = 0;
 	if(dbfile_p->db_fd == -1)
 	{
 		free(dbfile_p);
@@ -39,9 +41,14 @@ uint32_t get_block_count(dbfile* dbfile_p)
 
 uint32_t get_block_size(dbfile* dbfile_p)
 {
-	if(dbfile_p->physical_block_size == 0 || dbfile_p->physical_block_size == (~0))
+	if(dbfile_p->physical_block_size == 0)
 	{
-		ioctl(dbfile_p->db_fd, BLKSSZGET, &dbfile_p->physical_block_size);
+		int physical_block_size = -1;
+		ioctl(dbfile_p->db_fd, BLKSSZGET, &physical_block_size);
+		if(physical_block_size != -1)
+		{
+			dbfile_p->physical_block_size = physical_block_size;
+		}
 	}
 	return dbfile_p->physical_block_size;
 }

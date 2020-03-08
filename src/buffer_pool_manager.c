@@ -15,6 +15,20 @@ int compare_page_id(const void* key1, const void* key2)
 	return page_id1 > page_id2;
 }
 
+void print_key(const void* key)
+{
+	printf("lol key\n");
+	printf("%u", *((uint32_t*)key));
+}
+
+void print_value(const void* value)
+{
+	page_entry* page_ent = value;
+	printf("lol value\n");
+	printf("[%d]\n", page_ent);
+	//printf("[%d](page_id = e %u and a %u)", page_ent, page_ent->expected_page_id, page_ent->page_id);
+}
+
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t number_of_blocks_per_page)
 {
 	// try and open a dtabase file
@@ -39,7 +53,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->memory = malloc(buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 
-	buffp->data_page_entries = get_hashmap(buffp->maximum_pages_in_cache, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
+	buffp->data_page_entries = get_hashmap((buffp->maximum_pages_in_cache / 3) + 2, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
 	buffp->data_page_entries_lock = get_rwlock();
 
 	buffp->lru_p = get_lru();
@@ -110,6 +124,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int cache_only
 
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 {
+	print_hashmap(buffp->data_page_entries, print_key, print_value);
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
 	mark_as_recently_used(buffp->lru_p, page_ent);
 	acquire_read_lock(page_ent);
@@ -118,12 +133,14 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 
 void release_page_read(bufferpool* buffp, uint32_t page_id)
 {
+	print_hashmap(buffp->data_page_entries, print_key, print_value);
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
 	release_read_lock(page_ent);
 }
 
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
+	print_hashmap(buffp->data_page_entries, print_key, print_value);
 	page_entry* page_ent = fetch_page_entry(buffp, page_id, 0);
 	mark_as_recently_used(buffp->lru_p, page_ent);
 	acquire_write_lock(page_ent);
@@ -134,9 +151,10 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 }
 
 void release_page_write(bufferpool* buffp, uint32_t page_id)
-{printf("lol\n");
-	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);printf("lol %d\n", page_ent);
-	release_write_lock(page_ent);printf("lol\n");
+{
+	print_hashmap(buffp->data_page_entries, print_key, print_value);
+	page_entry* page_ent = fetch_page_entry(buffp, page_id, 1);
+	release_write_lock(page_ent);
 }
 
 void delete_page_entry_wrapper(const void* key, const void* value, const void* additional_params)
