@@ -22,7 +22,7 @@
 
 // open db file in read/write mode, we will read write directly to the disk, by passing the os page cache
 // the write must return after completion of writing data and necessary file metadata, db file can not be a symbolik link
-#define STANDARD_DB_FILE_FLAGS (O_RDWR /*| O_DIRECT | O_DSYNC  | O_SYNC*/ | O_NOFOLLOW)
+#define STANDARD_DB_FILE_FLAGS (O_RDWR /*| O_DIRECT */ | O_DSYNC  | O_SYNC | O_NOFOLLOW)
 
 // returns file discriptor, if file is creation succeeds
 // else returns -1
