@@ -42,7 +42,7 @@ uint32_t get_block_count(dbfile* dbfile_p)
 #include<string.h>
 #include<errno.h>
 
-int get_device(dbfile* dbfile_p)
+int find_device(dbfile* dbfile_p, char device[256])
 {
 	char minmaj[128];
 	sprintf(minmaj, "%d:%d ", (int) dbfile_p->dbfstat.st_dev >> 8, (int) dbfile_p->dbfstat.st_dev & 0xff);
@@ -50,6 +50,7 @@ int get_device(dbfile* dbfile_p)
 	FILE* f = fopen("/proc/self/mountinfo", "r");
 
 	char sline[256];
+	int device_found = -1;
 	while(fgets(sline, 256, f))
 	{
 		char* token = strtok(sline, "-");
@@ -58,40 +59,47 @@ int get_device(dbfile* dbfile_p)
 		{
 			token = strtok(NULL, " -:");
 			token = strtok(NULL, " -:");
-			printf("%s\n", token);
+			strcpy(device, token);
+			device_found = 0;
 			break;
 		}
 	}
 
 	fclose(f);
-	return -1;
+	return device_found;
 }
 
 uint32_t get_block_size(dbfile* dbfile_p)
 {
 	if(dbfile_p->physical_block_size == 0)
 	{
-		int physical_block_size = -1;
-
-		get_device(dbfile_p);
-
-		int device_fd = open("/dev/sda1", O_RDONLY);
-		if(device_fd > 0)
+		char device_path[256];
+		if(find_device(dbfile_p, device_path) != -1)
 		{
-			int err_return = ioctl(device_fd, BLKSSZGET, &physical_block_size);
-			close(device_fd);
-			if(err_return != -1)
+			printf("Given database file is on device %s\n", device_path);
+			int device_fd = open(device_path, O_RDONLY);
+			if(device_fd > 0)
 			{
-				dbfile_p->physical_block_size = physical_block_size;
+				int physical_block_size = -1;
+				int err_return = ioctl(device_fd, BLKSSZGET, &physical_block_size);
+				close(device_fd);
+				if(err_return != -1)
+				{
+					dbfile_p->physical_block_size = physical_block_size;
+				}
+				else
+				{
+					printf("getting physical block size as %d, errnum %d\n", err_return, errno);
+				}
 			}
 			else
 			{
-				printf("getting physical block size as %d, errnum %d\n", err_return, errno);
+				printf("could not open device for reading physial block size\n");
 			}
 		}
 		else
 		{
-			printf("could not open device for reading physial block size\n");
+			printf("the device does not seem to be found by the database file provided\n");
 		}
 	}
 	if(dbfile_p->physical_block_size == 0)
