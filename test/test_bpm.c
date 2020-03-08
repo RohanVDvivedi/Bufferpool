@@ -21,6 +21,7 @@ int main()
 	printf("page 0 locked for write\n");
 	char* string_temp = "Hello World, This is page number 0";
 	memcpy(page_mem, string_temp, strlen(string_temp) + 1);
+	printf("Data : \t <%s>\n", (char*)page_mem);
 	printf("page 0 write done\n");
 	release_page_write(bpm, 0);
 	printf("page 0 released from write lock\n\n");

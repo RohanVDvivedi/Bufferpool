@@ -76,16 +76,22 @@ uint32_t get_block_size(dbfile* dbfile_p)
 		get_device(dbfile_p);
 
 		int device_fd = open("/dev/sda1", O_RDONLY);
-		ioctl(device_fd, BLKSSZGET, &physical_block_size);
-		close(device_fd);
-
-		if(physical_block_size != -1)
+		if(device_fd > 0)
 		{
-			dbfile_p->physical_block_size = physical_block_size;
+			int err_return = ioctl(device_fd, BLKSSZGET, &physical_block_size);
+			close(device_fd);
+			if(err_return != -1)
+			{
+				dbfile_p->physical_block_size = physical_block_size;
+			}
+			else
+			{
+				printf("getting physical block size as %d, errnum %d\n", err_return, errno);
+			}
 		}
 		else
 		{
-			printf("getting physical block size as -1, errnum %d\n", errno);
+			printf("could not open device for reading physial block size\n");
 		}
 	}
 	if(dbfile_p->physical_block_size == 0)
