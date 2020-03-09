@@ -86,10 +86,11 @@ uint32_t get_block_size(dbfile* dbfile_p)
 				if(err_return != -1)
 				{
 					dbfile_p->physical_block_size = physical_block_size;
+					printf("getting physical block size as %d\n", physical_block_size);
 				}
 				else
 				{
-					printf("getting physical block size as %d, errnum %d\n", err_return, errno);
+					printf("getting physical block size returns %d, errnum %d\n", err_return, errno);
 				}
 			}
 			else

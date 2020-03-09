@@ -11,7 +11,7 @@ int main()
 {
 	printf("\n\ntest started\n\n");
 
-	bufferpool* bpm = get_bufferpool("./test.db", 1, BLOCKS_PER_PAGE);
+	bufferpool* bpm = get_bufferpool("/media/rohan/5699ddb0-77df-47e2-8fd0-1152949f0981/test.db", 1, BLOCKS_PER_PAGE);
 
 	printf("Bufferpool built\n\n");
 

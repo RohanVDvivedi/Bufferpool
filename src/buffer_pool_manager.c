@@ -37,7 +37,9 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
 	buffp->number_of_blocks_per_page = number_of_blocks_per_page;
 
-	buffp->memory = malloc(buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
+	buffp->memory = malloc((buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file)) + get_block_size(buffp->db_file));
+	void* first_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
+	printf("first block starts from %p, actual memory starts from %p\n machine pointer size %lu, machine uintptr_t %lu, expect issues if they are not the same\n", first_block, buffp->memory, sizeof(void*), sizeof(uintptr_t));
 
 	buffp->data_page_entries = get_hashmap((buffp->maximum_pages_in_cache / 3) + 2, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
 	buffp->data_page_entries_lock = get_rwlock();
@@ -47,7 +49,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
-		void* page_memory = buffp->memory + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
+		void* page_memory = first_block + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = get_page_entry(buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
 		mark_as_recently_used(buffp->lru_p, page_ent);
 	}
