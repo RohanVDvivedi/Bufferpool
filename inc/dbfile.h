@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include<string.h>
+#include<errno.h>
+
 #include<disk_access_functions.h>
 
 typedef struct dbfile dbfile;

@@ -22,11 +22,13 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	if(dbf == NULL)
 	{
 		// create a database file
+		printf("Database file does not exist, Database file will be created first\n");
 		dbf = create_dbfile(heap_file_name);
 	}
 
 	if(dbf == NULL)
 	{
+		printf("Database file can not be created, Buffer pool manager can not be created\n");
 		return NULL;
 	}
 
@@ -66,12 +68,11 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int cache_only
 	page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
 	read_unlock(buffp->data_page_entries_lock);
 
-	if(cache_only)
+	if(cache_only || page_ent != NULL)
 	{
+		printf("Page ex = %u, act = %u was found directly in cache\n\n", page_ent->expected_page_id, page_ent->page_id);
 		return page_ent;
 	}
-
-	int disk_access_required = 0;
 
 	// if it does not exist in buffer pool, we might have to read it from disk first
 	if(page_ent == NULL)
@@ -82,11 +83,14 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int cache_only
 		{
 			page_ent = get_swapable_page(buffp->lru_p);
 			pthread_mutex_lock(&(page_ent->page_entry_lock));
-			delete_entry_from_hash(buffp->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+			if(!page_ent->is_free)
+			{
+				// a free page will never exist on the hashmap of the buffer pool manager, so we are not required to remove it
+				delete_entry_from_hash(buffp->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+			}
 			page_ent->expected_page_id = page_id;
 			insert_entry_in_hash(buffp->data_page_entries, &(page_ent->expected_page_id), page_ent);
 			pthread_mutex_unlock(&(page_ent->page_entry_lock));
-			disk_access_required = 1;
 		}
 		write_unlock(buffp->data_page_entries_lock);
 	}
@@ -94,7 +98,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int cache_only
 	// disk access can take time so we do it outside of the lock of the buffer pool hashmap
 	acquire_write_lock(page_ent);
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	if(page_ent->expected_page_id != page_ent->page_id)
+	if(page_ent->expected_page_id != page_ent->page_id || page_ent->is_free || page_ent->is_dirty)
 	{
 		if(page_ent->is_dirty)
 		{

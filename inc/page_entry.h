@@ -47,6 +47,9 @@ struct page_entry
 	// if a page is dirty, it is yet to be written to disk
 	uint8_t is_dirty;
 
+	// if the page is free, the page has no meaningfull data on it
+	uint8_t is_free;
+
 	// this lock ensures only 1 thread attempts to read or write the page to the disk
 	rwlock* page_memory_lock;
 

@@ -7,6 +7,7 @@ dbfile* create_dbfile(char* filename)
 	dbfile_p->physical_block_size = 0;
 	if(dbfile_p->db_fd == -1)
 	{
+		printf("Can not create database file, errno %d\n", errno);
 		free(dbfile_p);
 		dbfile_p = NULL;
 	}
@@ -24,6 +25,7 @@ dbfile* open_dbfile(char* filename)
 	dbfile_p->physical_block_size = 0;
 	if(dbfile_p->db_fd == -1)
 	{
+		printf("Can not open database file, errno %d\n", errno);
 		free(dbfile_p);
 		dbfile_p = NULL;
 	}
@@ -38,9 +40,6 @@ uint32_t get_block_count(dbfile* dbfile_p)
 {
 	return dbfile_p->dbfstat.st_blocks;
 }
-
-#include<string.h>
-#include<errno.h>
 
 int find_device(dbfile* dbfile_p, char device[256])
 {
