@@ -2,7 +2,7 @@
 
 unsigned long long int hash_page_id(const void* key)
 {
-	uint32_t page_id = *((const uint32_t*)key);
+	uint32_t page_id = *((uint32_t*)key);
 	// some very shitty hash function this would be replaced by some more popular hash function
 	unsigned long long int hash = ((page_id | page_id << 10 | page_id >> 11) + 2 * page_id + 1) * (2 * page_id + 1);
 	return hash;
@@ -10,9 +10,9 @@ unsigned long long int hash_page_id(const void* key)
 
 int compare_page_id(const void* key1, const void* key2)
 {
-	uint32_t page_id1 = *((const uint32_t*)key1);
-	uint32_t page_id2 = *((const uint32_t*)key2);
-	return page_id1 > page_id2;
+	uint32_t page_id1 = *((uint32_t*)key1);
+	uint32_t page_id2 = *((uint32_t*)key2);
+	return page_id1 - page_id2;
 }
 
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t number_of_blocks_per_page)
@@ -41,7 +41,6 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->memory = malloc((buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file)) + get_block_size(buffp->db_file));
 	void* first_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
-	printf("first block starts from %p, actual memory starts from %p\n machine pointer size %lu, machine uintptr_t %lu, expect issues if they are not the same\n", first_block, buffp->memory, sizeof(void*), sizeof(uintptr_t));
 
 	buffp->data_page_entries = get_hashmap((buffp->maximum_pages_in_cache / 3) + 2, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
 	buffp->data_page_entries_lock = get_rwlock();
@@ -70,7 +69,6 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int cache_only
 
 	if(cache_only || page_ent != NULL)
 	{
-		printf("Page ex = %u, act = %u was found directly in cache\n\n", page_ent->expected_page_id, page_ent->page_id);
 		return page_ent;
 	}
 
@@ -98,16 +96,17 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id, int cache_only
 	// disk access can take time so we do it outside of the lock of the buffer pool hashmap
 	acquire_write_lock(page_ent);
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	if(page_ent->expected_page_id != page_ent->page_id || page_ent->is_free || page_ent->is_dirty)
-	{
 		if(page_ent->is_dirty)
 		{
 			write_page_to_disk(page_ent);
 			page_ent->is_dirty = 0;
 		}
-		update_page_id(page_ent, page_ent->expected_page_id);
-		read_page_from_disk(page_ent);
-	}
+		if(page_ent->expected_page_id != page_ent->page_id || page_ent->is_free)
+		{
+			update_page_id(page_ent, page_ent->expected_page_id);
+			read_page_from_disk(page_ent);
+			page_ent->is_free = 0;
+		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	release_write_lock(page_ent);
 

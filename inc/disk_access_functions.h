@@ -11,6 +11,9 @@
 #include<unistd.h>
 #include<stdint.h>
 
+#include<stdio.h>
+#include<errno.h>
+
 
 #if defined __linux__
 	// no redefinition required
