@@ -89,30 +89,42 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 			insert_entry_in_hash(buffp->data_page_entries, &(page_ent->expected_page_id), page_ent);
 			pthread_mutex_unlock(&(page_ent->page_entry_lock));
 		}
-
-		// disk access can take time so we do it outside of the lock of the buffer pool hashmap
-		// but we ensure that, since we have all the locks necessary, someone may find the page_entry
-		// but will not be able to modify it.
 		write_unlock(buffp->data_page_entries_lock);
 	}
 
-	acquire_write_lock(page_ent);
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(page_ent->is_dirty)
-		{
-			write_page_to_disk(page_ent);
-			page_ent->is_dirty = 0;
-		}
-		if(page_ent->expected_page_id != page_ent->page_id || page_ent->is_free)
-		{
-			update_page_id(page_ent, page_ent->expected_page_id);
-			read_page_from_disk(page_ent);
-			page_ent->is_free = 0;
-		}
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
-	release_write_lock(page_ent);
-
 	return page_ent;
+}
+
+// you must have page_entry mutex locked, while calling this function
+static int is_page_entry_sync_up_required(page_entry* page_ent)
+{
+	return (page_ent->expected_page_id != page_ent->page_id || page_ent->is_free);
+}
+
+// you must have page_entry mutex locked and page memory write lock, while calling this function
+static void do_page_entry_sync_up(page_entry* page_ent)
+{
+	if(page_ent->is_dirty && !page_ent->is_free)
+	{
+		write_page_to_disk(page_ent);
+		page_ent->is_dirty = 0;
+	}
+	if(page_ent->expected_page_id != page_ent->page_id || page_ent->is_free)
+	{
+		update_page_id(page_ent, page_ent->expected_page_id);
+		read_page_from_disk(page_ent);
+		page_ent->is_free = 0;
+	}
+}
+
+// you must have page_entry mutex locked and page memory read lock, while calling this function
+static void do_page_entry_clean_up(page_entry* page_ent)
+{
+	if(page_ent->is_dirty && !page_ent->is_free)
+	{
+		write_page_to_disk(page_ent);
+		page_ent->is_dirty = 0;
+	}
 }
 
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
@@ -120,6 +132,25 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 	mark_as_recently_used(buffp->lru_p, page_ent);
 	acquire_read_lock(page_ent);
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+	if(is_page_entry_sync_up_required(page_ent))
+	{
+		pthread_mutex_unlock(&(page_ent->page_entry_lock));
+		release_read_lock(page_ent);
+		acquire_write_lock(page_ent);
+		pthread_mutex_lock(&(page_ent->page_entry_lock));
+			if(is_page_entry_sync_up_required(page_ent))
+			{
+				do_page_entry_sync_up(page_ent);
+			}
+		pthread_mutex_unlock(&(page_ent->page_entry_lock));
+		release_write_lock(page_ent);
+		acquire_read_lock(page_ent);
+	}
+	else
+	{
+		pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	}
 	return page_ent->page_memory;
 }
 
@@ -135,6 +166,10 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 	mark_as_recently_used(buffp->lru_p, page_ent);
 	acquire_write_lock(page_ent);
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
+	if(is_page_entry_sync_up_required(page_ent))
+	{
+		do_page_entry_sync_up(page_ent);
+	}
 	page_ent->is_dirty = 1;
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	return page_ent->page_memory;
