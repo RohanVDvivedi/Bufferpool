@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 		memcpy(page_mem, data, strlen(data) + 1);
 		printf("Data written on page %u : \t <%s>\n", i, (char*)page_mem);
 		printf("page %u write done\n", i);
-		release_page_write(bpm, i);
+		release_page_write(bpm, page_mem);
 		printf("page %u released from write lock\n\n", i);
 
 		uint32_t r = (uint32_t)(rand() % (i + 1));
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 		printf("page %u locked for read\n", r);
 		printf("Data read from page %u : \t <%s>\n", r, (char*)page_mem);
 		printf("page %u read done\n", r);
-		release_page_read(bpm, r);
+		release_page_read(bpm, page_mem);
 		printf("page %u released from read lock\n\n", r);
 	}
 
