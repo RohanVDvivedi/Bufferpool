@@ -29,6 +29,9 @@ struct bufferpool
 	void* memory;
 
 	// the address of the first aligned block, located in the allocated memory (the field immediately above)
+	// the first_aligned_block >= memory and  first_aligned_block <= memory + get_block_size(dbfile)
+	// We offset from the memory provided by malloc so as to 
+	// align both the ram memory addresses and disk access offsets to the physical block_size of the disk (to get advantage of DMA and DIRECT_IO, else IO fails)
 	void* first_aligned_block;
 
 	// this is the maximum number of pages that will exist in buffer pool cache at any moment
