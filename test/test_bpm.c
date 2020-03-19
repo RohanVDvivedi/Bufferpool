@@ -99,7 +99,7 @@ void page_read_and_print(uint32_t page_id)
 	uint32_t page_id_temp = 0;
 	printf("page %u locked for read\n", page_id);
 	printf("Data read from page %u : \t <%s>\n", page_id, (char*)page_mem);
-	sscanf(page_mem, PAGE_DATA_FORMAT, &page_id, &writes);
+	sscanf(page_mem, PAGE_DATA_FORMAT, &page_id_temp, &writes);
 	if(page_id != page_id_temp)
 	{
 		printf("DATA ACCESS CONTENTION, requested %u page for read, received %u page\n", page_id, page_id_temp);
