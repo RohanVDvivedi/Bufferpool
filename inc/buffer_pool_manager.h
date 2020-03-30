@@ -5,18 +5,13 @@
 #include<stdlib.h>
 #include<stdint.h>
 
-#include<hashmap.h>
-#include<linkedlist.h>
-
-#include<rwlock.h>
-
 #include<dbfile.h>
 #include<page_entry.h>
+#include<page_entry_mapper.h>
 #include<least_recently_used.h>
 
 // the provided implementation of the bufferpool is a LRU cache
 // for the unordered pages of a heap file
-// with a fixed number of bucket count
 
 typedef struct bufferpool bufferpool;
 struct bufferpool
@@ -41,17 +36,7 @@ struct bufferpool
 	// people generally go with 8 blocks per page
 	uint32_t number_of_blocks_per_page;
 
-	// this is the list of page_entries, ordered by increasing order of addresses of page_memory
-	// this will be used to get address to the page_entry, from the address of the page_memory of that particular page_entry
-	// It will be a read only data structure, so no locks needed for this array,
-	// it will be used as a static look up table (LUT) to get address of the page_entry on which we are being asked to release the lock
-	page_entry** page_entries_list;
-
-	// this is in memory hashmap of data pages in memory
-	// page_id vs page_entry
-	hashmap* data_page_entries;
-	// lock
-	rwlock* data_page_entries_lock;
+	page_entry_mapper* mapp_p;
 
 	lru* lru_p;
 };

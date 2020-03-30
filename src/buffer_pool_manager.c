@@ -1,25 +1,5 @@
 #include<buffer_pool_manager.h>
 
-static unsigned long long int hash_page_id(const void* key)
-{
-	uint32_t page_id = *((uint32_t*)key);
-	// some very shitty hash function this would be replaced by some more popular hash function
-	unsigned long long int hash = ((page_id | page_id << 10 | page_id >> 11) + 2 * page_id + 1) * (2 * page_id + 1);
-	return hash;
-}
-
-static int compare_page_id(const void* key1, const void* key2)
-{
-	uint32_t page_id1 = *((uint32_t*)key1);
-	uint32_t page_id2 = *((uint32_t*)key2);
-	return page_id1 - page_id2;
-}
-
-static uint32_t get_index_in_page_entries_list_from_page_memory_address(bufferpool* buffp, void* page_memory)
-{
-	return ((uintptr_t)(page_memory - buffp->first_aligned_block)) / (buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
-}
-
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes)
 {
 	// try and open a dtabase file
@@ -53,10 +33,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->memory = malloc((buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file)) + get_block_size(buffp->db_file));
 	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
 
-	buffp->page_entries_list = (page_entry**) malloc(buffp->maximum_pages_in_cache * sizeof(page_entry*));
-
-	buffp->data_page_entries = get_hashmap((buffp->maximum_pages_in_cache / 3) + 2, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
-	buffp->data_page_entries_lock = get_rwlock();
+	buffp->mapp_p = get_page_entry_mapper(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
 	buffp->lru_p = get_lru();
 
@@ -65,7 +42,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	{
 		void* page_memory = buffp->first_aligned_block + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = get_page_entry(buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
-		buffp->page_entries_list[get_index_in_page_entries_list_from_page_memory_address(buffp, page_memory)] = page_ent;
+		insert_page_entry_to_map_by_page_memory(buffp->mapp_p, page_ent);
 		mark_as_recently_used(buffp->lru_p, page_ent);
 	}
 
@@ -77,9 +54,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	page_entry* page_ent = NULL;
 
 	// search of the page in buffer pool
-	read_lock(buffp->data_page_entries_lock);
-	page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
-	read_unlock(buffp->data_page_entries_lock);
+	page_ent = get_page_entry_by_page_id(buffp->mapp_p, page_id);
 
 	// return it if a page is found
 	if(page_ent != NULL)
@@ -89,21 +64,22 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	// else if it does not exist in buffer pool, we might have to read it from disk first
 	else if(page_ent == NULL)
 	{
-		write_lock(buffp->data_page_entries_lock);
-		page_ent = (page_entry*) find_value_from_hash(buffp->data_page_entries, &page_id);
+		// TODO
+		write_lock(buffp->mapp_p->data_page_entries_lock);
+		page_ent = (page_entry*) find_value_from_hash(buffp->mapp_p->data_page_entries, &page_id);
 		if(page_ent == NULL)
 		{
 			page_ent = get_swapable_page(buffp->lru_p);
 			pthread_mutex_lock(&(page_ent->page_entry_lock));
 			if(!page_ent->is_free)
 			{
-				delete_entry_from_hash(buffp->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+				delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
 			}
 			page_ent->expected_page_id = page_id;
-			insert_entry_in_hash(buffp->data_page_entries, &(page_ent->expected_page_id), page_ent);
+			insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
 			pthread_mutex_unlock(&(page_ent->page_entry_lock));
 		}
-		write_unlock(buffp->data_page_entries_lock);
+		write_unlock(buffp->mapp_p->data_page_entries_lock);
 	}
 
 	return page_ent;
@@ -170,7 +146,7 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 
 void release_page_read(bufferpool* buffp, void* page_memory)
 {
-	page_entry* page_ent = buffp->page_entries_list[get_index_in_page_entries_list_from_page_memory_address(buffp, page_memory)];
+	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
 	release_read_lock(page_ent);
 }
 
@@ -191,13 +167,12 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 
 void release_page_write(bufferpool* buffp, void* page_memory)
 {
-	page_entry* page_ent = buffp->page_entries_list[get_index_in_page_entries_list_from_page_memory_address(buffp, page_memory)];
+	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
 	release_write_lock(page_ent);
 }
 
-void delete_page_entry_wrapper(const void* key, const void* value, const void* additional_params)
+static void delete_page_entry_wrapper(page_entry* page_ent)
 {
-	page_entry* page_ent = (page_entry*) value;
 	acquire_read_lock(page_ent);
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 	if(page_ent->is_dirty)
@@ -212,12 +187,10 @@ void delete_page_entry_wrapper(const void* key, const void* value, const void* a
 
 void delete_bufferpool(bufferpool* buffp)
 {
-	free(buffp->page_entries_list);
-	for_each_entry_in_hash(buffp->data_page_entries, delete_page_entry_wrapper, NULL);
+	for_each_page_entry_in_page_entry_mapper(buffp->mapp_p, delete_page_entry_wrapper);
 	close_dbfile(buffp->db_file);
 	free(buffp->memory);
-	delete_hashmap(buffp->data_page_entries);
-	delete_rwlock(buffp->data_page_entries_lock);
+	delete_page_entry_mapper(buffp->mapp_p);
 	delete_lru(buffp->lru_p);
 	free(buffp);
 }
