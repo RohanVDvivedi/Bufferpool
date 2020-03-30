@@ -12,16 +12,18 @@
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_PAGES_IN_BUFFER_POOL 3
 
-#define FIXED_THREAD_POOL_SIZE 10
+#define FIXED_THREAD_POOL_SIZE 1
+//0
 #define COUNT_OF_IO_TASKS 100
 
+#define PAGE_DATA_FORMAT_PREFIX_CHARS 11
 #define PAGE_DATA_FORMAT "Hello World, This is page number %u -> Buffer pool manager works, %d writes completed..."
 
 typedef struct io_task io_task;
 struct io_task
 {
 	// if set we write, else we perforn a read
-	uint8_t do_write;
+	int8_t do_write;
 
 	// the page_id on which task has to be performed
 	uint32_t page_id;
@@ -29,6 +31,7 @@ struct io_task
 
 bufferpool* bpm = NULL;
 executor* exe = NULL;
+io_task io_tasks_init_pages[PAGES_IN_HEAP_FILE];
 io_task io_tasks[COUNT_OF_IO_TASKS];
 void* io_task_execute(io_task* io_t_p);
 
@@ -56,6 +59,14 @@ int main(int argc, char **argv)
 	exe = get_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
+	for(uint32_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
+	{
+		io_task* io_t_p = &(io_tasks_init_pages[i]);
+		io_t_p->do_write = -1;
+		io_t_p->page_id = i;
+		submit_function(exe, (void*(*)(void*))io_task_execute, io_t_p);
+	}
+
 	for(uint32_t i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		io_task* io_t_p = &(io_tasks[i]);
@@ -79,6 +90,7 @@ int main(int argc, char **argv)
 
 void page_read_and_print(uint32_t page_id);
 void page_write_and_print(uint32_t page_id);
+void blankify_new_page(uint32_t page_id);
 
 void* io_task_execute(io_task* io_t_p)
 {
@@ -87,10 +99,17 @@ void* io_task_execute(io_task* io_t_p)
 		case 1:
 		{
 			page_write_and_print(io_t_p->page_id);
+			break;
 		}
 		case 0:
 		{
 			page_read_and_print(io_t_p->page_id);
+			break;
+		}
+		case -1:
+		{
+			blankify_new_page(io_t_p->page_id);
+			break;
 		}
 		default:
 		{
@@ -104,11 +123,12 @@ void page_read_and_print(uint32_t page_id)
 {
 	void* page_mem = get_page_to_read(bpm, page_id);
 	int writes = -1;
+	int is_blank = strncmp(PAGE_DATA_FORMAT, page_mem, PAGE_DATA_FORMAT_PREFIX_CHARS);
 	uint32_t page_id_temp = 0;
 	printf("page %u locked for read\n", page_id);
 	printf("Data read from page %u : \t <%s>\n", page_id, (char*)page_mem);
 	sscanf(page_mem, PAGE_DATA_FORMAT, &page_id_temp, &writes);
-	if(page_id != page_id_temp)
+	if(page_id != page_id_temp && !is_blank)
 	{
 		printf("DATA ACCESS CONTENTION, requested %u page for read, received %u page\n", page_id, page_id_temp);
 	}
@@ -120,21 +140,43 @@ void page_read_and_print(uint32_t page_id)
 void page_write_and_print(uint32_t page_id)
 {
 	void* page_mem = get_page_to_write(bpm, page_id);
-	int writes = -1;
+	int writes;
+	int is_blank = strncmp(PAGE_DATA_FORMAT, page_mem, PAGE_DATA_FORMAT_PREFIX_CHARS);
 	uint32_t page_id_temp = 0;
 	printf("page %u locked for write\n", page_id);
-	printf("old Data written on page %u : \t <%s>\n", page_id, (char*)page_mem);
-	sscanf(page_mem, PAGE_DATA_FORMAT, &page_id_temp, &writes);
-	if(page_id != page_id_temp)
+	if(is_blank)
+	{
+		printf("page %u is blank\n", page_id);
+		page_id_temp = page_id;
+		writes = 0;
+	}
+	else
+	{
+		printf("old Data written on page %u : \t <%s>\n", page_id, (char*)page_mem);
+		sscanf(page_mem, PAGE_DATA_FORMAT, &page_id_temp, &writes);
+	}
+	if(page_id != page_id_temp && !is_blank)
 	{
 		printf("DATA ACCESS CONTENTION, requested %u page for write, received %u page\n", page_id, page_id_temp);
 	}
 	else
 	{
-		memset(page_mem, ' ', 4096);
+		memset(page_mem, ' ', PAGE_SIZE_IN_BYTES);
 		sprintf(page_mem, PAGE_DATA_FORMAT, page_id, ++writes);
 		printf("new Data written on page %u : \t <%s>\n", page_id, (char*)page_mem);
 	}
+	release_page_write(bpm, page_mem);
+	printf("page %u released from write lock\n\n", page_id);
+}
+
+void blankify_new_page(uint32_t page_id)
+{
+	void* page_mem = get_page_to_write(bpm, page_id);
+	printf("page %u locked for write\n", page_id);
+	printf("page %u is being made blank\n", page_id);
+	memset(page_mem, ' ', PAGE_SIZE_IN_BYTES);
+	sprintf(page_mem, PAGE_DATA_FORMAT, page_id, 0);
+	printf("new Data written on page %u : \t <%s>\n", page_id, (char*)page_mem);
 	release_page_write(bpm, page_mem);
 	printf("page %u released from write lock\n\n", page_id);
 }
