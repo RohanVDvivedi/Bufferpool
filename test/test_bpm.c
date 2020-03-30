@@ -7,7 +7,7 @@
 
 #include<executor.h>
 
-#define BLOCKS_PER_PAGE 8
+#define PAGE_SIZE_IN_BYTES 4096
 
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_PAGES_IN_BUFFER_POOL 3
@@ -42,8 +42,16 @@ int main(int argc, char **argv)
 		strcpy(file_name, argv[1]);
 	}
 
-	bpm = get_bufferpool(file_name, MAX_PAGES_IN_BUFFER_POOL, BLOCKS_PER_PAGE);
-	printf("Bufferpool built for file %s\n\n", file_name);
+	bpm = get_bufferpool(file_name, MAX_PAGES_IN_BUFFER_POOL, PAGE_SIZE_IN_BYTES);
+	if(bpm != NULL)
+	{
+		printf("Bufferpool built for file %s\n\n", file_name);
+	}
+	else
+	{
+		printf("Bufferpool can not be built for file %s, please check errors\n\n", file_name);
+		return 0;
+	}
 
 	exe = get_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);

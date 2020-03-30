@@ -20,7 +20,7 @@ static uint32_t get_index_in_page_entries_list_from_page_memory_address(bufferpo
 	return ((uintptr_t)(page_memory - buffp->first_aligned_block)) / (buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 }
 
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t number_of_blocks_per_page)
+bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes)
 {
 	// try and open a dtabase file
 	dbfile* dbf = open_dbfile(heap_file_name);
@@ -36,13 +36,19 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 		printf("Database file can not be created, Buffer pool manager can not be created\n");
 		return NULL;
 	}
+	else if(page_size_in_bytes % get_block_size(dbf))
+	{
+		printf("Provided page_size is not supported by the disk it must be a multiple of %u, Buffer pool manager can not be created\n", get_block_size(dbf));
+		close_dbfile(dbf);
+		return NULL;
+	}
 
 	bufferpool* buffp = (bufferpool*) malloc(sizeof(bufferpool));
 
 	buffp->db_file = dbf;
 
 	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
-	buffp->number_of_blocks_per_page = number_of_blocks_per_page;
+	buffp->number_of_blocks_per_page = page_size_in_bytes / get_block_size(buffp->db_file);
 
 	buffp->memory = malloc((buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file)) + get_block_size(buffp->db_file));
 	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
