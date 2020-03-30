@@ -8,7 +8,6 @@
 #include<rwlock.h>
 
 #include<dbfile.h>
-#include<disk_access_functions.h>
 
 // in general
 // page_id = block_id / blocks_count

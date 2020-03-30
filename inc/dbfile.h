@@ -43,6 +43,12 @@ uint32_t get_size(dbfile* dbfile_p);
 // resize the file to contain a fixed number of blocks
 int resize_file(dbfile* dbfile_p, uint32_t num_blocks);
 
+// writes a given number of blocks starting with starting_block_id, and write their contents with data pointer to by blocks_in_main_memory pointer
+int write_blocks_to_disk(dbfile* dbfile_p, void* blocks_in_main_memory, uint32_t starting_block_id, uint32_t num_blocks_to_write);
+
+// reads a given number of blocks starting with starting_block_id, and store their contents to memory location pointed to by blocks_in_main_memory
+int read_blocks_from_disk(dbfile* dbfile_p, void* blocks_in_main_memory, uint32_t starting_block_id, uint32_t num_blocks_to_read);
+
 int close_dbfile(dbfile* dbfile_p);
 
 #endif

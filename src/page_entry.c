@@ -62,12 +62,12 @@ void release_write_lock(page_entry* page_ent)
 
 int read_page_from_disk(page_entry* page_ent)
 {
-	return read_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
+	return read_blocks_from_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page);
 }
 
 int write_page_to_disk(page_entry* page_ent)
 {
-	return write_blocks(page_ent->dbfile_p->db_fd, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page, get_block_size(page_ent->dbfile_p));
+	return write_blocks_to_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page);
 }
 
 void delete_page_entry(page_entry* page_ent)
