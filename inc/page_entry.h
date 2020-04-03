@@ -5,6 +5,7 @@
 #include<stdlib.h>
 #include<stdint.h>
 
+#include<pthread.h>
 #include<rwlock.h>
 
 #include<dbfile.h>
@@ -20,7 +21,7 @@
 typedef struct page_entry page_entry;
 struct page_entry
 {
-	// this lock ensures only 1 thread attempts to read or write the page to the disk
+	// this lock ensures only 1 thread attempts to access the page_entry at any given moment
 	pthread_mutex_t page_entry_lock;
 
 	// this is the database file, to which the page_entry belongs to
