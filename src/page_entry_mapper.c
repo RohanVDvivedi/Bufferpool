@@ -44,9 +44,20 @@ page_entry_mapper* get_page_entry_mapper(uint32_t page_entry_count, uint32_t pag
 
 page_entry* get_page_entry_by_page_id(page_entry_mapper* pem_p, uint32_t page_id)
 {
-	page_entry* page_ent = NULL;
 	read_lock(pem_p->data_page_entries_lock);
-	page_ent = (page_entry*) find_value_from_hash(pem_p->data_page_entries, &page_id);
+	page_entry* page_ent = (page_entry*) find_value_from_hash(pem_p->data_page_entries, &page_id);
+	read_unlock(pem_p->data_page_entries_lock);
+	return page_ent;
+}
+
+page_entry* get_page_entry_by_page_id_removing_it_from_lru(page_entry_mapper* pem_p, uint32_t page_id, lru* lru_p)
+{
+	read_lock(pem_p->data_page_entries_lock);
+	page_entry* page_ent = (page_entry*) find_value_from_hash(pem_p->data_page_entries, &page_id);
+	if(page_ent != NULL)
+	{
+		remove_page_entry_from_lru(lru_p, page_ent);
+	}
 	read_unlock(pem_p->data_page_entries_lock);
 	return page_ent;
 }

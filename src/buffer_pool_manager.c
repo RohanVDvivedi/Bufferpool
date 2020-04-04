@@ -54,7 +54,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	page_entry* page_ent = NULL;
 
 	// search of the page in buffer pool
-	page_ent = get_page_entry_by_page_id(buffp->mapp_p, page_id);
+	page_ent = get_page_entry_by_page_id_removing_it_from_lru(buffp->mapp_p, page_id, buffp->lru_p);
 
 	// return it if a page is found
 	if(page_ent != NULL)
@@ -70,14 +70,20 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 		if(page_ent == NULL)
 		{
 			page_ent = get_swapable_page(buffp->lru_p);
-			pthread_mutex_lock(&(page_ent->page_entry_lock));
-			if(!page_ent->is_free)
+
+			// if all the pages are being accessed for io by different threads,
+			// we might not have any page for swapping
+			if(page_ent != NULL)
 			{
-				delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+				pthread_mutex_lock(&(page_ent->page_entry_lock));
+				if(!page_ent->is_free)
+				{
+					delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+				}
+				page_ent->expected_page_id = page_id;
+				insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
+				pthread_mutex_unlock(&(page_ent->page_entry_lock));
 			}
-			page_ent->expected_page_id = page_id;
-			insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
-			pthread_mutex_unlock(&(page_ent->page_entry_lock));
 		}
 		write_unlock(buffp->mapp_p->data_page_entries_lock);
 	}
@@ -120,27 +126,45 @@ static void do_page_entry_clean_up(page_entry* page_ent)
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
-	mark_as_recently_used(buffp->lru_p, page_ent);
+
+	// first thing you do is acquire the read lock
 	acquire_read_lock(page_ent);
+
+	// then try and check if it needs any io, if it requires an io, 
+	// you will be required to take write lock to perform the io
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 	if(is_page_entry_sync_up_required(page_ent))
 	{
+		// since io is required, we need to acquire write lock instead 
+		// but for this we first need to release the read lock that we have already acquired
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 		release_read_lock(page_ent);
-		acquire_write_lock(page_ent);
-		pthread_mutex_lock(&(page_ent->page_entry_lock));
-			if(is_page_entry_sync_up_required(page_ent))
-			{
-				do_page_entry_sync_up(page_ent);
-			}
-		pthread_mutex_unlock(&(page_ent->page_entry_lock));
-		release_write_lock(page_ent);
+
+		// here since the page entry is not present in the lru struct,
+		// there is no possibility that the page entry will be reassigned to hold some other page
+
+			acquire_write_lock(page_ent);
+			pthread_mutex_lock(&(page_ent->page_entry_lock));
+				if(is_page_entry_sync_up_required(page_ent))
+				{
+					do_page_entry_sync_up(page_ent);
+				}
+			pthread_mutex_unlock(&(page_ent->page_entry_lock));
+			release_write_lock(page_ent);
+
+		// acquire read lock on the page again
 		acquire_read_lock(page_ent);
 	}
 	else
 	{
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
+
+	// just as to mark that the page is recently in use, or was used, this marking is managed by lru struct
+	// this is to be done only after you have a read or write lock on page memory
+	// and once you are sure that no io is required to be done on it
+	mark_as_recently_used(buffp->lru_p, page_ent);
+
 	return page_ent->page_memory;
 }
 
@@ -153,8 +177,8 @@ void release_page_read(bufferpool* buffp, void* page_memory)
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
-	mark_as_recently_used(buffp->lru_p, page_ent);
 	acquire_write_lock(page_ent);
+	
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 	if(is_page_entry_sync_up_required(page_ent))
 	{
@@ -162,6 +186,12 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 	}
 	page_ent->is_dirty = 1;
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
+	// just as to mark that the page is recently in use, or was used, this marking is managed by lru struct
+	// this is to be done only after you have a read or write lock on page memory
+	// and once you are sure that no io is required to be done on it
+	mark_as_recently_used(buffp->lru_p, page_ent);
+
 	return page_ent->page_memory;
 }
 
