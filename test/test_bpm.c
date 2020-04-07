@@ -18,6 +18,8 @@
 #define PAGE_DATA_FORMAT_PREFIX_CHARS 11
 #define PAGE_DATA_FORMAT "Hello World, This is page number %u -> Buffer pool manager works, %d writes completed..."
 
+#define BLANK_ALL_PAGES_BEFORE_TESTS 1
+
 typedef struct io_task io_task;
 struct io_task
 {
@@ -30,9 +32,9 @@ struct io_task
 
 bufferpool* bpm = NULL;
 executor* exe = NULL;
-io_task io_tasks_init_pages[PAGES_IN_HEAP_FILE];
 io_task io_tasks[COUNT_OF_IO_TASKS];
 void* io_task_execute(io_task* io_t_p);
+void blankify_new_page(uint32_t page_id);
 
 int main(int argc, char **argv)
 {
@@ -55,22 +57,41 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	exe = get_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0);
-	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
-
-	for(uint32_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
+	if(BLANK_ALL_PAGES_BEFORE_TESTS)
 	{
-		io_task* io_t_p = &(io_tasks_init_pages[i]);
-		io_t_p->do_write = -1;
-		io_t_p->page_id = i;
-		submit_function(exe, (void*(*)(void*))io_task_execute, io_t_p);
+		printf("Sequentially blanking all pages before the io test\n\n");
+		for(uint32_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
+		{
+			blankify_new_page(i);
+		}
 	}
 
+	exe = get_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0);
+	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
+
+	printf("Initializing IO tasks\n\n");
+	int read_tasks = 0;
+	int write_tasks = 0;
 	for(uint32_t i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		io_task* io_t_p = &(io_tasks[i]);
 		io_t_p->do_write = rand() % 2;
 		io_t_p->page_id = (uint32_t)(rand() % PAGES_IN_HEAP_FILE);
+
+		if(io_t_p->do_write)
+		{
+			write_tasks++;
+		}
+		else
+		{
+			read_tasks++;
+		}
+	}
+
+	printf("Initialized %d read IO tasks and %d write IO tasks, submitting them now\n\n", read_tasks, write_tasks);
+	for(uint32_t i = 0; i < COUNT_OF_IO_TASKS; i++)
+	{
+		io_task* io_t_p = &(io_tasks[i]);
 		submit_function(exe, (void*(*)(void*))io_task_execute, io_t_p);
 	}
 
@@ -89,7 +110,6 @@ int main(int argc, char **argv)
 
 void page_read_and_print(uint32_t page_id);
 void page_write_and_print(uint32_t page_id);
-void blankify_new_page(uint32_t page_id);
 
 void* io_task_execute(io_task* io_t_p)
 {
@@ -103,11 +123,6 @@ void* io_task_execute(io_task* io_t_p)
 		case 0:
 		{
 			page_read_and_print(io_t_p->page_id);
-			break;
-		}
-		case -1:
-		{
-			blankify_new_page(io_t_p->page_id);
 			break;
 		}
 		default:
