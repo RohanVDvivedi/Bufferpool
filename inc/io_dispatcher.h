@@ -29,6 +29,9 @@ io_dispatcher* get_io_dispatcher(unsigned int thread_count);
 // submit a page_entry for io job, this job will be responsible for making the page up and ready for io
 job* submit_page_entry_for_io(io_dispatcher* iod_p, page_entry* page_ent);
 
+// it will wait for the completion of the job and return the page_entry
+page_entry* get_page_entry_after_io(job* job_p);
+
 void delete_io_dispatcher_after_completion(io_dispatcher* iod_p);
 
 #endif

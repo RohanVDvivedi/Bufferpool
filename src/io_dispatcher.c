@@ -22,6 +22,19 @@ static void do_page_entry_sync_up(page_entry* page_ent)
 	}
 }
 
+static page_entry* io_task(page_entry* page_ent)
+{
+	acquire_write_lock(page_ent);
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+		if(is_page_entry_sync_up_required(page_ent))
+		{
+			do_page_entry_sync_up(page_ent);
+		}
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	release_write_lock(page_ent);
+	return page_ent;
+}
+
 io_dispatcher* get_io_dispatcher(unsigned int thread_count)
 {
 	io_dispatcher* iod_p = (io_dispatcher*) malloc(sizeof(io_dispatcher));
@@ -30,7 +43,16 @@ io_dispatcher* get_io_dispatcher(unsigned int thread_count)
 
 job* submit_page_entry_for_io(io_dispatcher* iod_p, page_entry* page_ent)
 {
+	job* job_p = get_job((void*(*)(void*))io_task, page_ent);
+	submit_job(iod_p->io_task_executor, job_p);
+	return job_p;
+}
 
+page_entry* get_page_entry_after_io(job* job_p)
+{
+	page_entry* page_ent = (page_entry*) get_result(job_p);
+	delete_job(job_p);
+	return page_ent;
 }
 
 void delete_io_dispatcher_after_completion(io_dispatcher* iod_p)
