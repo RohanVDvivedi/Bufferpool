@@ -98,11 +98,11 @@ page_entry* get_page_entry_by_page_memory(page_entry_mapper* pem_p, void* page_m
 	return pem_p->page_entries_list[page_entry_index];
 }
 
-void for_each_page_entry_in_page_entry_mapper(page_entry_mapper* pem_p, void (*operation)(page_entry* page_ent))
+void for_each_page_entry_in_page_entry_mapper(page_entry_mapper* pem_p, void (*operation)(page_entry* page_ent, void* additional_param), void* additional_param)
 {
 	for(uint32_t index = 0; index < pem_p->page_entry_count; index++)
 	{
-		operation(pem_p->page_entries_list[index]);
+		operation(pem_p->page_entries_list[index], additional_param);
 	}
 }
 

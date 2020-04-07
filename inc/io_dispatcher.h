@@ -14,8 +14,15 @@
 	It is your responsibility to submit only one job for a page_entry at a time, else there could be contention
 	you may submit another io job once the job you currently waited on completed
 
-	submit_page_entry_for_io is the main function, it will return a job after you submit a page_id for io
-	the job will return the same page_entry that you provided
+	supported tasks by the io_dispatcher
+
+	sync_up task
+		-> if the page is dirty and is not a free page, write it to disk
+		-> if the expected page_id and the actual page_id do not match, 
+			-> then read a new page from disk into the given page entry
+
+	clean up task
+		-> if the page is dirty and is not a free page, write it to disk
 */
 
 typedef struct io_dispatcher io_dispatcher;
@@ -26,11 +33,16 @@ struct io_dispatcher
 
 io_dispatcher* get_io_dispatcher(unsigned int thread_count);
 
-// submit a page_entry for io job, this job will be responsible for making the page up and ready for io
-job* submit_page_entry_for_io(io_dispatcher* iod_p, page_entry* page_ent);
+// submit a page_entry for io sync up job
+// you can wait on this to complete, by using the function get_page_entry_after_io
+job* submit_page_entry_for_sync_up(io_dispatcher* iod_p, page_entry* page_ent);
 
 // it will wait for the completion of the job and return the page_entry
-page_entry* get_page_entry_after_io(job* job_p);
+page_entry* get_page_entry_after_sync_up(job* job_p);
+
+// submit a page_entry for io clean up, you can not wait for the clean up to complete, 
+// though you can wait for the completion of all such tasks by using delete_io_dispatcher_after_completion function
+void submit_page_entry_for_clean_up(io_dispatcher* iod_p, page_entry* page_ent);
 
 void delete_io_dispatcher_after_completion(io_dispatcher* iod_p);
 

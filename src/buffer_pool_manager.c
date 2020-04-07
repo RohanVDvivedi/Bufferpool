@@ -37,6 +37,8 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->lru_p = get_lru();
 
+	buffp->iod_p = get_io_dispatcher(1);
+
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
@@ -64,6 +66,8 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	// else if it does not exist in buffer pool, we might have to read it from disk first
 	else if(page_ent == NULL)
 	{
+		job* io_sync_up_job = NULL;
+
 		while(page_ent == NULL)
 		{
 			wait_if_lru_is_empty(buffp->lru_p);
@@ -85,12 +89,17 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 						delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
 					}
 					page_ent->expected_page_id = page_id;
+					io_sync_up_job = submit_page_entry_for_sync_up(buffp->iod_p, page_ent);
 					insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
 					pthread_mutex_unlock(&(page_ent->page_entry_lock));
 				}
 			}
 			write_unlock(buffp->mapp_p->data_page_entries_lock);
+
+			// wait for the io sync up job to complete
+			get_page_entry_after_sync_up(io_sync_up_job);
 		}
+
 	}
 
 	return page_ent;
@@ -135,37 +144,7 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 	// first thing you do is acquire the read lock
 	acquire_read_lock(page_ent);
 
-	printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
-
-	// then try and check if it needs any io, if it requires an io, 
-	// you will be required to take write lock to perform the io
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	if(page_id != page_ent->page_id && is_page_entry_sync_up_required(page_ent))
-	{
-		// since io is required, we need to acquire write lock instead 
-		// but for this we first need to release the read lock that we have already acquired
-		pthread_mutex_unlock(&(page_ent->page_entry_lock));
-		release_read_lock(page_ent);
-
-		// here since the page entry is not present in the lru struct,
-		// there is no possibility that the page entry will be reassigned to hold some other page
-
-			acquire_write_lock(page_ent);
-			pthread_mutex_lock(&(page_ent->page_entry_lock));
-				if(is_page_entry_sync_up_required(page_ent))
-				{
-					do_page_entry_sync_up(page_ent);
-				}
-			pthread_mutex_unlock(&(page_ent->page_entry_lock));
-			release_write_lock(page_ent);
-
-		// acquire read lock on the page again
-		acquire_read_lock(page_ent);
-	}
-	else
-	{
-		pthread_mutex_unlock(&(page_ent->page_entry_lock));
-	}
+	//printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
 
 	// just as to mark that the page is recently in use, or was used, this marking is managed by lru struct
 	// this is to be done only after you have a read or write lock on page memory
@@ -186,13 +165,9 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 	acquire_write_lock(page_ent);
 
-	printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
+	//printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
 	
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	if(page_id != page_ent->page_id && is_page_entry_sync_up_required(page_ent))
-	{
-		do_page_entry_sync_up(page_ent);
-	}
 	page_ent->is_dirty = 1;
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
@@ -210,27 +185,19 @@ void release_page_write(bufferpool* buffp, void* page_memory)
 	release_write_lock(page_ent);
 }
 
-static void delete_page_entry_wrapper(page_entry* page_ent)
+static void delete_page_entry_wrapper(page_entry* page_ent, io_dispatcher* iod_p)
 {
-	acquire_read_lock(page_ent);
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	if(page_ent->is_dirty)
-	{
-		write_page_to_disk(page_ent);
-		page_ent->is_dirty = 0;
-	}
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
-	release_read_lock(page_ent);
-	delete_page_entry(page_ent);
+	submit_page_entry_for_clean_up(iod_p, page_ent);
 }
 
 void delete_bufferpool(bufferpool* buffp)
 {
-	for_each_page_entry_in_page_entry_mapper(buffp->mapp_p, delete_page_entry_wrapper);
+	for_each_page_entry_in_page_entry_mapper(buffp->mapp_p, (void(*)(page_entry*,void*))delete_page_entry_wrapper, buffp->iod_p);
+	delete_io_dispatcher_after_completion(buffp->iod_p);
 	close_dbfile(buffp->db_file);
 	free(buffp->memory);
-	delete_page_entry_mapper(buffp->mapp_p);
 	delete_lru(buffp->lru_p);
+	delete_page_entry_mapper(buffp->mapp_p);
 	free(buffp);
 }
 

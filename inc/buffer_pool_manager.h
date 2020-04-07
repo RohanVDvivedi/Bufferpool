@@ -9,6 +9,7 @@
 #include<page_entry.h>
 #include<page_entry_mapper.h>
 #include<least_recently_used.h>
+#include<io_dispatcher.h>
 
 // the provided implementation of the bufferpool is a LRU cache
 // for the unordered pages of a heap file
@@ -39,6 +40,8 @@ struct bufferpool
 	page_entry_mapper* mapp_p;
 
 	lru* lru_p;
+
+	io_dispatcher* iod_p;
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name

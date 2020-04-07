@@ -65,7 +65,7 @@ int insert_page_entry_to_map_by_page_memory(page_entry_mapper* pem_p, page_entry
 page_entry* get_page_entry_by_page_memory(page_entry_mapper* pem_p, void* page_memory);
 
 // this helps us perform an operation, on all the page_entries sequentially
-void for_each_page_entry_in_page_entry_mapper(page_entry_mapper* pem_p, void (*operation)(page_entry* page_ent));
+void for_each_page_entry_in_page_entry_mapper(page_entry_mapper* pem_p, void (*operation)(page_entry* page_ent, void* additional_param), void* additional_param);
 
 void delete_page_entry_mapper(page_entry_mapper* pem_p);
 
