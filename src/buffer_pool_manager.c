@@ -135,10 +135,12 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 	// first thing you do is acquire the read lock
 	acquire_read_lock(page_ent);
 
+	printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
+
 	// then try and check if it needs any io, if it requires an io, 
 	// you will be required to take write lock to perform the io
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	if(is_page_entry_sync_up_required(page_ent))
+	if(page_id != page_ent->page_id && is_page_entry_sync_up_required(page_ent))
 	{
 		// since io is required, we need to acquire write lock instead 
 		// but for this we first need to release the read lock that we have already acquired
@@ -183,9 +185,11 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 	acquire_write_lock(page_ent);
+
+	printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
 	
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	if(is_page_entry_sync_up_required(page_ent))
+	if(page_id != page_ent->page_id && is_page_entry_sync_up_required(page_ent))
 	{
 		do_page_entry_sync_up(page_ent);
 	}
