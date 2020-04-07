@@ -64,28 +64,33 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	// else if it does not exist in buffer pool, we might have to read it from disk first
 	else if(page_ent == NULL)
 	{
-		// TODO
-		write_lock(buffp->mapp_p->data_page_entries_lock);
-		page_ent = (page_entry*) find_value_from_hash(buffp->mapp_p->data_page_entries, &page_id);
-		if(page_ent == NULL)
+		while(page_ent == NULL)
 		{
-			page_ent = get_swapable_page(buffp->lru_p);
+			wait_if_lru_is_empty(buffp->lru_p);
 
-			// if all the pages are being accessed for io by different threads,
-			// we might not have any page for swapping
-			if(page_ent != NULL)
+			// TODO
+			write_lock(buffp->mapp_p->data_page_entries_lock);
+			page_ent = (page_entry*) find_value_from_hash(buffp->mapp_p->data_page_entries, &page_id);
+			if(page_ent == NULL)
 			{
-				pthread_mutex_lock(&(page_ent->page_entry_lock));
-				if(!page_ent->is_free)
+				page_ent = get_swapable_page(buffp->lru_p);
+
+				// if all the pages are being accessed for io by different threads,
+				// we might not have any page for swapping
+				if(page_ent != NULL)
 				{
-					delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+					pthread_mutex_lock(&(page_ent->page_entry_lock));
+					if(!page_ent->is_free)
+					{
+						delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+					}
+					page_ent->expected_page_id = page_id;
+					insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
+					pthread_mutex_unlock(&(page_ent->page_entry_lock));
 				}
-				page_ent->expected_page_id = page_id;
-				insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
-				pthread_mutex_unlock(&(page_ent->page_entry_lock));
 			}
+			write_unlock(buffp->mapp_p->data_page_entries_lock);
 		}
-		write_unlock(buffp->mapp_p->data_page_entries_lock);
 	}
 
 	return page_ent;

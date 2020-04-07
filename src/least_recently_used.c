@@ -3,6 +3,7 @@
 lru* get_lru()
 {
 	lru* lru_p = (lru*) malloc(sizeof(lru));
+	pthread_cond_init(&(lru_p->wait_for_empty), NULL);
 	lru_p->page_entries = get_linkedlist(SIMPLE, NULL);
 	pthread_mutex_init(&(lru_p->page_entries_lock), NULL);
 	return lru_p;
@@ -21,6 +22,16 @@ page_entry* get_swapable_page(lru* lru_p)
 		}
 	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 	return page_ent;
+}
+
+void wait_if_lru_is_empty(lru* lru_p)
+{
+	pthread_mutex_lock(&(lru_p->page_entries_lock));
+		while(lru_p->page_entries->tail == NULL)
+		{
+			pthread_cond_wait(&(lru_p->wait_for_empty), &(lru_p->page_entries_lock));
+		}
+	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 }
 
 // if the given page_entry is present in the lru
@@ -64,11 +75,13 @@ void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 		remove_page_entry_from_lru_if_present_unsafe(lru_p, page_ent);
 		insert_page_entry_in_lru_head_if_absent_unsafe(lru_p, page_ent);
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	pthread_cond_broadcast(&(lru_p->wait_for_empty));
 	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 }
 
 void delete_lru(lru* lru_p)
 {
+	pthread_cond_destroy(&(lru_p->wait_for_empty));
 	delete_linkedlist(lru_p->page_entries);
 	pthread_mutex_destroy(&(lru_p->page_entries_lock));
 	free(lru_p);
