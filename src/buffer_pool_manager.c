@@ -95,10 +95,10 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 				}
 			}
 			write_unlock(buffp->mapp_p->data_page_entries_lock);
-
-			// wait for the io sync up job to complete
-			get_page_entry_after_sync_up(io_sync_up_job);
 		}
+
+		// wait for the io sync up job to complete
+		get_page_entry_after_sync_up(io_sync_up_job);
 
 	}
 
