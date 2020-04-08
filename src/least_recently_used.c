@@ -60,9 +60,7 @@ static void insert_page_entry_in_lru_head_if_absent_unsafe(lru* lru_p, page_entr
 int remove_page_entry_from_lru(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->page_entries_lock));
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
 		int result = remove_page_entry_from_lru_if_present_unsafe(lru_p, page_ent);
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 	return result;
 }
@@ -70,10 +68,8 @@ int remove_page_entry_from_lru(lru* lru_p, page_entry* page_ent)
 void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->page_entries_lock));
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
 		remove_page_entry_from_lru_if_present_unsafe(lru_p, page_ent);
 		insert_page_entry_in_lru_head_if_absent_unsafe(lru_p, page_ent);
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	pthread_cond_broadcast(&(lru_p->wait_for_empty));
 	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 }
