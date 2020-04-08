@@ -1,6 +1,8 @@
 #ifndef PAGE_MEMORY_MAPPER
 #define PAGE_MEMORY_MAPPER
 
+#include<page_entry.h>
+
 /*
 	This is a very simple data structure that helps other data structures to better manage themselves
 	It is used in other major buffer pool data structures like lru and page_entry_mapper
@@ -26,7 +28,7 @@
 typedef struct page_memory_mapper page_memory_mapper;
 struct page_memory_mapper
 {
-	void* first_aligned_page_address;
+	void* first_page_memory_address;
 
 	uint32_t page_size_in_bytes;
 
@@ -35,18 +37,21 @@ struct page_memory_mapper
 	void** external_references;
 };
 
-page_memory_mapper* get_page_memory_mapper(void* first_aligned_page_address, uint32_t page_size_in_bytes, uint32_t number_of_pages);
+page_memory_mapper* get_page_memory_mapper(void* first_page_memory_address, uint32_t page_size_in_bytes, uint32_t number_of_pages);
 
-int is_valid_page_memory_address(void* page_mem);
+int is_valid_page_memory_address(page_memory_mapper* pmm_p, void* page_mem);
 
+// getters return NULL, if the page_mem provided is not a valid address
+// or if there is really a NULL stored corresponding to the page_memory, so double check if you receive NULL
 void* get_by_page_memory(page_memory_mapper* pmm_p, void* page_mem);
 
 void* get_by_page_entry(page_memory_mapper* pmm_p, page_entry* page_ent);
 
+// setters return 0, if the page_mem provided is not a valid address
 int set_by_page_memory(page_memory_mapper* pmm_p, void* page_mem, void* ref);
 
 int set_by_page_entry(page_memory_mapper* pmm_p, page_entry* page_ent, void* ref);
 
-void delete_page_memory_mapper();
+void delete_page_memory_mapper(page_memory_mapper* pmm_p);
 
 #endif
