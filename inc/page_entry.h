@@ -53,9 +53,6 @@ struct page_entry
 	// this lock ensures only 1 thread attempts to read or write the page to the disk
 	rwlock* page_memory_lock;
 
-	// this field does not belong to the pageentry, you can utilize it to store external greater structure refernce
-	void* external_lru_reference;
-
 	// properties of the page
 
 	// this is the priority of the page inside buffer pool cache

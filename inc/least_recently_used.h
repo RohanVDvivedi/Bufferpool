@@ -6,6 +6,7 @@
 #include<pthread.h>
 
 #include<page_entry.h>
+#include<page_memory_mapper.h>
 
 typedef struct lru lru;
 struct lru
@@ -18,9 +19,13 @@ struct lru
 	linkedlist* page_entries;
 	// lock, to protect it
 	pthread_mutex_t page_entries_lock;
+
+	// this is a mapping from page_entry to the corresponding node in the page_entries linkedlist
+	// this helps in easily identifying the node pointer when removing the node from the lru
+	page_memory_mapper* node_mapping;
 };
 
-lru* get_lru();
+lru* get_lru(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address);
 
 // you can be assured that the returned replacable page_entry will not exist in the lru,
 // if this function retuns NULL, it means the lru does not have a free page to spare to you

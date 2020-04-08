@@ -1,11 +1,12 @@
 #include<least_recently_used.h>
 
-lru* get_lru()
+lru* get_lru(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address)
 {
 	lru* lru_p = (lru*) malloc(sizeof(lru));
 	pthread_cond_init(&(lru_p->wait_for_empty), NULL);
 	lru_p->page_entries = get_linkedlist(SIMPLE, NULL);
 	pthread_mutex_init(&(lru_p->page_entries_lock), NULL);
+	lru_p->node_mapping = get_page_memory_mapper(first_page_memory_address, page_size_in_bytes, page_entry_count);
 	return lru_p;
 }
 
@@ -16,9 +17,7 @@ page_entry* get_swapable_page(lru* lru_p)
 		if(page_ent != NULL)
 		{
 			remove_tail(lru_p->page_entries);
-			pthread_mutex_lock(&(page_ent->page_entry_lock));
-				page_ent->external_lru_reference = NULL;
-			pthread_mutex_unlock(&(page_ent->page_entry_lock));
+			set_by_page_entry(lru_p->node_mapping, page_ent, NULL);
 		}
 	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 	return page_ent;
@@ -38,10 +37,10 @@ void wait_if_lru_is_empty(lru* lru_p)
 // remove the given page_entry from the lru
 static int remove_page_entry_from_lru_if_present_unsafe(lru* lru_p, page_entry* page_ent)
 {
-	if(page_ent->external_lru_reference != NULL)
+	if(get_by_page_entry(lru_p->node_mapping, page_ent) != NULL)
 	{
-		remove_node(lru_p->page_entries, page_ent->external_lru_reference);
-		page_ent->external_lru_reference = NULL;
+		remove_node(lru_p->page_entries, get_by_page_entry(lru_p->node_mapping, page_ent));
+		set_by_page_entry(lru_p->node_mapping, page_ent, NULL);
 		return 1;
 	}
 	return 0;
@@ -51,10 +50,10 @@ static int remove_page_entry_from_lru_if_present_unsafe(lru* lru_p, page_entry* 
 // insert the given page_entry to the top of the lru
 static void insert_page_entry_in_lru_head_if_absent_unsafe(lru* lru_p, page_entry* page_ent)
 {
-	if(page_ent->external_lru_reference == NULL)
+	if(get_by_page_entry(lru_p->node_mapping, page_ent) == NULL)
 	{
 		insert_head(lru_p->page_entries, page_ent);
-		page_ent->external_lru_reference = lru_p->page_entries->head;
+		set_by_page_entry(lru_p->node_mapping, page_ent, lru_p->page_entries->head);
 	}
 }
 
@@ -84,5 +83,6 @@ void delete_lru(lru* lru_p)
 	pthread_cond_destroy(&(lru_p->wait_for_empty));
 	delete_linkedlist(lru_p->page_entries);
 	pthread_mutex_destroy(&(lru_p->page_entries_lock));
+	delete_page_memory_mapper(lru_p->node_mapping);
 	free(lru_p);
 }
