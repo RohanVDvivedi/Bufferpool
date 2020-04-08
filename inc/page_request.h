@@ -26,8 +26,10 @@ struct page_request
 	job* io_job_reference;
 };
 
-void get_page_request();
+void get_page_request(uint32_t page_id, job* io_job);
 
-void delete_page_request();
+void increment_page_request_counter(page_request* page_req);
+
+void delete_page_request(page_request* page_req);
 
 #endif

@@ -1,9 +1,11 @@
 #ifndef PAGE_REQUEST_MAPPER_H
 #define PAGE_REQUEST_MAPPER_H
 
+#include<rwlock.h>
 #include<hashmap.h>
 #include<heap.h>
 
+#include<page_entry.h>
 #include<page_request.h>
 
 /*
