@@ -52,6 +52,8 @@ int set_by_page_memory(page_memory_mapper* pmm_p, void* page_mem, void* ref);
 
 int set_by_page_entry(page_memory_mapper* pmm_p, page_entry* page_ent, void* ref);
 
+void for_each_reference(page_memory_mapper* pmm_p, void (*operation)(void* reference, void* additional_param), void* additional_param);
+
 void delete_page_memory_mapper(page_memory_mapper* pmm_p);
 
 #endif

@@ -4,6 +4,7 @@
 #include<rwlock.h>
 #include<hashmap.h>
 
+#include<page_memory_mapper.h>
 #include<page_entry.h>
 #include<least_recently_used.h>
 
@@ -20,24 +21,10 @@
 typedef struct page_entry_mapper page_entry_mapper;
 struct page_entry_mapper
 {
-	// this is the address of the first page_entry allocated on the memory by the buffer pool 
-	void* first_page_memory_address;
-
-	// this is the size of each page_memory for all the page_entries
-	// this helps us build a small linear function for a LUT to map page_memory to page_entry
-	uint32_t page_size_in_bytes;
-
-	// this is the number of pages, that are being to be managed by the page_entry_mapper
-	// it is a constant, can not be changed once the page_entry_mapper is created
-	// it does is used to manage page_entries_list, it is not affected by functions get_page_entry_by_page_id and remove_page_entry_by_page_id
-	uint32_t page_entry_count;
-
-	// this is the list of page_entries, ordered by increasing order of addresses of page_memory for all the page_entries
-	// this will be used to get the page_entry, from the pointer (address) of the page_memory of that particular page_entry
-	// It will be a read only data structure, so no locks needed for this array,
 	// it will be used as a static look up table (LUT) to get address of the page_entry, by the address of memory of the page
 	// We must recall that the page_memory address remains the same, even if the page_entry is holding a page of different page_id
-	page_entry** page_entries_list;
+	// It will be a read only data structure, so no locks needed for it
+	page_memory_mapper* mem_to_entry_mapping;
 
 	// this is in memory hashmap of data pages in memory
 	// page_id vs page_entry
