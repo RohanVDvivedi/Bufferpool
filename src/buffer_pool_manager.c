@@ -37,7 +37,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->lru_p = get_lru(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
-	buffp->iod_p = get_io_dispatcher(1);
+	buffp->iod_p = get_io_dispatcher((buffp->maximum_pages_in_cache/32) + 4);
 
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
