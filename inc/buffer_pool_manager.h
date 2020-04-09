@@ -61,6 +61,11 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
 void release_page_read(bufferpool* buffp, void* page_memory);
 void release_page_write(bufferpool* buffp, void* page_memory);
 
+void request_prefetch(bufferpool* buffp, uint32_t page_id);
+
+void force_write_async(bufferpool* buffp, uint32_t page_id);
+void force_write_blocking(bufferpool* buffp, uint32_t page_id);
+
 // deletes the buffer pool manager, that will maintain a heap file given by the name heap_file_name
 void delete_bufferpool(bufferpool* buffp);
 
