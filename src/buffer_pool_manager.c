@@ -107,38 +107,6 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	return page_ent;
 }
 
-// you must have page_entry mutex locked, while calling this function
-static int is_page_entry_sync_up_required(page_entry* page_ent)
-{
-	return (page_ent->expected_page_id != page_ent->page_id || page_ent->is_free);
-}
-
-// you must have page_entry mutex locked and page memory write lock, while calling this function
-static void do_page_entry_sync_up(page_entry* page_ent)
-{
-	if(page_ent->is_dirty && !page_ent->is_free)
-	{
-		write_page_to_disk(page_ent);
-		page_ent->is_dirty = 0;
-	}
-	if(page_ent->expected_page_id != page_ent->page_id || page_ent->is_free)
-	{
-		update_page_id(page_ent, page_ent->expected_page_id);
-		read_page_from_disk(page_ent);
-		page_ent->is_free = 0;
-	}
-}
-
-// you must have page_entry mutex locked and page memory read lock, while calling this function
-static void do_page_entry_clean_up(page_entry* page_ent)
-{
-	if(page_ent->is_dirty && !page_ent->is_free)
-	{
-		write_page_to_disk(page_ent);
-		page_ent->is_dirty = 0;
-	}
-}
-
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
