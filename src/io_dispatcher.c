@@ -16,7 +16,7 @@ static void do_page_entry_sync_up(page_entry* page_ent)
 	}
 	if(page_ent->expected_page_id != page_ent->page_id || page_ent->is_free)
 	{
-		update_page_id(page_ent, page_ent->expected_page_id);
+		page_ent->page_id = page_ent->expected_page_id;
 		read_page_from_disk(page_ent);
 		page_ent->is_free = 0;
 	}

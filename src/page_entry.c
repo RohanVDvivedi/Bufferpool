@@ -11,7 +11,7 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 	page_ent->dbfile_p = dbfile_p;
 
 	page_ent->page_id = 0;
-	page_ent->block_id = 0;
+
 	page_ent->number_of_blocks_in_page = number_of_blocks_in_page;
 
 	page_ent->priority = 0;
@@ -30,12 +30,6 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 	page_ent->page_memory_lock = get_rwlock();
 	
 	return page_ent;
-}
-
-void update_page_id(page_entry* page_ent, uint32_t page_id)
-{
-	page_ent->page_id = page_id;
-	page_ent->block_id = page_id * page_ent->number_of_blocks_in_page;
 }
 
 void acquire_read_lock(page_entry* page_ent)
@@ -60,12 +54,12 @@ void release_write_lock(page_entry* page_ent)
 
 int read_page_from_disk(page_entry* page_ent)
 {
-	return read_blocks_from_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page);
+	return read_blocks_from_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->page_id * page_ent->number_of_blocks_in_page, page_ent->number_of_blocks_in_page);
 }
 
 int write_page_to_disk(page_entry* page_ent)
 {
-	return write_blocks_to_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->block_id, page_ent->number_of_blocks_in_page);
+	return write_blocks_to_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->page_id * page_ent->number_of_blocks_in_page, page_ent->number_of_blocks_in_page);
 }
 
 void delete_page_entry(page_entry* page_ent)

@@ -33,10 +33,6 @@ struct page_entry
 	// this is the actual page id of the page that the buffer pool is holding
 	uint32_t page_id;
 
-	// this is identifier of the first block of this page
-	// remember: every page is built of same number of consecutive blocks
-	uint32_t block_id;
-
 	// this is the number of blocks, that make up this page
 	uint32_t number_of_blocks_in_page;
 
@@ -72,8 +68,6 @@ void acquire_write_lock(page_entry* page_ent);
 void release_read_lock(page_entry* page_ent);
 
 void release_write_lock(page_entry* page_ent);
-
-void update_page_id(page_entry* page_ent, uint32_t page_id);
 
 int read_page_from_disk(page_entry* page_ent);
 
