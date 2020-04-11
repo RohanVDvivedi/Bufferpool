@@ -84,13 +84,13 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 				if(page_ent != NULL)
 				{
 					pthread_mutex_lock(&(page_ent->page_entry_lock));
-					if(!page_ent->is_free)
-					{
-						delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
-					}
-					page_ent->expected_page_id = page_id;
-					io_sync_up_job = submit_page_entry_for_sync_up(buffp->iod_p, page_ent);
-					insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
+						if(!page_ent->is_free)
+						{
+							delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+						}
+						page_ent->expected_page_id = page_id;
+						io_sync_up_job = submit_page_entry_for_sync_up(buffp->iod_p, page_ent);
+						insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
 					pthread_mutex_unlock(&(page_ent->page_entry_lock));
 				}
 			}
