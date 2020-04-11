@@ -93,7 +93,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 					insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
 					pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
-					get_page_entry_after_sync_up(io_sync_up_job);
+					//get_page_entry_after_sync_up(io_sync_up_job);
 				}
 			}
 			write_unlock(buffp->mapp_p->data_page_entries_lock);
@@ -102,7 +102,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 		// wait for the io sync up job to complete, if it was assigned
 		if(io_sync_up_job != NULL)
 		{
-			//get_page_entry_after_sync_up(io_sync_up_job);
+			get_page_entry_after_sync_up(io_sync_up_job);
 		}
 	}
 
