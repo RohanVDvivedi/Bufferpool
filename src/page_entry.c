@@ -14,14 +14,12 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 
 	page_ent->number_of_blocks_in_page = number_of_blocks_in_page;
 
-	page_ent->priority = 0;
-
-	// if this bit is set, you need to write this page to disk
+	// set appropriate bits for the page entry
 	page_ent->is_dirty = 0;
-
-	// A page is always free, when it is created, since it will only have garbage data on it
 	page_ent->is_free = 1;
+	page_ent->is_pinned = 0;
 
+	// this is the actual page memory that is assigned to this page_entry
 	page_ent->page_memory = page_memory;
 	// this lock protects the page memory
 	// all other attributes of this struct are protected by the page_entry_lock

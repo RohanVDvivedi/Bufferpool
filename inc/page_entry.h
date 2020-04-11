@@ -46,17 +46,12 @@ struct page_entry
 	// if the page is free, the page has no meaningfull data on it
 	uint8_t is_free;
 
+	// if the page is being used/going to be used by any of the thread, then this bit it required to be set
+	// if this bit is set, the buffer pool manager will not replace it, with any other page/data i.e. it is not swappable
+	uint8_t is_pinned;
+
 	// this lock ensures only 1 thread attempts to read or write the page to the disk
 	rwlock* page_memory_lock;
-
-	// properties of the page
-
-	// this is the priority of the page inside buffer pool cache
-	// higher the priority, higher are the chances of the page to stay in cache
-	// and gets preferred in getting written to disk
-	// lower priority pages are evicted first,
-	// when the buffer pool does not have free memory
-	uint8_t priority;
 };
 
 page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_of_blocks_in_page);
