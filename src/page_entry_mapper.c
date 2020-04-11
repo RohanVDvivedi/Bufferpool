@@ -41,6 +41,9 @@ page_entry* get_page_entry_by_page_id_removing_it_from_lru(page_entry_mapper* pe
 	page_entry* page_ent = (page_entry*) find_value_from_hash(pem_p->data_page_entries, &page_id);
 	if(page_ent != NULL)
 	{
+		pthread_mutex_lock(&(page_ent->page_entry_lock));
+		page_ent->pinned_by_count++;
+		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 		remove_page_entry_from_lru(lru_p, page_ent);
 	}
 	read_unlock(pem_p->data_page_entries_lock);

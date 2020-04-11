@@ -17,7 +17,8 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 	// set appropriate bits for the page entry
 	page_ent->is_dirty = 0;
 	page_ent->is_free = 1;
-	page_ent->is_pinned = 0;
+	
+	page_ent->pinned_by_count = 0;
 
 	// this is the actual page memory that is assigned to this page_entry
 	page_ent->page_memory = page_memory;

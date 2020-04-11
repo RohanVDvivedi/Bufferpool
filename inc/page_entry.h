@@ -46,9 +46,9 @@ struct page_entry
 	// if the page is free, the page has no meaningfull data on it
 	uint8_t is_free;
 
-	// if the page is being used/going to be used by any of the thread, then this bit it required to be set
-	// if this bit is set, the buffer pool manager will not replace it, with any other page/data i.e. it is not swappable
-	uint8_t is_pinned;
+	// if the page is being used/going to be used by any of the thread, then this count has to be incremented by that thread
+	// if the pin count for a page > 0, the buffer pool manager will not replace it, with any other page/data i.e. it is not swappable
+	uint32_t pinned_by_count;
 
 	// this lock ensures only 1 thread attempts to read or write the page to the disk
 	rwlock* page_memory_lock;
