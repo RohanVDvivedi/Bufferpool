@@ -145,15 +145,9 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 
-	// first thing you do is acquire the read lock
 	acquire_read_lock(page_ent);
 
 	//printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
-
-	// just as to mark that the page is recently in use, or was used, this marking is managed by lru struct
-	// this is to be done only after you have a read or write lock on page memory
-	// and once you are sure that no io is required to be done on it
-	mark_as_recently_used(buffp->lru_p, page_ent);
 
 	return page_ent->page_memory;
 }
@@ -161,24 +155,24 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 void release_page_read(bufferpool* buffp, void* page_memory)
 {
 	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
+
 	release_read_lock(page_ent);
+
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+		if(get_total_thread_count(page_ent->page_memory_lock) == 0)
+		{
+			mark_as_recently_used(buffp->lru_p, page_ent);
+		}
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 }
 
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
+
 	acquire_write_lock(page_ent);
 
 	//printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
-	
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	page_ent->is_dirty = 1;
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
-
-	// just as to mark that the page is recently in use, or was used, this marking is managed by lru struct
-	// this is to be done only after you have a read or write lock on page memory
-	// and once you are sure that no io is required to be done on it
-	mark_as_recently_used(buffp->lru_p, page_ent);
 
 	return page_ent->page_memory;
 }
@@ -186,7 +180,16 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 void release_page_write(bufferpool* buffp, void* page_memory)
 {
 	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
+
 	release_write_lock(page_ent);
+
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+		if(get_total_thread_count(page_ent->page_memory_lock) == 0)
+		{
+			mark_as_recently_used(buffp->lru_p, page_ent);
+		}
+		page_ent->is_dirty = 1;
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 }
 
 static void delete_page_entry_wrapper(page_entry* page_ent, io_dispatcher* iod_p)
