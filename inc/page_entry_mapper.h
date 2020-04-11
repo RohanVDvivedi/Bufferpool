@@ -6,7 +6,6 @@
 
 #include<page_memory_mapper.h>
 #include<page_entry.h>
-#include<least_recently_used.h>
 
 // the task of this structure and functions is to map page entries, 
 // by its various constant or almost constant attributes
@@ -38,8 +37,8 @@ page_entry_mapper* get_page_entry_mapper(uint32_t page_entry_count, uint32_t pag
 // returns NULL, if a page_entry was not found
 page_entry* get_page_entry_by_page_id(page_entry_mapper* pem_p, uint32_t page_id);
 
-// returns NULL, if a page_entry was not found, if a page_entry is found, it is removed from the given lru
-page_entry* get_page_entry_by_page_id_removing_it_from_lru(page_entry_mapper* pem_p, uint32_t page_id, lru* lru_p);
+// returns NULL, if a page_entry was not found, if a page_entry is found, it is pinned inside of the read lock of the page_entry_mapper
+page_entry* get_page_entry_by_page_id_for_access(page_entry_mapper* pem_p, uint32_t page_id);
 
 // returns 1 if the page_entry was removed from the hashmap
 int remove_page_entry_by_page_id(page_entry_mapper* pem_p, uint32_t page_id);

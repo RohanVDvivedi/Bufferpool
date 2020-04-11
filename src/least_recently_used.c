@@ -37,28 +37,10 @@ lru* get_lru(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first
 page_entry* get_swapable_page(lru* lru_p)
 {
 	pthread_mutex_lock(&(lru_p->page_entries_lock));
-		page_entry* page_ent = NULL;
-		while(1)
+		page_entry* page_ent =  (page_entry*) get_tail_data(lru_p->page_entries);
+		if(page_ent != NULL)
 		{
-			page_ent = (page_entry*) get_tail_data(lru_p->page_entries);
-			if(page_ent != NULL)
-			{
-				remove_page_entry_from_lru_if_present_unsafe(lru_p, page_ent);
-				pthread_mutex_lock(&(page_ent->page_entry_lock));
-				if(page_ent->pinned_by_count == 0)
-				{
-					pthread_mutex_unlock(&(page_ent->page_entry_lock));
-					break;
-				}
-				else
-				{
-					pthread_mutex_unlock(&(page_ent->page_entry_lock));
-				}
-			}
-			else
-			{
-				break;
-			}
+			remove_page_entry_from_lru_if_present_unsafe(lru_p, page_ent);
 		}
 	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 	return page_ent;

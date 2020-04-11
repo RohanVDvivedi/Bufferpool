@@ -51,12 +51,12 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	return buffp;
 }
 
-page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
+static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 {
 	page_entry* page_ent = NULL;
 
 	// search of the page in buffer pool
-	page_ent = get_page_entry_by_page_id_removing_it_from_lru(buffp->mapp_p, page_id, buffp->lru_p);
+	page_ent = get_page_entry_by_page_id_for_access(buffp->mapp_p, page_id);
 
 	// return it if a page is found
 	if(page_ent != NULL)
@@ -68,7 +68,7 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	{
 		job* io_sync_up_job = NULL;
 
-		while(page_ent == NULL)
+		while(io_sync_up_job == NULL)
 		{
 			wait_if_lru_is_empty(buffp->lru_p);
 
@@ -84,14 +84,17 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 				if(page_ent != NULL)
 				{
 					pthread_mutex_lock(&(page_ent->page_entry_lock));
-						if(!page_ent->is_free)
+						if(page_ent->pinned_by_count == 0)
 						{
-							delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+							if(!page_ent->is_free)
+							{
+								delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
+							}
+							page_ent->expected_page_id = page_id;
+							io_sync_up_job = submit_page_entry_for_sync_up(buffp->iod_p, page_ent);
+							insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
+							page_ent->pinned_by_count++;
 						}
-						page_ent->expected_page_id = page_id;
-						io_sync_up_job = submit_page_entry_for_sync_up(buffp->iod_p, page_ent);
-						insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
-						page_ent->pinned_by_count++;
 					pthread_mutex_unlock(&(page_ent->page_entry_lock));
 				}
 			}
@@ -105,7 +108,24 @@ page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 		}
 	}
 
+	remove_page_entry_from_lru(buffp->lru_p, page_ent);
+
 	return page_ent;
+}
+
+static void release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int was_modified)
+{
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+		page_ent->pinned_by_count--;
+		if(page_ent->pinned_by_count == 0)
+		{
+			mark_as_recently_used(buffp->lru_p, page_ent);
+		}
+		if(was_modified)
+		{
+			page_ent->is_dirty = 1;
+		}
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 }
 
 void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
@@ -123,14 +143,9 @@ void release_page_read(bufferpool* buffp, void* page_memory)
 {
 	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
 
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		release_read_lock(page_ent);
-		page_ent->pinned_by_count--;
-		if(page_ent->pinned_by_count == 0)
-		{
-			mark_as_recently_used(buffp->lru_p, page_ent);
-		}
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	release_read_lock(page_ent);
+
+	release_used_page_entry(buffp, page_ent, 0);
 }
 
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
@@ -147,15 +162,10 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 void release_page_write(bufferpool* buffp, void* page_memory)
 {
 	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		release_write_lock(page_ent);
-		page_ent->is_dirty = 1;
-		page_ent->pinned_by_count--;
-		if(page_ent->pinned_by_count == 0)
-		{
-			mark_as_recently_used(buffp->lru_p, page_ent);
-		}
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
+	release_write_lock(page_ent);
+
+	release_used_page_entry(buffp, page_ent, 1);
 }
 
 static void delete_page_entry_wrapper(page_entry* page_ent, io_dispatcher* iod_p)
