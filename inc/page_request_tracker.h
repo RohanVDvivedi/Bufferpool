@@ -8,6 +8,8 @@
 #include<page_entry.h>
 #include<page_request.h>
 
+#include<io_dispatcher.h>
+
 /*
 	This structure is responsible to keep a mapping from page_id to page_request
 	It ensures that if a page request is made multiple times, then only one of the request is processed
@@ -22,24 +24,23 @@ struct page_request_tracker
 
 	// hashmap from page_id -> page_request
 	hashmap* page_request_map;
-
-	// the top of the page_request_max_heap points to the page_request with maximum request made for it
-	heap* page_request_max_heap;
 };
 
 page_request_tracker* get_page_request_tracker(uint32_t max_requests);
 
-// returns NULL if no request exists
-job* get_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id);
-
-// returns a job that was submitted, 
+// returns a page_request that was submitted, 
 // or if there was no page_request made then a new page request is created and returned
-job* get_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id);
+page_request* get_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p);
 
 // this function will discard a request, once it is completed
-// it is blocking, it will wait untill the corresponding job is completed
-// it will return NULL if no such job for the corresponding page_id was submitted
-page_entry* discard_request(page_request_tracker* prt_p, uint32_t page_id);
+// it is blocking, it will wait untill the corresponding job for the given page_id is completed
+// it will return NULL if no such page_request for the corresponding page_id exists
+int discard_page_request(page_request_tracker* prt_p, uint32_t page_id);
+
+/*
+	you should take care and discard a page request, 
+	only when noone could be waiting for that page_request to complete
+*/
 
 void delete_page_request_tracker(page_request_tracker* prt_p);
 
