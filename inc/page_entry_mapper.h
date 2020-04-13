@@ -6,6 +6,7 @@
 
 #include<page_memory_mapper.h>
 #include<page_entry.h>
+#include<page_request_tracker.h>
 
 // the task of this structure and functions is to map page entries, 
 // by its various constant or almost constant attributes
@@ -27,21 +28,25 @@ struct page_entry_mapper
 
 	// this is in memory hashmap of data pages in memory
 	// page_id vs page_entry
-	hashmap* data_page_entries;
+	hashmap* page_entry_map;
 	// lock
-	rwlock* data_page_entries_lock;
+	rwlock* page_entry_map_lock;
 };
 
 page_entry_mapper* get_page_entry_mapper(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address);
 
 // returns NULL, if a page_entry was not found
-page_entry* get_page_entry_by_page_id(page_entry_mapper* pem_p, uint32_t page_id);
+page_entry* find_page_entry(page_entry_mapper* pem_p, uint32_t page_id);
 
-// returns NULL, if a page_entry was not found, if a page_entry is found, it is pinned inside of the read lock of the page_entry_mapper
-page_entry* get_page_entry_by_page_id_for_access(page_entry_mapper* pem_p, uint32_t page_id);
+// insert a page_entry in the page_entry mapper, if the corresponding page_id slot is empty
+// else it will return 0
+// insertion fails if a page_entry for the page_id already exists
+int insert_page_entry(page_entry_mapper* pem_p, page_entry* page_ent);
 
-// returns 1 if the page_entry was removed from the hashmap
-int remove_page_entry_by_page_id(page_entry_mapper* pem_p, uint32_t page_id);
+// returns 0 if the page_entry was not removed
+// returns 1 if the page_entry was removed from the page_entry_map, but not the page_request
+// returns 2 if the page_entry is removed and the corresponding page_request was deleted, from the page_request tracker
+int remove_page_entry_and_request(page_entry_mapper* pem_p, page_request_tracker* prt_p, page_entry* page_ent);
 
 // returns 1, if the page_entry was added, insertion fails if the page_entry is already present for a given page_memory
 // you are not suppossed to added

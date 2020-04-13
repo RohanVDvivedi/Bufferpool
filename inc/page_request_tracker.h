@@ -32,14 +32,12 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests);
 // or if there was no page_request made then a new page request is created and returned
 page_request* get_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p);
 
-// this function will discard a request, once it is completed
-// it is blocking, it will wait untill the corresponding job for the given page_id is completed
-// it will return NULL if no such page_request for the corresponding page_id exists
+// this function will discard a request from its hashmap, and delete the page_request
 int discard_page_request(page_request_tracker* prt_p, uint32_t page_id);
 
 /*
 	you should take care and discard a page request, 
-	only when noone could be waiting for that page_request to complete
+	only when noone could be waiting for that page_request to complete, you may discard it
 */
 
 void delete_page_request_tracker(page_request_tracker* prt_p);

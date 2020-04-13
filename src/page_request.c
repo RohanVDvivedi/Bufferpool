@@ -14,7 +14,8 @@ page_entry* get_requested_page_entry(page_request* page_req)
 		get_result(page_req->io_job_reference) : NULL);
 }
 
-void delete_page_request(page_request* page_req)
+void delete_page_request_and_job(page_request* page_req)
 {
+	delete_job(page_req->io_job_reference);
 	free(page_req);
 }

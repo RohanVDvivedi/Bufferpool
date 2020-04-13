@@ -27,9 +27,6 @@ struct page_entry
 	// this is the database file, to which the page_entry belongs to
 	dbfile* dbfile_p;
 
-	// this is the page id, we store in the hashmap, of the buffer pool
-	uint32_t expected_page_id;
-
 	// this is the actual page id of the page that the buffer pool is holding
 	uint32_t page_id;
 

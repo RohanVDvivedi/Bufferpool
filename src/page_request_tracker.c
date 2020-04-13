@@ -10,7 +10,7 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	return prt_p;
 }
 
-page_request* get_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p)
+page_request* get_or_create_request(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p)
 {
 	read_lock(prt_p->page_request_tracker_lock);
 		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
@@ -21,7 +21,7 @@ page_request* get_or_create_request_for_page_id(page_request_tracker* prt_p, uin
 			page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
 			if(page_req == NULL)
 			{
-				job* io_job = NULL;// TODO create a job using the io_dispatcher
+				job* io_job = queue_page_request(iod_p, page_id);
 				page_req = get_page_request(page_id, io_job);
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
 			}
@@ -30,19 +30,18 @@ page_request* get_or_create_request_for_page_id(page_request_tracker* prt_p, uin
 	return page_req;
 }
 
-page_entry* discard_request(page_request_tracker* prt_p, uint32_t page_id)
+int discard_page_request(page_request_tracker* prt_p, uint32_t page_id)
 {
+	int is_deleted = 0;
 	read_lock(prt_p->page_request_tracker_lock);
 		page_request* page_req = NULL;
-		int is_deleted = delete_entry_from_hash(prt_p->page_request_map, &page_id, NULL, (const void**)(&page_req));
+		is_deleted = delete_entry_from_hash(prt_p->page_request_map, &page_id, NULL, (const void **)(&page_req));
 	read_lock(prt_p->page_request_tracker_lock);
-	page_entry* page_ent = NULL;
 	if(is_deleted)
 	{
-		page_ent = get_requested_page_entry(page_req);
-		delete_page_request(page_req);
+		delete_page_request_and_job(page_req);
 	}
-	return page_ent;
+	return is_deleted;
 }
 
 void delete_page_request_tracker(page_request_tracker* prt_p)

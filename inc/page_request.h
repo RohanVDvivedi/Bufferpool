@@ -9,6 +9,12 @@
 
 #include<page_entry.h>
 
+/*
+	This will be regarded as a constant structure for different page_id
+	It will not/can not be modified throughout its life cycle
+	no locks required to protect it
+*/
+
 typedef struct page_request page_request;
 struct page_request
 {
@@ -25,6 +31,6 @@ page_request* get_page_request(uint32_t page_id, job* io_job);
 // blocking call, it blocks untill the request is satisfied by the io_dispatcher
 page_entry* get_requested_page_entry(page_request* page_req);
 
-void delete_page_request(page_request* page_req);
+void delete_page_request_and_job(page_request* page_req);
 
 #endif

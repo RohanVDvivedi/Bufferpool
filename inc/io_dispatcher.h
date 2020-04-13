@@ -44,6 +44,10 @@ page_entry* get_page_entry_after_sync_up(job* job_p);
 // though you can wait for the completion of all such tasks by using delete_io_dispatcher_after_completion function
 void submit_page_entry_for_clean_up(io_dispatcher* iod_p, page_entry* page_ent);
 
+job* queue_page_request(io_dispatcher* iod_p, uint32_t page_id);
+
+void queue_page_clean_up(io_dispatcher* iod_p, uint32_t page_id);
+
 void delete_io_dispatcher_after_completion(io_dispatcher* iod_p);
 
 #endif
