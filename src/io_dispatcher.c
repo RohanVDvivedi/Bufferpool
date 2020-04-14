@@ -113,29 +113,14 @@ static void* io_clean_up_task(io_job_param* param)
 	return NULL;
 }
 
-io_dispatcher* get_io_dispatcher(bufferpool* buffp, unsigned int thread_count)
+job* queue_page_request(bufferpool* buffp, uint32_t page_id)
 {
-	io_dispatcher* iod_p = (io_dispatcher*) malloc(sizeof(io_dispatcher));
-	iod_p->io_task_executor = get_executor(FIXED_THREAD_COUNT_EXECUTOR, thread_count, 0);
-	iod_p->buffp = buffp;
-}
-
-job* queue_page_request(io_dispatcher* iod_p, uint32_t page_id)
-{
-	job* job_p = get_job((void*(*)(void*))io_page_replace_task, get_io_job_param(iod_p->buffp, page_id));
-	submit_job(iod_p->io_task_executor, job_p);
+	job* job_p = get_job((void*(*)(void*))io_page_replace_task, get_io_job_param(buffp, page_id));
+	submit_job(buffp->io_dispatcher, job_p);
 	return job_p;
 }
 
-void queue_page_clean_up(io_dispatcher* iod_p, uint32_t page_id)
+void queue_page_clean_up(bufferpool* buffp, uint32_t page_id)
 {
-	submit_function(iod_p->io_task_executor, (void* (*)(void*))io_clean_up_task, get_io_job_param(iod_p->buffp, page_id));
-}
-
-void delete_io_dispatcher_after_completion(io_dispatcher* iod_p)
-{
-	shutdown_executor(iod_p->io_task_executor, 0);
-	wait_for_all_threads_to_complete(iod_p->io_task_executor);
-	delete_executor(iod_p->io_task_executor);
-	free(iod_p);
+	submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, get_io_job_param(buffp, page_id));
 }

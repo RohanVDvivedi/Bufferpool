@@ -37,7 +37,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->lru_p = get_lru(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
-	buffp->iod_p = get_io_dispatcher(buffp, (buffp->maximum_pages_in_cache/32) + 4);
+	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, ((buffp->maximum_pages_in_cache/32) + 4), 0);
 
 	buffp->rq_tracker = get_request_tracker(buffp->maximum_pages_in_cache * 3);
 
@@ -75,7 +75,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 
 	if(!is_page_entry_found)
 	{
-		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp->iod_p);
+		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp);
 
 		page_ent = get_requested_page_entry(page_req);
 
@@ -156,15 +156,19 @@ void release_page_write(bufferpool* buffp, void* page_memory)
 	release_used_page_entry(buffp, page_ent, 1);
 }
 
-static void delete_page_entry_wrapper(page_entry* page_ent, io_dispatcher* iod_p)
+static void delete_page_entry_wrapper(page_entry* page_ent, bufferpool* buffp)
 {
-	submit_page_entry_for_clean_up(iod_p, page_ent);
+	submit_page_entry_for_clean_up(buffp, page_ent);
 }
 
 void delete_bufferpool(bufferpool* buffp)
 {
-	for_each_page_entry_in_page_entry_mapper(buffp->mapp_p, (void(*)(page_entry*,void*))delete_page_entry_wrapper, buffp->iod_p);
-	delete_io_dispatcher_after_completion(buffp->iod_p);
+	for_each_page_entry_in_page_entry_mapper(buffp->mapp_p, (void(*)(page_entry*,void*))delete_page_entry_wrapper, buffp);
+	
+	shutdown_executor(buffp->io_dispatcher, 0);
+	wait_for_all_threads_to_complete(buffp->io_dispatcher);
+	delete_executor(buffp->io_dispatcher);
+
 	close_dbfile(buffp->db_file);
 	free(buffp->memory);
 	delete_lru(buffp->lru_p);

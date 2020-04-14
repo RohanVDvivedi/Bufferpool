@@ -5,13 +5,9 @@
 #include<stdlib.h>
 #include<stdint.h>
 
+#include<executor.h>
+
 #include<dbfile.h>
-
-typedef struct bufferpool bufferpool;
-struct bufferpool;
-
-typedef struct io_dispatcher io_dispatcher;
-struct io_dispatcher;
 
 #include<page_entry.h>
 #include<page_entry_mapper.h>
@@ -50,7 +46,7 @@ struct bufferpool
 
 	lru* lru_p;
 
-	io_dispatcher* iod_p;
+	executor* io_dispatcher;
 
 	page_request_tracker* rq_tracker;
 };

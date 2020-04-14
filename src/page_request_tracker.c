@@ -10,7 +10,7 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	return prt_p;
 }
 
-page_request* find_or_create_request(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p)
+page_request* find_or_create_request(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp)
 {
 	read_lock(prt_p->page_request_tracker_lock);
 		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
@@ -21,7 +21,7 @@ page_request* find_or_create_request(page_request_tracker* prt_p, uint32_t page_
 			page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
 			if(page_req == NULL)
 			{
-				job* io_job = queue_page_request(iod_p, page_id);
+				job* io_job = queue_page_request(buffp, page_id);
 				page_req = get_page_request(page_id, io_job);
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
 			}

@@ -30,7 +30,7 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests);
 
 // returns a page_request that was submitted, 
 // or if there was no page_request made then a new page request is created and returned
-page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p);
+page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp);
 
 // this function will discard a request from its hashmap, and delete the page_request
 int discard_page_request(page_request_tracker* prt_p, uint32_t page_id);
