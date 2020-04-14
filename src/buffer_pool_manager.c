@@ -83,9 +83,25 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 		{
 			pthread_mutex_lock(&(page_ent->page_entry_lock));
 
-			insert_page_entry(buffp->mapp_p, page_ent);
+			if(page_ent->page_id == page_id)
+			{
+				insert_page_entry(buffp->mapp_p, page_ent);
 
-			is_page_entry_found = 1;
+				is_page_entry_found = 1;
+			}
+			else
+			{
+				insert_page_entry(buffp->mapp_p, page_ent);
+
+				is_page_entry_found = 1;
+
+				printf("possible contention received %u instead of %u page_id\n", page_ent->page_id, page_id);
+
+				/*
+					PAGE NOT FOUND PANIC
+					pthread_mutex_unlock(&(page_ent->page_entry_lock));
+				*/
+			}
 		}
 	}
 	
