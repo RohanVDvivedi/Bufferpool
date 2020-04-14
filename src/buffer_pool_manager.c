@@ -39,6 +39,8 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->iod_p = get_io_dispatcher((buffp->maximum_pages_in_cache/32) + 4);
 
+	buffp->rq_tracker = get_request_tracker(buffp->maximum_pages_in_cache * 3);
+
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
@@ -113,6 +115,54 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	return page_ent;
 }
 
+static page_entry* fetch_page_entry_v2(bufferpool* buffp, uint32_t page_id)
+{
+	int is_page_entry_found = 0;
+
+	page_entry* page_ent = find_page_entry(buffp->mapp_p, page_id);;
+
+	if(page_ent != NULL)
+	{
+		pthread_mutex_lock(&(page_ent->page_entry_lock));
+
+		if(page_ent->page_id == page_id)
+		{
+			is_page_entry_found = 1;
+		}
+		else
+		{
+			pthread_mutex_unlock(&(page_ent->page_entry_lock));
+		}
+	}
+
+	if(!is_page_entry_found)
+	{
+		page_request* page_req = find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p);
+
+		page_ent = get_requested_page_entry(page_req);
+
+		if(page_ent != NULL)
+		{
+			pthread_mutex_lock(&(page_ent->page_entry_lock));
+
+			insert_page_entry(buffp->mapp_p, page_ent);
+
+			is_page_entry_found = 1;
+		}
+	}
+	
+	if(is_page_entry_found)
+	{
+		page_ent->pinned_by_count++;
+
+		remove_page_entry_from_lru(buffp->lru_p, page_ent);
+
+		pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	}
+
+	return page_ent;
+}
+
 static void release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int was_modified)
 {
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
@@ -181,6 +231,7 @@ void delete_bufferpool(bufferpool* buffp)
 	free(buffp->memory);
 	delete_lru(buffp->lru_p);
 	delete_page_entry_mapper(buffp->mapp_p);
+	delete_page_request_tracker(buffp->rq_tracker);
 	free(buffp);
 }
 

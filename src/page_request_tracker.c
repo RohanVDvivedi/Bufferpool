@@ -10,7 +10,7 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	return prt_p;
 }
 
-page_request* get_or_create_request(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p)
+page_request* find_or_create_request(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p)
 {
 	read_lock(prt_p->page_request_tracker_lock);
 		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
