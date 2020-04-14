@@ -37,7 +37,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->lru_p = get_lru(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
-	buffp->iod_p = get_io_dispatcher((buffp->maximum_pages_in_cache/32) + 4);
+	buffp->iod_p = get_io_dispatcher(buffp, (buffp->maximum_pages_in_cache/32) + 4);
 
 	buffp->rq_tracker = get_request_tracker(buffp->maximum_pages_in_cache * 3);
 
@@ -55,71 +55,9 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 {
-	page_entry* page_ent = NULL;
-
-	// search of the page in buffer pool
-	page_ent = get_page_entry_by_page_id_for_access(buffp->mapp_p, page_id);
-
-	// return it if a page is found
-	if(page_ent != NULL)
-	{
-		return page_ent;
-	}
-	// else if it does not exist in buffer pool, we might have to read it from disk first
-	else if(page_ent == NULL)
-	{
-		job* io_sync_up_job = NULL;
-
-		while(io_sync_up_job == NULL)
-		{
-			wait_if_lru_is_empty(buffp->lru_p);
-
-			// TODO
-			write_lock(buffp->mapp_p->data_page_entries_lock);
-			page_ent = (page_entry*) find_value_from_hash(buffp->mapp_p->data_page_entries, &page_id);
-			if(page_ent == NULL)
-			{
-				page_ent = get_swapable_page(buffp->lru_p);
-
-				// if all the pages are being accessed for io by different threads,
-				// we might not have any page for swapping
-				if(page_ent != NULL)
-				{
-					pthread_mutex_lock(&(page_ent->page_entry_lock));
-						if(page_ent->pinned_by_count == 0)
-						{
-							if(!page_ent->is_free)
-							{
-								delete_entry_from_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), NULL, NULL);
-							}
-							page_ent->expected_page_id = page_id;
-							io_sync_up_job = submit_page_entry_for_sync_up(buffp->iod_p, page_ent);
-							insert_entry_in_hash(buffp->mapp_p->data_page_entries, &(page_ent->expected_page_id), page_ent);
-							page_ent->pinned_by_count++;
-						}
-					pthread_mutex_unlock(&(page_ent->page_entry_lock));
-				}
-			}
-			write_unlock(buffp->mapp_p->data_page_entries_lock);
-		}
-
-		// wait for the io sync up job to complete, if it was assigned
-		if(io_sync_up_job != NULL)
-		{
-			get_page_entry_after_sync_up(io_sync_up_job);
-		}
-	}
-
-	remove_page_entry_from_lru(buffp->lru_p, page_ent);
-
-	return page_ent;
-}
-
-static page_entry* fetch_page_entry_v2(bufferpool* buffp, uint32_t page_id)
-{
 	int is_page_entry_found = 0;
 
-	page_entry* page_ent = find_page_entry(buffp->mapp_p, page_id);;
+	page_entry* page_ent = find_page_entry(buffp->mapp_p, page_id);
 
 	if(page_ent != NULL)
 	{
@@ -137,7 +75,7 @@ static page_entry* fetch_page_entry_v2(bufferpool* buffp, uint32_t page_id)
 
 	if(!is_page_entry_found)
 	{
-		page_request* page_req = find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, io_dispatcher* iod_p);
+		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp->iod_p);
 
 		page_ent = get_requested_page_entry(page_req);
 

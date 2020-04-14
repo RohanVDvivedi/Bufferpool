@@ -7,6 +7,12 @@
 
 #include<dbfile.h>
 
+typedef struct bufferpool bufferpool;
+struct bufferpool;
+
+typedef struct io_dispatcher io_dispatcher;
+struct io_dispatcher;
+
 #include<page_entry.h>
 #include<page_entry_mapper.h>
 #include<least_recently_used.h>
@@ -17,7 +23,6 @@
 
 // the provided implementation of the bufferpool is a LRU cache
 // for the unordered pages of a heap file
-
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
