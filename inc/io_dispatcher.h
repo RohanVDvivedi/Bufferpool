@@ -7,7 +7,8 @@
 
 #include<executor.h>
 
-#include<buffer_pool_manager.h>
+typedef struct bufferpool bufferpool;
+struct bufferpool;
 
 job* queue_page_request(bufferpool* buffp, uint32_t page_id);
 

@@ -39,7 +39,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, ((buffp->maximum_pages_in_cache/32) + 4), 0);
 
-	buffp->rq_tracker = get_request_tracker(buffp->maximum_pages_in_cache * 3);
+	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
 
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
@@ -158,7 +158,7 @@ void release_page_write(bufferpool* buffp, void* page_memory)
 
 static void delete_page_entry_wrapper(page_entry* page_ent, bufferpool* buffp)
 {
-	submit_page_entry_for_clean_up(buffp, page_ent);
+	queue_page_clean_up(buffp, page_ent->page_id);
 }
 
 void delete_bufferpool(bufferpool* buffp)
