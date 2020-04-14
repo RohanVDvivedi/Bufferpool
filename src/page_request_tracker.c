@@ -33,10 +33,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 int discard_page_request(page_request_tracker* prt_p, uint32_t page_id)
 {
 	int is_deleted = 0;
-	read_lock(prt_p->page_request_tracker_lock);
+	write_lock(prt_p->page_request_tracker_lock);
 		page_request* page_req = NULL;
 		is_deleted = delete_entry_from_hash(prt_p->page_request_map, &page_id, NULL, (const void **)(&page_req));
-	read_lock(prt_p->page_request_tracker_lock);
+	write_unlock(prt_p->page_request_tracker_lock);
 	if(is_deleted)
 	{
 		delete_page_request_and_job(page_req);
