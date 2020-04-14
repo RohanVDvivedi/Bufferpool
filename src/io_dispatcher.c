@@ -77,8 +77,6 @@ static page_entry* io_page_replace_task(io_job_param* param)
 
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
-	free(param);
-
 	return page_ent;
 }
 
@@ -108,8 +106,6 @@ static void* io_clean_up_task(io_job_param* param)
 
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
-
-	free(param);
 
 	return NULL;
 }
