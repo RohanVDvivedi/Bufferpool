@@ -28,6 +28,7 @@ int increment_page_request_reference_count(page_request* page_req)
 			is_page_request_sharable = 1;
 		}
 	pthread_mutex_unlock(&(page_req->page_request_reference_lock));
+
 	return is_page_request_sharable;
 }
 
@@ -38,7 +39,7 @@ void mark_page_request_for_deletion(page_request* page_req)
 	pthread_mutex_lock(&(page_req->page_request_reference_lock));
 		page_req->request_reference_count--;
 		page_req->marked_for_deletion = 1;
-		if(page_req->request_reference_count == 0)
+		if(page_req->marked_for_deletion == 1 && page_req->request_reference_count == 0)
 		{
 			delete_page_request = 1;
 		}
@@ -59,7 +60,7 @@ page_entry* get_requested_page_entry_and_discard_page_request(page_request* page
 
 	pthread_mutex_lock(&(page_req->page_request_reference_lock));
 		page_req->request_reference_count--;
-		if(page_req->marked_for_deletion == 1)
+		if(page_req->marked_for_deletion == 1 && page_req->request_reference_count == 0)
 		{
 			delete_page_request = 1;
 		}
