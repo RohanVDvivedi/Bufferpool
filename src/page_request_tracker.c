@@ -54,8 +54,17 @@ int discard_page_request(page_request_tracker* prt_p, uint32_t page_id)
 	return is_deleted;
 }
 
+static void mark_existing_page_request_for_deletion_wrapper(const void* key, const void* value, const void* additional_params)
+{
+	mark_page_request_for_deletion((page_request*) value);
+}
+
 void delete_page_request_tracker(page_request_tracker* prt_p)
 {
+	read_lock(prt_p->page_request_tracker_lock);
+		for_each_entry_in_hash(prt_p->page_request_map, mark_existing_page_request_for_deletion_wrapper, NULL);
+	read_unlock(prt_p->page_request_tracker_lock);
+
 	delete_rwlock(prt_p->page_request_tracker_lock);
 	delete_hashmap(prt_p->page_request_map);
 }
