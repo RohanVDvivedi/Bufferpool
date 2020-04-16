@@ -77,7 +77,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	{
 		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp);
 
-		page_ent = get_requested_page_entry(page_req);
+		page_ent = get_requested_page_entry_and_discard_page_request(page_req);
 
 		if(page_ent != NULL)
 		{
