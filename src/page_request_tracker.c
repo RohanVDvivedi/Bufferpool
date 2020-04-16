@@ -30,6 +30,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				page_req = get_page_request(page_id, io_job);
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
 			}
+			else
+			{
+				increment_page_request_reference_count(page_req);
+			}
 		write_unlock(prt_p->page_request_tracker_lock);
 	}
 
