@@ -73,7 +73,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 		}
 	}
 
-	if(!is_page_entry_found)
+	while(!is_page_entry_found)
 	{
 		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp);
 
@@ -91,16 +91,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 			}
 			else
 			{
-				insert_page_entry(buffp->mapp_p, page_ent);
-
-				is_page_entry_found = 1;
-
-				printf("possible contention received %u instead of %u page_id\n", page_ent->page_id, page_id);
-
-				/*
-					PAGE NOT FOUND PANIC
-					pthread_mutex_unlock(&(page_ent->page_entry_lock));
-				*/
+				pthread_mutex_unlock(&(page_ent->page_entry_lock));
 			}
 		}
 	}
