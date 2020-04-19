@@ -44,11 +44,6 @@ page_entry* find_page_entry(page_entry_mapper* pem_p, uint32_t page_id);
 int insert_page_entry(page_entry_mapper* pem_p, page_entry* page_ent);
 
 // returns 0 if the page_entry was not removed
-// returns 1 if the page_entry was removed from the page_entry_map, but not the page_request
-// returns 2 if the page_entry is removed and the corresponding page_request was deleted, from the page_request tracker
-int remove_page_entry_and_request(page_entry_mapper* pem_p, page_request_tracker* prt_p, page_entry* page_ent);
-
-// returns 0 if the page_entry was not removed
 // returns 1 if the page_entry was removed from the page_entry_map
 int discard_page_entry(page_entry_mapper* pem_p, page_entry* page_ent);
 

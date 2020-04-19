@@ -32,11 +32,15 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests);
 // or if there was no page_request made then a new page request is created and returned
 page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp);
 
-// this function will discard a request from its hashmap, and delete the page_request
+// this function will discard a request from its hashmap, and mark the page_request for deletion
+// after this function call the page_request will be deleted on its own by the thread that dereferences the reult from that page_request
+// the function returns 1, if the page_request was successfully discarded and marked for deletion
 int discard_page_request(page_request_tracker* prt_p, uint32_t page_id);
 
-// this function will discard a request from its hashmap, and delete the page_request, 
+// this function will discard a request from its hashmap, and mark the page_request for deletion, 
 // if and only if the page_request is currently not being referenced by any thread or data structure
+// since effectively the page_request is not being referenced by any_one, when it is being marked for deletion it gets deleted internally by the same thread that calls this function
+// the function returns 1, if the page_request was successfully discarded and deleted
 int discard_page_request_if_not_referenced(page_request_tracker* prt_p, uint32_t page_id);
 
 /*
