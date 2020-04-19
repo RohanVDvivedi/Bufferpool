@@ -91,16 +91,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 			}
 			else
 			{
-				insert_page_entry(buffp->mapp_p, page_ent);
-
-				is_page_entry_found = 1;
-
-				printf("possible contention received %u instead of %u page_id\n", page_ent->page_id, page_id);
-
-				/*
-					PAGE NOT FOUND PANIC
-					pthread_mutex_unlock(&(page_ent->page_entry_lock));
-				*/
+				pthread_mutex_unlock(&(page_ent->page_entry_lock));
 			}
 		}
 	}
@@ -138,8 +129,6 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 
 	acquire_read_lock(page_ent);
 
-	//printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
-
 	return page_ent->page_memory;
 }
 
@@ -157,8 +146,6 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 
 	acquire_write_lock(page_ent);
-
-	//printf("requested page_id : %u, expected_page_id %u, page_id %u\n", page_id, page_ent->expected_page_id, page_ent->page_id);
 
 	return page_ent->page_memory;
 }
