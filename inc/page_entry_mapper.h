@@ -48,6 +48,10 @@ int insert_page_entry(page_entry_mapper* pem_p, page_entry* page_ent);
 // returns 2 if the page_entry is removed and the corresponding page_request was deleted, from the page_request tracker
 int remove_page_entry_and_request(page_entry_mapper* pem_p, page_request_tracker* prt_p, page_entry* page_ent);
 
+// returns 0 if the page_entry was not removed
+// returns 1 if the page_entry was removed from the page_entry_map
+int discard_page_entry(page_entry_mapper* pem_p, page_entry* page_ent);
+
 // returns 1, if the page_entry was added, insertion fails if the page_entry is already present for a given page_memory
 // you are not suppossed to added
 int insert_page_entry_to_map_by_page_memory(page_entry_mapper* pem_p, page_entry* page_ent);

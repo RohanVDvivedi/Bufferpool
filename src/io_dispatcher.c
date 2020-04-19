@@ -42,21 +42,26 @@ static page_entry* io_page_replace_task(io_job_param* param)
 			{
 				pthread_mutex_lock(&(page_ent->page_entry_lock));
 
-				if(page_ent->pinned_by_count > 0)
+				if(page_ent->pinned_by_count == 0 &&
+					(
+						page_ent->is_free == 1 ||
+				 		discard_page_request_if_not_referenced(buffp->rq_tracker, page_ent->page_id) == 1
+				 	)
+				)
+				{
+					is_page_valid = 1;
+				}
+				else
 				{
 					pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
 					continue;
 				}
-				else
-				{
-					is_page_valid = 1;
-				}
 			}
 		}
 	}
 
-	remove_page_entry_and_request(buffp->mapp_p, buffp->rq_tracker, page_ent);
+	discard_page_entry(buffp->mapp_p, page_ent);
 
 	if(page_ent->page_id != page_id || page_ent->is_free)
 	{
@@ -76,7 +81,7 @@ static page_entry* io_page_replace_task(io_job_param* param)
 	}
 
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
-
+	
 	return page_ent;
 }
 

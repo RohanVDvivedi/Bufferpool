@@ -55,6 +55,9 @@ page_request* get_page_request(uint32_t page_id, job* io_job);
 	// DONOT ATTEMPT TO USE THIS PAGE REQUEST OR SHARE IT AFTER MARKING IT FOR DELETION
 	void mark_page_request_for_deletion(page_request* page_req);
 
+	// This helps the data structures that manages the page_requests, to know the number of times the current page_request was shared
+	uint32_t get_page_request_reference_count(page_request* page_req);
+
 /* Below is the functions to be used by the data structures/threads that only utilize page_requests for getting the page_entry */
 
 // blocking call, it blocks untill the request is satisfied by the io_dispatcher

@@ -30,10 +30,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				page_req = get_page_request(page_id, io_job);
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
 			}
-			else
-			{
-				increment_page_request_reference_count(page_req);
-			}
+			increment_page_request_reference_count(page_req);
 		write_unlock(prt_p->page_request_tracker_lock);
 	}
 
@@ -42,16 +39,33 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 
 int discard_page_request(page_request_tracker* prt_p, uint32_t page_id)
 {
-	int is_deleted = 0;
+	int is_discarded = 0;
 	write_lock(prt_p->page_request_tracker_lock);
 		page_request* page_req = NULL;
-		is_deleted = delete_entry_from_hash(prt_p->page_request_map, &page_id, NULL, (const void **)(&page_req));
-		if(is_deleted)
+		is_discarded = delete_entry_from_hash(prt_p->page_request_map, &page_id, NULL, (const void **)(&page_req));
+		if(is_discarded)
 		{
 			mark_page_request_for_deletion(page_req);
 		}
 	write_unlock(prt_p->page_request_tracker_lock);
-	return is_deleted;
+	return is_discarded;
+}
+
+int discard_page_request_if_not_referenced(page_request_tracker* prt_p, uint32_t page_id)
+{
+	int is_discarded = 0;
+	write_lock(prt_p->page_request_tracker_lock);
+		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
+		if(page_req != NULL && get_page_request_reference_count(page_req) == 1)
+		{
+			is_discarded = delete_entry_from_hash(prt_p->page_request_map, &page_id, NULL, (const void **)(&page_req));
+			if(is_discarded)
+			{
+				mark_page_request_for_deletion(page_req);
+			}
+		}
+	write_unlock(prt_p->page_request_tracker_lock);
+	return is_discarded;
 }
 
 static void mark_existing_page_request_for_deletion_wrapper(const void* key, const void* value, const void* additional_params)

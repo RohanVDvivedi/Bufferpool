@@ -35,6 +35,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 // this function will discard a request from its hashmap, and delete the page_request
 int discard_page_request(page_request_tracker* prt_p, uint32_t page_id);
 
+// this function will discard a request from its hashmap, and delete the page_request, 
+// if and only if the page_request is currently not being referenced by any thread or data structure
+int discard_page_request_if_not_referenced(page_request_tracker* prt_p, uint32_t page_id);
+
 /*
 	you should take care and discard a page request, 
 	only when noone could be waiting for that page_request to complete, you may discard it

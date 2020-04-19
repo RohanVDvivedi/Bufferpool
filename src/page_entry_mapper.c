@@ -35,15 +35,24 @@ int insert_page_entry(page_entry_mapper* pem_p, page_entry* page_ent)
 
 int remove_page_entry_and_request(page_entry_mapper* pem_p, page_request_tracker* prt_p, page_entry* page_ent)
 {
-	int is_entry_deleted = 0;
+	int is_entry_discarded = 0;
 	write_lock(pem_p->page_entry_map_lock);
-		is_entry_deleted = delete_entry_from_hash(pem_p->page_entry_map, &(page_ent->page_id), NULL, NULL);
-		if(is_entry_deleted)
+		is_entry_discarded = delete_entry_from_hash(pem_p->page_entry_map, &(page_ent->page_id), NULL, NULL);
+		if(is_entry_discarded)
 		{
-			is_entry_deleted += discard_page_request(prt_p, page_ent->page_id);
+			is_entry_discarded += discard_page_request(prt_p, page_ent->page_id);
 		}
 	write_unlock(pem_p->page_entry_map_lock);
-	return is_entry_deleted;
+	return is_entry_discarded;
+}
+
+int discard_page_entry(page_entry_mapper* pem_p, page_entry* page_ent)
+{
+	int is_entry_discarded = 0;
+	write_lock(pem_p->page_entry_map_lock);
+		is_entry_discarded = delete_entry_from_hash(pem_p->page_entry_map, &(page_ent->page_id), NULL, NULL);
+	write_unlock(pem_p->page_entry_map_lock);
+	return is_entry_discarded;
 }
 
 int insert_page_entry_to_map_by_page_memory(page_entry_mapper* pem_p, page_entry* page_ent)

@@ -51,6 +51,14 @@ void mark_page_request_for_deletion(page_request* page_req)
 	}
 }
 
+uint32_t get_page_request_reference_count(page_request* page_req)
+{
+	pthread_mutex_lock(&(page_req->page_request_reference_lock));
+		uint32_t request_reference_count = page_req->request_reference_count;
+	pthread_mutex_unlock(&(page_req->page_request_reference_lock));
+	return request_reference_count;
+}
+
 page_entry* get_requested_page_entry_and_discard_page_request(page_request* page_req)
 {
 	page_entry* page_ent = (page_entry*) ((page_req->io_job_reference != NULL) ? 
