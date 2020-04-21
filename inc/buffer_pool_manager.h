@@ -68,7 +68,7 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
 void release_page_read(bufferpool* buffp, void* page_memory);
 void release_page_write(bufferpool* buffp, void* page_memory);
 
-void request_prefetch(bufferpool* buffp, uint32_t page_id);
+void request_page_prefetch(bufferpool* buffp, uint32_t page_id);
 
 void force_write_async(bufferpool* buffp, uint32_t page_id);
 void force_write_blocking(bufferpool* buffp, uint32_t page_id);

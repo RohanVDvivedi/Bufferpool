@@ -159,7 +159,7 @@ void release_page_write(bufferpool* buffp, void* page_memory)
 	release_used_page_entry(buffp, page_ent, 1);
 }
 
-void request_prefetch(bufferpool* buffp, uint32_t page_id)
+void request_page_prefetch(bufferpool* buffp, uint32_t page_id)
 {
 
 }
