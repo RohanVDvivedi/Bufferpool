@@ -95,7 +95,6 @@ static void* io_clean_up_task(io_job_param* param)
 
 	if(page_ent != NULL)
 	{
-
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
 
 			if(page_ent->page_id == page_id && page_ent->is_dirty && !page_ent->is_free)
@@ -125,4 +124,12 @@ job* queue_page_request(bufferpool* buffp, uint32_t page_id)
 void queue_page_clean_up(bufferpool* buffp, uint32_t page_id)
 {
 	submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, get_io_job_param(buffp, page_id));
+}
+
+void queue_and_wait_for_page_clean_up(bufferpool* buffp, uint32_t page_id)
+{
+	job* job_p = get_job((void*(*)(void*))io_clean_up_task, get_io_job_param(buffp, page_id));
+	submit_job(buffp->io_dispatcher, job_p);
+	get_result(job_p);
+	delete_job(job_p);
 }

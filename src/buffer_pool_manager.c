@@ -159,6 +159,21 @@ void release_page_write(bufferpool* buffp, void* page_memory)
 	release_used_page_entry(buffp, page_ent, 1);
 }
 
+void request_prefetch(bufferpool* buffp, uint32_t page_id)
+{
+
+}
+
+void force_write_async(bufferpool* buffp, uint32_t page_id)
+{
+	queue_page_clean_up(buffp, page_id);
+}
+
+void force_write_blocking(bufferpool* buffp, uint32_t page_id)
+{
+	queue_and_wait_for_page_clean_up(buffp, page_id);
+}
+
 static void delete_page_entry_wrapper(page_entry* page_ent, bufferpool* buffp)
 {
 	queue_page_clean_up(buffp, page_ent->page_id);
