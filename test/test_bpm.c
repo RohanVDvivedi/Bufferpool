@@ -11,6 +11,7 @@
 
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_PAGES_IN_BUFFER_POOL 4
+#define MAX_IO_THREADS_IN_BUFFER_POOL 4
 
 #define FIXED_THREAD_POOL_SIZE 10
 #define COUNT_OF_IO_TASKS 100
@@ -46,7 +47,7 @@ int main(int argc, char **argv)
 		strcpy(file_name, argv[1]);
 	}
 
-	bpm = get_bufferpool(file_name, MAX_PAGES_IN_BUFFER_POOL, PAGE_SIZE_IN_BYTES);
+	bpm = get_bufferpool(file_name, MAX_PAGES_IN_BUFFER_POOL, PAGE_SIZE_IN_BYTES, MAX_IO_THREADS_IN_BUFFER_POOL);
 	if(bpm != NULL)
 	{
 		printf("Bufferpool built for file %s\n\n", file_name);

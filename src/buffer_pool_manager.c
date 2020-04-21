@@ -1,6 +1,6 @@
 #include<buffer_pool_manager.h>
 
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes)
+bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count)
 {
 	// try and open a dtabase file
 	dbfile* dbf = open_dbfile(heap_file_name);
@@ -37,7 +37,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->lru_p = get_lru(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
-	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, ((buffp->maximum_pages_in_cache/32) + 4), 0);
+	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, 0);
 
 	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
 
