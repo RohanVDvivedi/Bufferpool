@@ -1,34 +1,32 @@
 #include<cleanup_scheduler.h>
 
-cleanup_scheduler* get_cleanup_scheduler(uint32_t maximum_expected_page_entry_count, uint64_t cleanup_rate_in_milliseconds)
+cleanup_scheduler* get_cleanup_scheduler(bufferpool* buffp, uint32_t maximum_expected_page_entry_count, uint64_t cleanup_rate_in_milliseconds)
 {
 	cleanup_scheduler* csh_p = (cleanup_scheduler*) malloc(sizeof(cleanup_scheduler));
 	csh_p->page_entry_count = 0;
 	csh_p->page_entry_holder = get_array(maximum_expected_page_entry_count);
 	csh_p->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	csh_p->scheduler_job = NULL;
-	csh_p->state = SCHEDULER_INITIALIZED;
+	csh_p->buffp = buffp;
+	csh_p->SHUTDOWN_CALLED = 0;
 	return csh_p;
 }
 
 int register_page_entry_to_cleanup_scheduler(cleanup_scheduler* csh_p, page_entry* page_ent)
 {
-	if(csh_p->state < SCHEDULER_TASK_STARTED)
+	if(csh_p->scheduler_job == NULL)
 	{
 		set_element(csh_p->page_entry_holder, page_ent, csh_p->page_entry_count++);
 	}
 }
 
-static void* cleanup_scheduler_task_function(void* It_Must_Be_Null)
+static void* cleanup_scheduler_task_function(void* param)
 {
-	// TODO : How to get there references here
-	cleanup_scheduler* csh_p = NULL;
-	bufferpool* buffp = NULL;
-
-	csh_p->state = SCHEDULER_TASK_RUNNING;
+	cleanup_scheduler* csh_p = (cleanup_scheduler*) param;
+	bufferpool* buffp = csh_p->buffp;
 
 	uint32_t index = 0;
-	while(csh_p->state != SHUTDOWN_CALLED)
+	while(csh_p->SHUTDOWN_CALLED == 0)
 	{
 		page_entry* page_ent = (page_entry*) get_element(csh_p->page_entry_holder, index);
 
@@ -52,8 +50,6 @@ static void* cleanup_scheduler_task_function(void* It_Must_Be_Null)
 
 		index = (index + 1) % csh_p->page_entry_count;
 	}
-
-	csh_p->state = SCHEDULER_TASK_STOPPED;
 }
 
 int start_cleanup_scheduler(cleanup_scheduler* csh_p)
@@ -63,15 +59,16 @@ int start_cleanup_scheduler(cleanup_scheduler* csh_p)
 		return 0;
 	}
 
-	csh_p->state = SCHEDULER_TASK_STARTED;
-
-	csh_p->scheduler_job = get_job((void*(*)(void*))cleanup_scheduler_task_function, NULL);
+	csh_p->scheduler_job = get_job((void*(*)(void*))cleanup_scheduler_task_function, csh_p);
 
 	execute_async(csh_p->scheduler_job);
+
+	return 1;
 }
 
 void delete_cleanup_scheduler(cleanup_scheduler* csh_p)
 {
+	csh_p->SHUTDOWN_CALLED = 1;
 	get_result(csh_p->scheduler_job);
 	delete_job(csh_p->scheduler_job);
 	delete_array(csh_p->page_entry_holder);
