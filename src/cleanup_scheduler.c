@@ -44,9 +44,9 @@ static void* cleanup_scheduler_task_function(void* param)
 		if(clean_up_required)
 		{
 			queue_and_wait_for_page_clean_up(buffp, page_id);
-		}
 
-		// wait for prescribed amount for time
+			// wait for prescribed amount for time
+		}
 
 		index = (index + 1) % csh_p->page_entry_count;
 	}
