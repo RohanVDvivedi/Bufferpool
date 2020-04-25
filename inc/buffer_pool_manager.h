@@ -17,6 +17,8 @@
 #include<page_request_tracker.h>
 #include<io_dispatcher.h>
 
+#include<cleanup_scheduler.h>
+
 // the provided implementation of the bufferpool is a LRU cache
 // for the unordered pages of a heap file
 typedef struct bufferpool bufferpool;
@@ -49,6 +51,8 @@ struct bufferpool
 	executor* io_dispatcher;
 
 	page_request_tracker* rq_tracker;
+
+	cleanup_scheduler* cleanup_schd;
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
@@ -70,8 +74,9 @@ void release_page_write(bufferpool* buffp, void* page_memory);
 
 void request_page_prefetch(bufferpool* buffp, uint32_t page_id);
 
-void force_write_async(bufferpool* buffp, uint32_t page_id);
-void force_write_blocking(bufferpool* buffp, uint32_t page_id);
+// this function is blocking and it will return only when the page write to disk succeeds
+// do not call this function on the page_id, while you have already acquired a read/write lock on that page
+void force_write(bufferpool* buffp, uint32_t page_id);
 
 // deletes the buffer pool manager, that will maintain a heap file given by the name heap_file_name
 void delete_bufferpool(bufferpool* buffp);

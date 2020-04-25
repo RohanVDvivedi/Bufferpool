@@ -41,6 +41,8 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
 
+	buffp->cleanup_schd = get_cleanup_scheduler(buffp->maximum_pages_in_cache, 1000);
+
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
@@ -48,7 +50,10 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 		page_entry* page_ent = get_page_entry(buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
 		insert_page_entry_to_map_by_page_memory(buffp->mapp_p, page_ent);
 		mark_as_recently_used(buffp->lru_p, page_ent);
+		register_page_entry_to_cleanup_scheduler(buffp->cleanup_schd, page_ent);
 	}
+
+	start_cleanup_scheduler(buffp->cleanup_schd, buffp);
 
 	return buffp;
 }
@@ -164,41 +169,34 @@ void request_page_prefetch(bufferpool* buffp, uint32_t page_id)
 
 }
 
-void force_write_async(bufferpool* buffp, uint32_t page_id)
-{
-	queue_page_clean_up(buffp, page_id);
-}
-
-void force_write_blocking(bufferpool* buffp, uint32_t page_id)
+void force_write(bufferpool* buffp, uint32_t page_id)
 {
 	queue_and_wait_for_page_clean_up(buffp, page_id);
 }
 
-static void delete_page_entry_wrapper(page_entry* page_ent, bufferpool* buffp)
-{
-	queue_page_clean_up(buffp, page_ent->page_id);
-}
-
 void delete_bufferpool(bufferpool* buffp)
 {
-	for_each_page_entry_in_page_entry_mapper(buffp->mapp_p, (void(*)(page_entry*,void*))delete_page_entry_wrapper, buffp);
-	
+	// call shutdown for the cleanup scheduler
+	shutdown_and_delete_cleanup_scheduler(buffp->cleanup_schd);
+
+	// the io_dispatcher has to be shutdown aswell, but only after it complets, all the io jobs that have been submitted it uptill now
 	shutdown_executor(buffp->io_dispatcher, 0);
 	wait_for_all_threads_to_complete(buffp->io_dispatcher);
 	delete_executor(buffp->io_dispatcher);
 
+	// since now we are sure that there are no dirty page_entries, close the database file
 	close_dbfile(buffp->db_file);
+
+	// delete all the page_entries
+
+	// free all the memory that the buffer pool acquired
 	free(buffp->memory);
+
+	// delete the lru, page_entry_mapper and the request tracker data structures
 	delete_lru(buffp->lru_p);
 	delete_page_entry_mapper(buffp->mapp_p);
 	delete_page_request_tracker(buffp->rq_tracker);
+
+	// free the buffer pool struct
 	free(buffp);
 }
-
-/*
- buffer pool man this is the struct that you will use,
- do not access any of the structures of the buffer_pool_manager
- unless it is returned by the functions in this source file
- keep, always release the page you get get/acquire,
- deleting bufferpool is not mandatory if you are closing the app in the end any way
-*/
