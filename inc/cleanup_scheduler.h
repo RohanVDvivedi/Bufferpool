@@ -2,6 +2,7 @@
 #define CLEANUP_SCHEDULER
 
 #include<stdint.h>
+#include<unistd.h>
 
 #include<array.h>
 #include<job.h>

@@ -63,6 +63,7 @@ static void* cleanup_scheduler_task_function(void* param)
 		if(check_and_queue_if_cleanup_required(csh_p, buffp, index, 1))
 		{
 			// wait for prescribed amount for time, after last page_entry cleanup
+			usleep(csh_p->cleanup_rate_in_milliseconds * 1000);
 		}
 
 		index = (index + 1) % csh_p->page_entry_count;
