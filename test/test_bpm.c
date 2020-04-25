@@ -19,6 +19,7 @@
 #define COUNT_OF_IO_TASKS 100
 
 #define IO_TASK_LATENCY_IN_MS 150
+#define DELAY_AFTER_IO_TASKS_ARE_COMPLETED 2000
 
 #define PAGE_DATA_FORMAT_PREFIX_CHARS 11
 #define PAGE_DATA_FORMAT "Hello World, This is page number %u -> Buffer pool manager works, %d writes completed..."
@@ -105,6 +106,9 @@ int main(int argc, char **argv)
 	printf("Waiting for tasks to finish\n\n");
 
 	delete_executor(exe);
+	#if defined DELAY_AFTER_IO_TASKS_ARE_COMPLETED
+		usleep(DELAY_AFTER_IO_TASKS_ARE_COMPLETED * 1000);
+	#endif
 	delete_bufferpool(bpm);
 	printf("Buffer pool and executor deleted\n\n");
 
