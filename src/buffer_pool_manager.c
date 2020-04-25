@@ -33,6 +33,8 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->memory = malloc((buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file)) + get_block_size(buffp->db_file));
 	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
 
+	buffp->page_entries = get_array(buffp->maximum_pages_in_cache);
+
 	buffp->mapp_p = get_page_entry_mapper(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
 	buffp->lru_p = get_lru(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
@@ -41,16 +43,16 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
 
-	buffp->cleanup_schd = get_cleanup_scheduler(buffp->maximum_pages_in_cache, 250);
+	buffp->cleanup_schd = get_cleanup_scheduler(250);
 
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
 		void* page_memory = buffp->first_aligned_block + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = get_page_entry(buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
+		set_element(buffp->page_entries, page_ent, i);
 		insert_page_entry_to_map_by_page_memory(buffp->mapp_p, page_ent);
 		mark_as_recently_used(buffp->lru_p, page_ent);
-		register_page_entry_to_cleanup_scheduler(buffp->cleanup_schd, page_ent);
 	}
 
 	start_cleanup_scheduler(buffp->cleanup_schd, buffp);
@@ -188,8 +190,13 @@ void delete_bufferpool(bufferpool* buffp)
 	close_dbfile(buffp->db_file);
 
 	// delete all the page_entries
+	for(uint32_t i; i < buffp->maximum_pages_in_cache; i++)
+	{
+		delete_page_entry((page_entry*)get_element(buffp->page_entries, i));
+	}
+	delete_array(buffp->page_entries);
 
-	// free all the memory that the buffer pool acquired
+	// free all the memory that the buffer pool acquired, for capturing frames
 	free(buffp->memory);
 
 	// delete the lru, page_entry_mapper and the request tracker data structures

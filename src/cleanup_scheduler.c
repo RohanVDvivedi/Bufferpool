@@ -1,29 +1,19 @@
 #include<buffer_pool_manager.h>
 #include<cleanup_scheduler.h>
 
-cleanup_scheduler* get_cleanup_scheduler(uint32_t maximum_expected_page_entry_count, uint64_t cleanup_rate_in_milliseconds)
+cleanup_scheduler* get_cleanup_scheduler(uint64_t cleanup_rate_in_milliseconds)
 {
 	cleanup_scheduler* csh_p = (cleanup_scheduler*) malloc(sizeof(cleanup_scheduler));
-	csh_p->page_entry_count = 0;
-	csh_p->page_entry_holder = get_array(maximum_expected_page_entry_count);
 	csh_p->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	csh_p->scheduler_job = NULL;
 	csh_p->SHUTDOWN_CALLED = 0;
 	return csh_p;
 }
 
-int register_page_entry_to_cleanup_scheduler(cleanup_scheduler* csh_p, page_entry* page_ent)
-{
-	if(csh_p->scheduler_job == NULL)
-	{
-		set_element(csh_p->page_entry_holder, page_ent, csh_p->page_entry_count++);
-	}
-}
-
 // returns 1, if the clean up was required for the page_entry at a given index
-static int check_and_queue_if_cleanup_required(cleanup_scheduler* csh_p, bufferpool* buffp, uint32_t index, int clean_up_sync)
+static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index, int clean_up_sync)
 {
-	page_entry* page_ent = (page_entry*) get_element(csh_p->page_entry_holder, index);
+	page_entry* page_ent = (page_entry*) get_element(buffp->page_entries, index);
 
 	int clean_up_required = 0;
 	uint32_t page_id = 0;
@@ -65,26 +55,26 @@ static void* cleanup_scheduler_task_function(void* param)
 	while(csh_p->SHUTDOWN_CALLED == 0)
 	{
 		// clean up is to be performed in sync here
-		if(check_and_queue_if_cleanup_required(csh_p, buffp, index, 1))
+		if(check_and_queue_if_cleanup_required(buffp, index, 1))
 		{
 			// wait for prescribed amount for time, after last page_entry cleanup
 			usleep(csh_p->cleanup_rate_in_milliseconds * 1000);
 		}
 
-		index = (index + 1) % csh_p->page_entry_count;
+		index = (index + 1) % buffp->maximum_pages_in_cache;
 	}
 
-	for(uint32_t iter = 0; iter < csh_p->page_entry_count; iter++)
+	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
 		// the pages that require clean up are only queued, here
 		// so the buffer pool io_dispatcher is required to wait for all threads to complete
-		check_and_queue_if_cleanup_required(csh_p, buffp, iter, 0);
+		check_and_queue_if_cleanup_required(buffp, i, 0);
 	}
 }
 
 int start_cleanup_scheduler(cleanup_scheduler* csh_p, bufferpool* buffp)
 {
-	if(csh_p->page_entry_count == 0)
+	if(buffp->maximum_pages_in_cache == 0)
 	{
 		return 0;
 	}
@@ -101,6 +91,5 @@ void shutdown_and_delete_cleanup_scheduler(cleanup_scheduler* csh_p)
 	csh_p->SHUTDOWN_CALLED = 1;
 	get_result(csh_p->scheduler_job);
 	delete_job(csh_p->scheduler_job);
-	delete_array(csh_p->page_entry_holder);
 	free(csh_p);
 }

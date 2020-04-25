@@ -44,6 +44,8 @@ struct bufferpool
 	// people generally go with 8 blocks per page
 	uint32_t number_of_blocks_per_page;
 
+	array* page_entries;
+
 	page_entry_mapper* mapp_p;
 
 	lru* lru_p;
