@@ -1,5 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<stdint.h>
+#include<unistd.h>
 
 #include<string.h>
 
@@ -15,6 +17,8 @@
 
 #define FIXED_THREAD_POOL_SIZE 10
 #define COUNT_OF_IO_TASKS 100
+
+#define IO_TASK_LATENCY_IN_MS 150
 
 #define PAGE_DATA_FORMAT_PREFIX_CHARS 11
 #define PAGE_DATA_FORMAT "Hello World, This is page number %u -> Buffer pool manager works, %d writes completed..."
@@ -148,7 +152,12 @@ void page_read_and_print(uint32_t page_id)
 		printf("DATA ACCESS CONTENTION, requested %u page for read, received %u page\n", page_id, page_id_temp);
 	}
 	printf("page %u read done\n", page_id);
+
+	#if defined IO_TASK_LATENCY_IN_MS
+		usleep(IO_TASK_LATENCY_IN_MS * 1000);
+	#endif
 	release_page_read(bpm, page_mem);
+	
 	printf("page %u released from read lock\n\n", page_id);
 }
 
@@ -180,6 +189,11 @@ void page_write_and_print(uint32_t page_id)
 		sprintf(page_mem, PAGE_DATA_FORMAT, page_id, ++writes);
 		printf("new Data written on page %u : \t <%s>\n", page_id, (char*)page_mem);
 	}
+
+	#if defined IO_TASK_LATENCY_IN_MS
+		usleep(IO_TASK_LATENCY_IN_MS * 1000);
+	#endif
+
 	release_page_write(bpm, page_mem);
 	printf("page %u released from write lock\n\n", page_id);
 }

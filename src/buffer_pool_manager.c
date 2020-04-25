@@ -41,7 +41,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
 
-	buffp->cleanup_schd = get_cleanup_scheduler(buffp->maximum_pages_in_cache, 1000);
+	buffp->cleanup_schd = get_cleanup_scheduler(buffp->maximum_pages_in_cache, 250);
 
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)

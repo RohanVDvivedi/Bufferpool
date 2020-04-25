@@ -40,10 +40,12 @@ static int check_and_queue_if_cleanup_required(cleanup_scheduler* csh_p, bufferp
 	{
 		if(clean_up_sync)
 		{
+			printf("sync clean up scheduled for %u page_id\n", page_ent->page_id);
 			queue_and_wait_for_page_clean_up(buffp, page_id);
 		}
 		else
 		{
+			printf("async clean up scheduled for %u page_id\n", page_ent->page_id);
 			queue_page_clean_up(buffp, page_id);
 		}
 	}
@@ -55,6 +57,9 @@ static void* cleanup_scheduler_task_function(void* param)
 {
 	bufferpool* buffp = (bufferpool*) param;
 	cleanup_scheduler* csh_p = buffp->cleanup_schd;
+
+	// wait for prescribed amount for time, after last page_entry cleanup
+	usleep(csh_p->cleanup_rate_in_milliseconds * 1000);
 
 	uint32_t index = 0;
 	while(csh_p->SHUTDOWN_CALLED == 0)
