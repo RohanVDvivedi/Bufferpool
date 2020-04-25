@@ -30,12 +30,10 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 	{
 		if(clean_up_sync)
 		{
-			printf("sync clean up scheduled for %u page_id\n", page_ent->page_id);
 			queue_and_wait_for_page_clean_up(buffp, page_id);
 		}
 		else
 		{
-			printf("async clean up scheduled for %u page_id\n", page_ent->page_id);
 			queue_page_clean_up(buffp, page_id);
 		}
 	}
