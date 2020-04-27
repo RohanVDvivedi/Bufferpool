@@ -29,9 +29,15 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 			page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
 			if(page_req == NULL)
 			{
+				// if not found, create a new page request
 				job* io_job = queue_page_request(buffp, page_id);
 				page_req = get_page_request(page_id, io_job);
+
+				// insert it into the inrenal datastructures
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
+				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
+					push_heap(prt_p->page_request_priority_queue, &(page_req->page_request_priority), page_req);
+				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 			}
 			increment_page_request_reference_count(page_req);
 		write_unlock(prt_p->page_request_tracker_lock);
@@ -73,8 +79,15 @@ int discard_page_request_if_not_referenced(page_request_tracker* prt_p, uint32_t
 
 page_request* get_highest_priority_page_request_to_fulfill(page_request_tracker* prt_p)
 {
-	// TODO
-	return NULL;
+	page_request* page_req = NULL;
+	pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
+		page_req = (page_request*)get_top_heap(prt_p->page_request_priority_queue, NULL);
+		if(page_req != NULL)
+		{
+			pop_heap(prt_p->page_request_priority_queue);
+		}
+	pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
+	return page_req;
 }
 
 static void mark_existing_page_request_for_deletion_wrapper(const void* key, const void* value, const void* additional_params)
