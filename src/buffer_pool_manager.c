@@ -115,6 +115,24 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	return page_ent;
 }
 
+void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id);
+
+	acquire_read_lock(page_ent);
+
+	return page_ent->page_memory;
+}
+
+void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
+{
+	page_entry* page_ent = fetch_page_entry(buffp, page_id);
+
+	acquire_write_lock(page_ent);
+
+	return page_ent->page_memory;
+}
+
 static void release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int was_modified)
 {
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
@@ -130,15 +148,6 @@ static void release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 }
 
-void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
-{
-	page_entry* page_ent = fetch_page_entry(buffp, page_id);
-
-	acquire_read_lock(page_ent);
-
-	return page_ent->page_memory;
-}
-
 void release_page_read(bufferpool* buffp, void* page_memory)
 {
 	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
@@ -146,15 +155,6 @@ void release_page_read(bufferpool* buffp, void* page_memory)
 	release_read_lock(page_ent);
 
 	release_used_page_entry(buffp, page_ent, 0);
-}
-
-void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
-{
-	page_entry* page_ent = fetch_page_entry(buffp, page_id);
-
-	acquire_write_lock(page_ent);
-
-	return page_ent->page_memory;
 }
 
 void release_page_write(bufferpool* buffp, void* page_memory)

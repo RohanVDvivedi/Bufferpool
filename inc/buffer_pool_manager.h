@@ -67,12 +67,14 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id);
 
 // lock the page for writing
 // multiple threads will not be allowed to write the same page simultaneously
+// this function will give you exclusive access to the page
 void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
 
 // this will unlock the page, provide the page_memory for the specific page
 // call this functions only  on the address returned after calling any one of get_page_to_* functions respectively
-void release_page_read(bufferpool* buffp, void* page_memory);
-void release_page_write(bufferpool* buffp, void* page_memory);
+// the release page method can be called, to release a page read/write lock,
+// it returns 0, if the lock could not be released
+int release_page(bufferpool* buffp, void* page_memory);
 
 void request_page_prefetch(bufferpool* buffp, uint32_t page_id);
 
