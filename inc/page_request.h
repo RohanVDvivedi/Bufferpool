@@ -14,7 +14,12 @@
 	It will not/can not be modified throughout its life cycle
 	no locks required to protect it
 
-	EXCEPT for the reference count and auto deletion, 
+	EXCEPT for
+
+	the request priority, it is a variable to be managed by the external data structure to prioritize
+	the fulfillment of this page request, hence it needs to be protected by the external structures only
+
+	the reference count and auto deletion, 
 	this helps us to know when there is noone using this object and hence we can delete that request
 */
 
@@ -27,6 +32,11 @@ struct page_request
 	// this is the job reference, external threads are asked to wait on this job,
 	// if they want to directly acquire the page when it comes to the main memory
 	job* io_job_reference;
+
+	// this number represents the effective number of times or how long ago was this request created
+	// the page_request with higher priority is fullfilled first
+	// this variable needs to be protected under the read/write lock of the data structure that manages the page request
+	uint32_t page_request_priority;
 
 	// the mutex below protects the reference and the deletion of the page_request
 	pthread_mutex_t page_request_reference_lock;

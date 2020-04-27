@@ -5,6 +5,7 @@ page_request* get_page_request(uint32_t page_id, job* io_job)
 	page_request* page_req = (page_request*) malloc(sizeof(page_request));
 	page_req->page_id = page_id;
 	page_req->io_job_reference = io_job;
+	page_req->page_request_priority = 0;
 	pthread_mutex_init(&(page_req->page_request_reference_lock), NULL);
 	page_req->page_request_reference_count = 1;
 	page_req->marked_for_deletion = 0;
