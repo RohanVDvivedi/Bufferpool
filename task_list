@@ -1,4 +1,3 @@
-* club page release methods of the buffer pool manager
 * necessary refactoring (page_request -> frame)
 * adding request count to page request
 * adding heap for page requests and the io_dispatcher always, picks the requests to resolve from that heap inside of the page_request tracker
