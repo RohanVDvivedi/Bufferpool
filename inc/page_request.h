@@ -31,7 +31,7 @@ struct page_request
 	// the mutex below protects the reference and the deletion of the page_request
 	pthread_mutex_t page_request_reference_lock;
 
-	uint32_t request_reference_count;
+	uint32_t page_request_reference_count;
 
 	uint8_t marked_for_deletion;
 };
