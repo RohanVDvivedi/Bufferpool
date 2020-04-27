@@ -13,6 +13,13 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	return prt_p;
 }
 
+static void priority_increment_wrapper_for_array_unsafe(void* data_p, unsigned long long int index, const void* additional_params)
+{
+	bucket* heap_bucket = (bucket*) data_p;
+	page_request* page_req = (page_request*) (heap_bucket->value);
+	page_req->page_request_priority++;
+}
+
 page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp)
 {
 	read_lock(prt_p->page_request_tracker_lock);
@@ -36,6 +43,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				// insert it into the inrenal datastructures
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
+					for_each_in_array(prt_p->page_request_priority_queue->heap_holder, priority_increment_wrapper_for_array_unsafe, NULL);
 					push_heap(prt_p->page_request_priority_queue, &(page_req->page_request_priority), page_req);
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 			}
