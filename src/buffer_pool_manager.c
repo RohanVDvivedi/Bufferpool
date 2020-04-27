@@ -133,37 +133,47 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
 	return page_ent->page_memory;
 }
 
-static void release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int was_modified)
+static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 {
-	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		page_ent->pinned_by_count--;
-		if(page_ent->pinned_by_count == 0)
-		{
-			mark_as_recently_used(buffp->lru_p, page_ent);
-		}
-		if(was_modified)
-		{
-			page_ent->is_dirty = 1;
-		}
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	int lock_released = 0;
+	int was_modified;
+
+	if(get_readers_count(page_ent->page_memory_lock))
+	{
+		release_read_lock(page_ent);
+		lock_released = 1;
+		was_modified = 0;
+	}
+	else if(get_writers_count(page_ent->page_memory_lock))
+	{
+		release_write_lock(page_ent);
+		lock_released = 1;
+		was_modified = 1;
+	}
+
+	if(lock_released)
+	{
+		pthread_mutex_lock(&(page_ent->page_entry_lock));
+			page_ent->pinned_by_count--;
+			if(page_ent->pinned_by_count == 0)
+			{
+				mark_as_recently_used(buffp->lru_p, page_ent);
+			}
+			if(was_modified)
+			{
+				page_ent->is_dirty = 1;
+			}
+		pthread_mutex_unlock(&(page_ent->page_entry_lock));
+	}
+
+	return lock_released;
 }
 
-void release_page_read(bufferpool* buffp, void* page_memory)
+int release_page(bufferpool* buffp, void* page_memory)
 {
 	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
 
-	release_read_lock(page_ent);
-
-	release_used_page_entry(buffp, page_ent, 0);
-}
-
-void release_page_write(bufferpool* buffp, void* page_memory)
-{
-	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
-
-	release_write_lock(page_ent);
-
-	release_used_page_entry(buffp, page_ent, 1);
+	return release_used_page_entry(buffp, page_ent);
 }
 
 void request_page_prefetch(bufferpool* buffp, uint32_t page_id)
