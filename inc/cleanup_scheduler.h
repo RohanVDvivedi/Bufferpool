@@ -27,7 +27,8 @@ cleanup_scheduler* get_cleanup_scheduler(uint64_t cleanup_rate_in_milliseconds);
 
 // returns 1, if the page cleanup scheduler was/could be started
 // page cleanup scheduler would not start if no page_entries has been registered, that we are suppossed to monitor
-// the all clean up will be called on the io executor threas of the given buffer pool only
+// the all clean up will be called on the io executor threads of the given buffer pool only
+// once the started the cleanup scheduler is responsible to keep on queuing dirty page entries of the buffer pool for cleanup at a given rate
 int start_cleanup_scheduler(cleanup_scheduler* csh_p, bufferpool* buffp);
 
 void shutdown_and_delete_cleanup_scheduler(cleanup_scheduler* csh_p);
