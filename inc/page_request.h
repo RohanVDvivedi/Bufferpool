@@ -17,7 +17,7 @@
 	EXCEPT for
 
 	the request priority, it is a variable to be managed by the external data structure to prioritize
-	the fulfillment of this page request, hence it needs to be protected by the external structures only
+	the fulfillment of this page request, hence it needs to be protected by the lock of external structure that is managing it
 
 	the reference count and auto deletion, 
 	this helps us to know when there is noone using this object and hence we can delete that request
