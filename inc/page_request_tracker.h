@@ -1,6 +1,8 @@
 #ifndef PAGE_REQUEST_TRACKER_H
 #define PAGE_REQUEST_TRACKER_H
 
+#include<pthread.h>
+
 #include<rwlock.h>
 #include<hashmap.h>
 #include<heap.h>
@@ -24,6 +26,12 @@ struct page_request_tracker
 
 	// hashmap from page_id -> page_request
 	hashmap* page_request_map;
+
+	// it protects the priorities of all the page_requests, and the max heap (priority queue) of page_requests (based on priorities)
+	pthread_mutex_t page_request_priotity_queue_lock;
+
+	// the request priority queue is used to help the buffer pool kow which request is more important to process first
+	heap* page_request_priotity_queue;
 };
 
 page_request_tracker* get_page_request_tracker(uint32_t max_requests);
@@ -43,10 +51,9 @@ int discard_page_request(page_request_tracker* prt_p, uint32_t page_id);
 // the function returns 1, if the page_request was successfully discarded and deleted
 int discard_page_request_if_not_referenced(page_request_tracker* prt_p, uint32_t page_id);
 
-/*
-	you should take care and discard a page request, 
-	only when noone could be waiting for that page_request to complete, you may discard it
-*/
+// the below function will query the priority queue (max heap) of the page_request tracker, and provide you with a page_request to fullfill
+// the io_dispatcher of the bufferpool is suppossed to fullfill the highest priority page_requests before others
+page_request* get_highest_priority_page_request_to_fulfill(page_request_tracker* prt_p);
 
 void delete_page_request_tracker(page_request_tracker* prt_p);
 

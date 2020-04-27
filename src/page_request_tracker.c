@@ -68,6 +68,12 @@ int discard_page_request_if_not_referenced(page_request_tracker* prt_p, uint32_t
 	return is_discarded;
 }
 
+page_request* get_highest_priority_page_request_to_fulfill(page_request_tracker* prt_p)
+{
+	// TODO
+	return NULL;
+}
+
 static void mark_existing_page_request_for_deletion_wrapper(const void* key, const void* value, const void* additional_params)
 {
 	mark_page_request_for_deletion((page_request*) value);
