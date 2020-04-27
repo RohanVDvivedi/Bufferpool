@@ -13,11 +13,17 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	return prt_p;
 }
 
+// below function is uniquely designed, to increment the priority of only a specific page_request, if the page_request pointer is provided as additional parameters
+// if you do not provide the target page_request, then the check is ignored and the priority is incremented anyway, for the given bucket of the heap
 static void priority_increment_wrapper_for_array_unsafe(void* data_p, unsigned long long int index, const void* additional_params)
 {
 	bucket* heap_bucket = (bucket*) data_p;
 	page_request* page_req = (page_request*) (heap_bucket->value);
-	page_req->page_request_priority++;
+	page_request* target_page_request = (page_request*) additional_params;
+	if(target_page_request == NULL || target_page_request == target_page_request)
+	{
+		page_req->page_request_priority++;
+	}
 }
 
 page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp)
@@ -27,6 +33,9 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 		if(page_req != NULL)
 		{
 			increment_page_request_reference_count(page_req);
+			pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
+				for_each_in_array(prt_p->page_request_priority_queue->heap_holder, priority_increment_wrapper_for_array_unsafe, page_req);
+			pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 		}
 	read_unlock(prt_p->page_request_tracker_lock);
 
@@ -45,6 +54,12 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
 					for_each_in_array(prt_p->page_request_priority_queue->heap_holder, priority_increment_wrapper_for_array_unsafe, NULL);
 					push_heap(prt_p->page_request_priority_queue, &(page_req->page_request_priority), page_req);
+				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
+			}
+			else
+			{
+				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
+					for_each_in_array(prt_p->page_request_priority_queue->heap_holder, priority_increment_wrapper_for_array_unsafe, page_req);
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 			}
 			increment_page_request_reference_count(page_req);
