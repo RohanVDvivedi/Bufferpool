@@ -15,6 +15,7 @@
 
 #include<page_request.h>
 #include<page_request_tracker.h>
+
 #include<io_dispatcher.h>
 
 #include<cleanup_scheduler.h>
@@ -24,18 +25,25 @@
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
-	// this is the database file, the current implementation allows only 1 file per database
+	// ******** Memories section start
+
+	// this is the database file, the current implementation allows only 1 file per bufferpool
 	dbfile* db_file;
 
 	// this is the total memory, as managed by the buffer pool
-	// the address holds memory equal to maximum pages in cache * number_of_blocks_per_page * size_of_block of the hardware
+	// the address holds memory equal to maximum pages in cache * number_of_blocks_per_page * size_of_block of the hardware + 1
+	// the additional block malloced is because, the malloced memory is not block aligned, while we need block aligned memory for direct io using DMA
 	void* memory;
 
 	// the address of the first aligned block, located in the allocated memory (the field immediately above)
 	// the first_aligned_block >= memory and  first_aligned_block <= memory + get_block_size(dbfile)
 	// We offset from the memory provided by malloc so as to 
-	// align both the ram memory addresses and disk access offsets to the physical block_size of the disk (to get advantage of DMA and DIRECT_IO, else IO fails)
+	// align both the ram memory addresses and disk access offsets to the physical block_size of the disk (to get advantage of DMA and DIRECT_IO, else IO will fail)
 	void* first_aligned_block;
+
+	// ******** Memories section end
+
+	// ******** bufferpool attributes section start
 
 	// this is the maximum number of pages that will exist in buffer pool cache at any moment
 	uint32_t maximum_pages_in_cache;
@@ -49,6 +57,10 @@ struct bufferpool
 	// this ensures that the buffer pool will not let a page be dirty for very long, even if it is not accessed
 	uint64_t cleanup_rate_in_milliseconds;
 
+	// ******** bufferpool attributes section end
+
+	// ******** Necessary custom datastructures start
+
 	array* page_entries;
 
 	page_entry_mapper* mapp_p;
@@ -56,6 +68,8 @@ struct bufferpool
 	lru* lru_p;
 
 	page_request_tracker* rq_tracker;
+
+	// ******** Necessary custom datastructures end
 
 	// ******** Threads section start
 
