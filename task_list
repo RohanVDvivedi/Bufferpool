@@ -1,4 +1,4 @@
 * necessary refactoring (page_request -> frame)
-* adding request count to page request
-* adding heap for page requests and the io_dispatcher always, picks the requests to resolve from that heap inside of the page_request tracker
+* removing the clean up scheduler structure
+* optimizing the heap access times, while changing priority
 * prefetch can be requested with a queue, and the page_id is pushed to all the queues once the page_request is fullfilled, hence threads can process threads out of order
