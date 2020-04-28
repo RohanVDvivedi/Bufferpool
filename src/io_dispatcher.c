@@ -1,4 +1,4 @@
-#include<buffer_pool_manager.h>
+#include<bufferpool.h>
 #include<io_dispatcher.h>
 
 typedef struct io_job_param io_job_param;

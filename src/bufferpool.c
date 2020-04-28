@@ -1,4 +1,4 @@
-#include<buffer_pool_manager.h>
+#include<bufferpool.h>
 
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count)
 {

@@ -1,4 +1,4 @@
-#include<buffer_pool_manager.h>
+#include<bufferpool.h>
 #include<cleanup_scheduler.h>
 
 cleanup_scheduler* get_cleanup_scheduler(uint64_t cleanup_rate_in_milliseconds)
