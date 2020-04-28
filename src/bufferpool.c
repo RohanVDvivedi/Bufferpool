@@ -55,11 +55,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->lru_p = get_lru(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
-	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, 0);
-
 	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
-
-	buffp->cleanup_schd = get_cleanup_scheduler(250);
 
 	// initialize empty page entries, and place them in clean page entries list
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
@@ -71,7 +67,12 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 		mark_as_recently_used(buffp->lru_p, page_ent);
 	}
 
-	start_cleanup_scheduler(buffp->cleanup_schd, buffp);
+	// no shutdown yet :p
+	buffp->SHUTDOWN_CALLED = 0;
+
+	// start necessary threads/jobs
+	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, 0);
+	start_async_cleanup_scheduler(buffp);
 
 	return buffp;
 }
@@ -202,10 +203,18 @@ void force_write(bufferpool* buffp, uint32_t page_id)
 	queue_and_wait_for_page_clean_up(buffp, page_id);
 }
 
+void shutdown_bufferpool(bufferpool* buffp)
+{
+	buffp->SHUTDOWN_CALLED = 1;
+}
+
 void delete_bufferpool(bufferpool* buffp)
 {
-	// call shutdown for the cleanup scheduler
-	shutdown_and_delete_cleanup_scheduler(buffp->cleanup_schd);
+	// call shutdown on the bufferpool
+	shutdown_bufferpool(buffp);
+
+	// wait for shutdown of the cleanup scheduler, in the end it would be queuing all the dirty pages to be written to the disk
+	wait_for_shutdown_cleanup_scheduler(buffp);
 
 	// the io_dispatcher has to be shutdown aswell, but only after it complets, all the io jobs that have been submitted it uptill now
 	shutdown_executor(buffp->io_dispatcher, 0);

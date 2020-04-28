@@ -1,15 +1,6 @@
 #include<bufferpool.h>
 #include<cleanup_scheduler.h>
 
-cleanup_scheduler* get_cleanup_scheduler(uint64_t cleanup_rate_in_milliseconds)
-{
-	cleanup_scheduler* csh_p = (cleanup_scheduler*) malloc(sizeof(cleanup_scheduler));
-	csh_p->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
-	csh_p->scheduler_job = NULL;
-	csh_p->SHUTDOWN_CALLED = 0;
-	return csh_p;
-}
-
 // returns 1, if the clean up was required for the page_entry at a given index
 static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index, int clean_up_sync)
 {
@@ -44,19 +35,18 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 static void* cleanup_scheduler_task_function(void* param)
 {
 	bufferpool* buffp = (bufferpool*) param;
-	cleanup_scheduler* csh_p = buffp->cleanup_schd;
 
 	// wait for prescribed amount for time, after last page_entry cleanup
-	usleep(csh_p->cleanup_rate_in_milliseconds * 1000);
+	usleep(buffp->cleanup_rate_in_milliseconds * 1000);
 
 	uint32_t index = 0;
-	while(csh_p->SHUTDOWN_CALLED == 0)
+	while(buffp->SHUTDOWN_CALLED == 0)
 	{
 		// clean up is to be performed in sync here
 		if(check_and_queue_if_cleanup_required(buffp, index, 1))
 		{
 			// wait for prescribed amount for time, after last page_entry cleanup
-			usleep(csh_p->cleanup_rate_in_milliseconds * 1000);
+			usleep(buffp->cleanup_rate_in_milliseconds * 1000);
 		}
 
 		index = (index + 1) % buffp->maximum_pages_in_cache;
@@ -70,24 +60,16 @@ static void* cleanup_scheduler_task_function(void* param)
 	}
 }
 
-int start_cleanup_scheduler(cleanup_scheduler* csh_p, bufferpool* buffp)
+void start_async_cleanup_scheduler(bufferpool* buffp)
 {
-	if(buffp->maximum_pages_in_cache == 0)
-	{
-		return 0;
-	}
+	buffp->cleanup_scheduler = get_job((void*(*)(void*))cleanup_scheduler_task_function, buffp);
 
-	csh_p->scheduler_job = get_job((void*(*)(void*))cleanup_scheduler_task_function, buffp);
-
-	execute_async(csh_p->scheduler_job);
-
-	return 1;
+	execute_async(buffp->cleanup_scheduler);
 }
 
-void shutdown_and_delete_cleanup_scheduler(cleanup_scheduler* csh_p)
+void shutdown_and_delete_cleanup_scheduler(bufferpool* buffp)
 {
-	csh_p->SHUTDOWN_CALLED = 1;
-	get_result(csh_p->scheduler_job);
-	delete_job(csh_p->scheduler_job);
-	free(csh_p);
+	get_result(buffp->cleanup_scheduler);
+	delete_job(buffp->cleanup_scheduler);
+	free(buffp);
 }

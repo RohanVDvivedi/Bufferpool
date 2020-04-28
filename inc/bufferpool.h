@@ -44,17 +44,33 @@ struct bufferpool
 	// people generally go with 8 blocks per page
 	uint32_t number_of_blocks_per_page;
 
+	// This is the rate at which the bufferpool will clean up dirty pages
+	// if the clean up rate is 3000 ms, that means at every 3 seconds the buffer pool will queue one dirty page to be written to disk
+	// this ensures that the buffer pool will not let a page be dirty for very long, even if it is not accessed
+	uint64_t cleanup_rate_in_milliseconds;
+
 	array* page_entries;
 
 	page_entry_mapper* mapp_p;
 
 	lru* lru_p;
 
-	executor* io_dispatcher;
-
 	page_request_tracker* rq_tracker;
 
-	cleanup_scheduler* cleanup_schd;
+	// ******** Threads section start
+
+	// This is the main multithread fixed thread count executor, 
+	// responsible to write dirty pages to disk and fetch new pages when there are pending page requests
+	executor* io_dispatcher;
+
+	// single thread that queues dirty pages to io_dispatcher for clean up, at a constant rate
+	job* cleanup_scheduler;
+
+	// ******** Threads section end
+
+	// this variable has to be set to 1, 
+	// if you want the async cleanup scheduling thread and the io_dispatcher to stop
+	volatile int SHUTDOWN_CALLED;
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
