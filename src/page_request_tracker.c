@@ -52,7 +52,6 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 			if(page_req == NULL)
 			{
 				// if not found, create a new page request
-				queue_job_for_page_request(buffp);
 				page_req = get_page_request(page_id);
 
 				// insert it into the inrenal data structures
@@ -61,6 +60,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 					for_each_in_array(prt_p->page_request_priority_queue->heap_holder, priority_increment_wrapper_for_array_unsafe, NULL);
 					push_heap(prt_p->page_request_priority_queue, &(page_req->page_request_priority), page_req);
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
+
+				// once the page request is properly setup, create a replacement job
+				// so that the buffer pool's io dispatcher could fulfill it
+				queue_job_for_page_request(buffp);
 			}
 			else
 			{
