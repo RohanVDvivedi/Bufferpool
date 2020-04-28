@@ -2,7 +2,23 @@
 
 bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count)
 {
-	// try and open a dtabase file
+	if(maximum_pages_in_cache == 0)
+	{
+		printf("A bufferpool can be built only for non zero pages in cache, hence buffer pool can not be built\n");
+		return NULL;
+	}
+	if(page_size_in_bytes == 0)
+	{
+		printf("The pagesize of the buffer pool must be a multiple of hardware block size and not 0, hence buffer pool can not be built\n");
+		return NULL;
+	}
+	if(io_thread_count == 0)
+	{
+		printf("You must allow atleast 1 io_thread for the functioning of the bufferpool, hence buffer pool can not be built\n");
+		return NULL;
+	}
+
+	// try and open a database file
 	dbfile* dbf = open_dbfile(heap_file_name);
 	if(dbf == NULL)
 	{
