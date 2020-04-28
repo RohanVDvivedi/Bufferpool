@@ -17,15 +17,18 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 // if you do not provide the target page_request, then the check is ignored and the priority is incremented anyway, for the given bucket of the heap
 static void priority_increment_wrapper_for_array_unsafe(void* data_p, unsigned long long int index, const void* additional_params)
 {
-	bucket* heap_bucket = (bucket*) data_p;
-	page_request* page_req = (page_request*) (heap_bucket->value);
-	page_request* target_page_request = (page_request*) additional_params;
-	if(target_page_request == NULL || target_page_request == target_page_request)
+	if(data_p != NULL)
 	{
-		page_req->page_request_priority++;
+		bucket* heap_bucket = (bucket*) data_p;
+		page_request* page_req = (page_request*) (heap_bucket->value);
+		page_request* target_page_request = (page_request*) additional_params;
+		if(target_page_request == NULL || target_page_request == target_page_request)
+		{
+			page_req->page_request_priority++;
+		}
+		// restore the index of the heap
+		page_req->index_in_priority_queue = index;
 	}
-	// restore the index of the heap
-	page_req->index_in_priority_queue = index;
 }
 
 page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp)
