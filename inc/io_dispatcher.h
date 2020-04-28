@@ -10,7 +10,7 @@
 typedef struct bufferpool bufferpool;
 struct bufferpool;
 
-job* queue_page_request(bufferpool* buffp, uint32_t page_id);
+job* queue_job_for_page_request(bufferpool* buffp);
 
 void queue_page_clean_up(bufferpool* buffp, uint32_t page_id);
 

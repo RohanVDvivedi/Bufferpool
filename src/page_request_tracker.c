@@ -49,7 +49,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 			if(page_req == NULL)
 			{
 				// if not found, create a new page request
-				job* io_job = queue_page_request(buffp, page_id);
+				job* io_job = queue_job_for_page_request(buffp);
 				page_req = get_page_request(page_id, io_job);
 
 				// insert it into the inrenal data structures
