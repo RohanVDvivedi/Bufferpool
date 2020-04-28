@@ -67,9 +67,8 @@ void start_async_cleanup_scheduler(bufferpool* buffp)
 	execute_async(buffp->cleanup_scheduler);
 }
 
-void shutdown_and_delete_cleanup_scheduler(bufferpool* buffp)
+void wait_for_shutdown_cleanup_scheduler(bufferpool* buffp)
 {
 	get_result(buffp->cleanup_scheduler);
 	delete_job(buffp->cleanup_scheduler);
-	free(buffp);
 }

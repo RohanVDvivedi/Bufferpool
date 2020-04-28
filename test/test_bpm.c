@@ -5,7 +5,7 @@
 
 #include<string.h>
 
-#include<buffer_pool_manager.h>
+#include<bufferpool.h>
 
 #include<executor.h>
 
