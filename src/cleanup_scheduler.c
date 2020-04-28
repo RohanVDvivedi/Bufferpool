@@ -43,7 +43,7 @@ static void* cleanup_scheduler_task_function(void* param)
 	while(buffp->SHUTDOWN_CALLED == 0)
 	{
 		// clean up is to be performed in sync here
-		if(check_and_queue_if_cleanup_required(buffp, index, 1))
+		if(check_and_queue_if_cleanup_required(buffp, index, 1) || (index == 0))
 		{
 			// wait for prescribed amount for time, after last page_entry cleanup
 			usleep(buffp->cleanup_rate_in_milliseconds * 1000);
