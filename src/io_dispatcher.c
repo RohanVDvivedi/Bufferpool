@@ -16,9 +16,15 @@ io_job_param* get_io_job_param(bufferpool* buffp, uint32_t page_id)
 	return param;
 }
 
-static page_entry* io_page_replace_task(bufferpool* buffp)
+static void* io_page_replace_task(bufferpool* buffp)
 {
 	page_request* page_req_to_fulfill = get_highest_priority_page_request_to_fulfill(buffp->rq_tracker);
+
+	if(page_req_to_fulfill == NULL)
+	{
+		return NULL;
+	}
+
 	uint32_t page_id = page_req_to_fulfill->page_id;
 
 	page_entry* page_ent = NULL;
@@ -80,8 +86,10 @@ static page_entry* io_page_replace_task(bufferpool* buffp)
 	}
 
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
+	set_result(page_req_to_fulfill->fulfillment_promise, page_ent);
 	
-	return page_ent;
+	return NULL;
 }
 
 static void* io_clean_up_task(io_job_param* param)
@@ -113,11 +121,9 @@ static void* io_clean_up_task(io_job_param* param)
 	return NULL;
 }
 
-job* queue_job_for_page_request(bufferpool* buffp)
+void queue_job_for_page_request(bufferpool* buffp)
 {
-	job* job_p = get_job((void*(*)(void*))io_page_replace_task, buffp);
-	submit_job(buffp->io_dispatcher, job_p);
-	return job_p;
+	submit_function(buffp->io_dispatcher, (void*(*)(void*))io_page_replace_task, buffp);
 }
 
 void queue_page_clean_up(bufferpool* buffp, uint32_t page_id)

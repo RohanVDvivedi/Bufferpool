@@ -30,8 +30,9 @@ struct page_request
 	uint32_t page_id;
 
 	// this is the job reference, external threads are asked to wait on this job,
+	// it is effectively a promise that the waiting threads will be woken up when the page_request is fulfilled
 	// if they want to directly acquire the page when it comes to the main memory
-	job* io_job_reference;
+	job* fulfillment_promise;
 
 	// this number represents the effective number of times or how long ago was this request created
 	// the page_request with higher priority is fullfilled first
@@ -51,7 +52,7 @@ struct page_request
 
 // this function returns a new page_request, whose reference count is already 1
 // we assume that you are going to reference this page_request if you are creating it
-page_request* get_page_request(uint32_t page_id, job* io_job);
+page_request* get_page_request(uint32_t page_id);
 
 /* Below are the functions to be used by the data structures/threads that are responsible for creation and maintenance of the page_requests */
 
