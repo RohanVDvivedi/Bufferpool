@@ -1,6 +1,6 @@
 #include<bufferpool.h>
 
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count)
+bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count, uint64_t cleanup_rate_in_milliseconds)
 {
 	if(maximum_pages_in_cache == 0)
 	{
@@ -15,6 +15,11 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	if(io_thread_count == 0)
 	{
 		printf("You must allow atleast 1 io_thread for the functioning of the bufferpool, hence buffer pool can not be built\n");
+		return NULL;
+	}
+	if(cleanup_rate_in_milliseconds = 0)
+	{
+		printf("The bufferpool cleanup rate should not be 0 milliseconds, hence buffer pool can not be built\n");
 		return NULL;
 	}
 
@@ -48,6 +53,8 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 
 	buffp->memory = malloc((buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file)) + get_block_size(buffp->db_file));
 	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
+
+	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 
 	buffp->page_entries = get_array(buffp->maximum_pages_in_cache);
 

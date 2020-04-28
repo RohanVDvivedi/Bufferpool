@@ -88,7 +88,7 @@ struct bufferpool
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count);
+bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count, uint64_t cleanup_rate_in_milliseconds);
 
 // locks the page for reading
 // multiple threads can read the same page simultaneously,
