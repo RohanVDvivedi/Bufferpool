@@ -10,7 +10,8 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 	uint32_t page_id = 0;
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(!page_ent->is_free && page_ent->is_dirty)
+	// a page_entry has to be queued for clean up only if, if it is a dirty page and not free and it is not pinned by any user thread (i.e. it is not in use)
+		if(!page_ent->is_free && page_ent->is_dirty && page_ent->pinned_by_count == 0)
 		{
 			clean_up_required = 1;
 			page_id = page_ent->page_id;
