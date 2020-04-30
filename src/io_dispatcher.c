@@ -141,15 +141,33 @@ void queue_job_for_page_request(bufferpool* buffp)
 	submit_function(buffp->io_dispatcher, (void*(*)(void*))io_page_replace_task, buffp);
 }
 
-void queue_page_clean_up(bufferpool* buffp, page_entry* page_ent)
+void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 {
-	submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, get_io_job_param(buffp, page_ent));
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+		if(!page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
+		{
+			submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, get_io_job_param(buffp, page_ent));
+			page_ent->is_queued_for_cleanup = 1;
+		}
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 }
 
-void queue_and_wait_for_page_clean_up(bufferpool* buffp, page_entry* page_ent)
+void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 {
-	job* job_p = get_job((void*(*)(void*))io_clean_up_task, get_io_job_param(buffp, page_ent));
-	submit_job(buffp->io_dispatcher, job_p);
-	get_result(job_p);
-	delete_job(job_p);
+	job* cleanup_job_p = NULL;
+
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+		if(!page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
+		{
+			cleanup_job_p = get_job((void*(*)(void*))io_clean_up_task, get_io_job_param(buffp, page_ent));
+			submit_job(buffp->io_dispatcher, cleanup_job_p);
+			page_ent->is_queued_for_cleanup = 1;
+		}
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
+	if(cleanup_job_p != NULL)
+	{
+		get_result(cleanup_job_p);
+		delete_job(cleanup_job_p);
+	}
 }

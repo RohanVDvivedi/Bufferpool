@@ -214,30 +214,23 @@ void force_write(bufferpool* buffp, uint32_t page_id)
 		int is_cleanup_required = 0;
 
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
-			if(page_id == page_ent->page_id
-			 && !page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
+			if(page_id == page_ent->page_id)
 			{
 				is_cleanup_required = 1;
-				page_ent->is_queued_for_cleanup = 1;
 			}
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
 		if(is_cleanup_required)
 		{
-			queue_and_wait_for_page_clean_up(buffp, page_ent);
+			queue_and_wait_for_page_entry_clean_up_if_dirty(buffp, page_ent);
 		}
 	}
-}
-
-void shutdown_bufferpool(bufferpool* buffp)
-{
-	buffp->SHUTDOWN_CALLED = 1;
 }
 
 void delete_bufferpool(bufferpool* buffp)
 {
 	// call shutdown on the bufferpool
-	shutdown_bufferpool(buffp);
+	buffp->SHUTDOWN_CALLED = 1;
 
 	// wait for shutdown of the cleanup scheduler, in the end it would be queuing all the dirty pages to be written to the disk
 	wait_for_shutdown_cleanup_scheduler(buffp);

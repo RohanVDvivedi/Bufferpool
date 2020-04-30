@@ -12,19 +12,13 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 	setToCurrentUnixTimestamp(currentTimeStamp);
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	// a page_entry has to be queued for clean up only if, if 
-	// it is a dirty page and not free and it has not already been queued in the io_dispatcher for the cleanup action
+	// a page_entry has to be queued for clean up only if
 	// and it is not pinned by any user thread (i.e. it is not in use),
 	// ** and that atleast cleanup rate in millizeconds have elapsed since last io operation on that page_entry or that the clean up is async
-		if(!page_ent->is_free && page_ent->is_dirty 
-			&& !page_ent->is_queued_for_cleanup 
-			&& ( (!clean_up_sync) || (currentTimeStamp >= page_ent->unix_timestamp_since_last_disk_io_in_ms + buffp->cleanup_rate_in_milliseconds))
+		if(( (!clean_up_sync) || (currentTimeStamp >= page_ent->unix_timestamp_since_last_disk_io_in_ms + buffp->cleanup_rate_in_milliseconds))
 			&& page_ent->pinned_by_count == 0)
 		{
 			clean_up_required = 1;
-
-			// and since we are going to be queuing the page for cleanup, we already mark it as being queued for cleanup
-			page_ent->is_queued_for_cleanup = 1;
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
@@ -32,20 +26,11 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 	{
 		if(clean_up_sync)
 		{
-			printf("Cleanup queued in sync\n");
-			queue_and_wait_for_page_clean_up(buffp, page_ent);
+			queue_and_wait_for_page_entry_clean_up_if_dirty(buffp, page_ent);
 		}
 		else
 		{
-			printf("Cleanup queued in async\n");
-			queue_page_clean_up(buffp, page_ent);
-		}
-	}
-	else
-	{
-		if(!clean_up_sync)
-		{
-			printf("Cleanup not queued in async %u %u %u\n", page_ent->is_free, page_ent->is_dirty, page_ent->is_queued_for_cleanup);
+			queue_page_entry_clean_up_if_dirty(buffp, page_ent);
 		}
 	}
 
