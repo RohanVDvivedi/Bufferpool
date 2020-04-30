@@ -1,12 +1,6 @@
 #ifndef CLEANUP_SCHEDULER
 #define CLEANUP_SCHEDULER
 
-#include<stdint.h>
-#include<unistd.h>
-#include<sys/time.h>
-
-#include<job.h>
-
 #include<page_entry.h>
 #include<io_dispatcher.h>
 

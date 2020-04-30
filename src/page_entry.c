@@ -1,4 +1,5 @@
- #include<page_entry.h>
+#include<buffer_pool_man_types.h>
+#include<page_entry.h>
 
 page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_of_blocks_in_page)
 {
@@ -19,7 +20,7 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 	page_ent->is_free = 1;
 	page_ent->is_queued_for_cleanup = 0;
 
-	page_ent->unix_timestamp_since_last_disk_io_in_ms = 0;
+	setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);
 	
 	page_ent->pinned_by_count = 0;
 
