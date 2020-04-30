@@ -1,21 +1,6 @@
 #include<bufferpool.h>
 #include<io_dispatcher.h>
 
-typedef struct io_job_param io_job_param;
-struct io_job_param
-{
-	bufferpool* buffp;
-	page_entry* page_ent;
-};
-
-io_job_param* get_io_job_param(bufferpool* buffp, page_entry* page_ent)
-{
-	io_job_param* param = (io_job_param*) malloc(sizeof(io_job_param));
-	param->buffp = buffp;
-	param->page_ent = page_ent;
-	return param;
-}
-
 static void* io_page_replace_task(bufferpool* buffp)
 {
 	page_request* page_req_to_fulfill = get_highest_priority_page_request_to_fulfill(buffp->rq_tracker);
@@ -98,12 +83,8 @@ static void* io_page_replace_task(bufferpool* buffp)
 	return NULL;
 }
 
-static void* io_clean_up_task(io_job_param* param)
+static void* io_clean_up_task(page_entry* page_ent)
 {
-	bufferpool* buffp = param->buffp;
-	page_entry* page_ent = param->page_ent;
-	free(param);
-
 	if(page_ent != NULL)
 	{
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
@@ -146,7 +127,7 @@ void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 		if(!page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
 		{
-			submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, get_io_job_param(buffp, page_ent));
+			submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, page_ent);
 			page_ent->is_queued_for_cleanup = 1;
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
@@ -159,7 +140,7 @@ void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_ent
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 		if(!page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
 		{
-			cleanup_job_p = get_job((void*(*)(void*))io_clean_up_task, get_io_job_param(buffp, page_ent));
+			cleanup_job_p = get_job((void*(*)(void*))io_clean_up_task, page_ent);
 			submit_job(buffp->io_dispatcher, cleanup_job_p);
 			page_ent->is_queued_for_cleanup = 1;
 		}
