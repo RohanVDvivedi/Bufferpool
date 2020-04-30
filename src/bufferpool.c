@@ -17,7 +17,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 		printf("You must allow atleast 1 io_thread for the functioning of the bufferpool, hence buffer pool can not be built\n");
 		return NULL;
 	}
-	if(cleanup_rate_in_milliseconds = 0)
+	if(cleanup_rate_in_milliseconds == 0)
 	{
 		printf("The bufferpool cleanup rate should not be 0 milliseconds, hence buffer pool can not be built\n");
 		return NULL;

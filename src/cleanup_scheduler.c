@@ -50,15 +50,8 @@ static void* cleanup_scheduler_task_function(void* param)
 		// clean up is to be performed in sync here
 		if(check_and_queue_if_cleanup_required(buffp, index, 1) || (index == 0))
 		{
-			uint64_t cur = 0;
-			setToCurrentUnixTimestamp(cur);
-			printf("s==>> %llu\n", cur);
-
 			// wait for prescribed amount for time, after last page_entry cleanup
 			sleepForMilliseconds(buffp->cleanup_rate_in_milliseconds);
-			
-			setToCurrentUnixTimestamp(cur);
-			printf("e==>> %llu\n", cur);
 		}
 
 		index = (index + 1) % buffp->maximum_pages_in_cache;
