@@ -19,8 +19,8 @@
 #define FIXED_THREAD_POOL_SIZE 10
 #define COUNT_OF_IO_TASKS 100
 
-#define IO_TASK_LATENCY_IN_MS 150
-#define DELAY_AFTER_IO_TASKS_ARE_COMPLETED 2000
+//#define IO_TASK_LATENCY_IN_MS 150
+//#define DELAY_AFTER_IO_TASKS_ARE_COMPLETED 2000
 
 #define PAGE_DATA_FORMAT_PREFIX_CHARS 11
 #define PAGE_DATA_FORMAT "Hello World, This is page number %u -> Buffer pool manager works, %d writes completed..."

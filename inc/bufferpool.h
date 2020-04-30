@@ -7,6 +7,8 @@
 
 #include<executor.h>
 
+#include<buffer_pool_man_types.h>
+
 #include<dbfile.h>
 
 #include<page_entry.h>

@@ -7,14 +7,24 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 	page_entry* page_ent = (page_entry*) get_element(buffp->page_entries, index);
 
 	int clean_up_required = 0;
-	uint32_t page_id = 0;
+
+	uint64_t currentTimeStamp = 0;
+	setToCurrentUnixTimestamp(currentTimeStamp);
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-	// a page_entry has to be queued for clean up only if, if it is a dirty page and not free and it is not pinned by any user thread (i.e. it is not in use)
-		if(!page_ent->is_free && page_ent->is_dirty && page_ent->pinned_by_count == 0)
+	// a page_entry has to be queued for clean up only if, if 
+	// it is a dirty page and not free and it has not already been queued in the io_dispatcher for the cleanup action
+	// and it is not pinned by any user thread (i.e. it is not in use),
+	// ** and that atleast cleanup rate in millizeconds have elapsed since last io operation on that page_entry or that the clean up is async
+		if(!page_ent->is_free && page_ent->is_dirty 
+			&& !page_ent->is_queued_for_cleanup 
+			&& ( (!clean_up_sync) || (currentTimeStamp >= page_ent->unix_timestamp_since_last_disk_io_in_ms + buffp->cleanup_rate_in_milliseconds))
+			&& page_ent->pinned_by_count == 0)
 		{
 			clean_up_required = 1;
-			page_id = page_ent->page_id;
+
+			// and since we are going to be queuing the page for cleanup, we already mark it as being queued for cleanup
+			page_ent->is_queued_for_cleanup = 1;
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
@@ -22,11 +32,20 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 	{
 		if(clean_up_sync)
 		{
-			queue_and_wait_for_page_clean_up(buffp, page_id);
+			printf("Cleanup queued in sync\n");
+			queue_and_wait_for_page_clean_up(buffp, page_ent);
 		}
 		else
 		{
-			queue_page_clean_up(buffp, page_id);
+			printf("Cleanup queued in async\n");
+			queue_page_clean_up(buffp, page_ent);
+		}
+	}
+	else
+	{
+		if(!clean_up_sync)
+		{
+			printf("Cleanup not queued in async %u %u %u\n", page_ent->is_free, page_ent->is_dirty, page_ent->is_queued_for_cleanup);
 		}
 	}
 

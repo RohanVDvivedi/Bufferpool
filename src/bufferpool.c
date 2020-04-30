@@ -207,7 +207,26 @@ void request_page_prefetch(bufferpool* buffp, uint32_t page_id)
 
 void force_write(bufferpool* buffp, uint32_t page_id)
 {
-	queue_and_wait_for_page_clean_up(buffp, page_id);
+	page_entry* page_ent = find_page_entry(buffp->mapp_p, page_id);
+
+	if(page_ent != NULL)
+	{
+		int is_cleanup_required = 0;
+
+		pthread_mutex_lock(&(page_ent->page_entry_lock));
+			if(page_id == page_ent->page_id
+			 && !page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
+			{
+				is_cleanup_required = 1;
+				page_ent->is_queued_for_cleanup = 1;
+			}
+		pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
+		if(is_cleanup_required)
+		{
+			queue_and_wait_for_page_clean_up(buffp, page_ent);
+		}
+	}
 }
 
 void shutdown_bufferpool(bufferpool* buffp)

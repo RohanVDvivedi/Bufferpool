@@ -14,9 +14,12 @@ page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_
 
 	page_ent->number_of_blocks_in_page = number_of_blocks_in_page;
 
-	// set appropriate bits for the page entry
+	// set appropriate bits for the page entry, (recognizing that the page_entry is initially clean and free, and no cleanup io has been queued on its creation)
 	page_ent->is_dirty = 0;
 	page_ent->is_free = 1;
+	page_ent->is_queued_for_cleanup = 0;
+
+	page_ent->unix_timestamp_since_last_disk_io_in_ms = 0;
 	
 	page_ent->pinned_by_count = 0;
 

@@ -33,9 +33,6 @@ struct page_entry
 	// this is the number of blocks, that make up this page
 	uint32_t number_of_blocks_in_page;
 
-	// pointer to the in memory copy of the page
-	void* page_memory;
-
 	// if the page is dirty, this byte is set to 1, else 0
 	// if a page is dirty, it is yet to be written to disk
 	uint8_t is_dirty;
@@ -43,9 +40,18 @@ struct page_entry
 	// if the page is free, the page has no meaningfull data on it
 	uint8_t is_free;
 
+	// this bit will be set, if this page_entry gets queued for cleanup of the dirty page, in the buffer pool of the io_dispatcher
+	uint8_t is_queued_for_cleanup;
+
 	// if the page is being used/going to be used by any of the thread, then this count has to be incremented by that thread
 	// if the pin count for a page > 0, the buffer pool manager will not replace it, with any other page/data i.e. it is not swappable
 	uint32_t pinned_by_count;
+
+	// this is the timestamp, when the last disk io operation was performed on this page_entry
+	uint64_t unix_timestamp_since_last_disk_io_in_ms;
+
+	// pointer to the in-memory copy of the page
+	void* page_memory;
 
 	// this lock ensures only 1 thread attempts to read or write the page to the disk
 	rwlock* page_memory_lock;

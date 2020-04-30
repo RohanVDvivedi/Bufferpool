@@ -12,8 +12,8 @@ struct bufferpool;
 
 void queue_job_for_page_request(bufferpool* buffp);
 
-void queue_page_clean_up(bufferpool* buffp, uint32_t page_id);
+void queue_page_clean_up(bufferpool* buffp, page_entry* page_ent);
 
-void queue_and_wait_for_page_clean_up(bufferpool* buffp, uint32_t page_id);
+void queue_and_wait_for_page_clean_up(bufferpool* buffp, page_entry* page_ent);
 
 #endif

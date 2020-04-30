@@ -5,6 +5,7 @@
 	#define _GNU_SOURCE
 #endif
 
+#include<sys/time.h>
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<fcntl.h>
