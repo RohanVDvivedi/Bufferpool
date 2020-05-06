@@ -14,18 +14,17 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 }
 
 // below function is uniquely designed, to increment the priority of only a specific page_request, if the page_request pointer is provided as additional parameters
-// if you do not provide the target page_request, then the check is ignored and the priority is incremented anyway, for the given bucket of the heap
-static void priority_increment_wrapper_for_array_unsafe(void* data_p, unsigned long long int index, const void* additional_params)
+// if you do not provide the target page_request, then the check is ignored and the priority is incremented anyway, for the all the page_requests that are in the priority_queue
+static void priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe(const void* key_p, const void* value_p, unsigned long long int heap_index, const void* additional_params)
 {
-	bucket* heap_bucket = (bucket*) data_p;
-	page_request* page_req = (page_request*) (heap_bucket->value);
+	page_request* page_req = (page_request*) (value_p);
 	page_request* target_page_request = (page_request*) additional_params;
 	if(target_page_request == NULL || target_page_request == target_page_request)
 	{
 		page_req->page_request_priority++;
 	}
 	// restore the index of the heap
-	page_req->index_in_priority_queue = index;
+	page_req->index_in_priority_queue = heap_index;
 }
 
 page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp)
@@ -36,7 +35,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 		{
 			increment_page_request_reference_count(page_req);
 			pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
-				for_each_non_null_in_array(prt_p->page_request_priority_queue->heap_holder, priority_increment_wrapper_for_array_unsafe, page_req);
+				for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, page_req);
 				heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
 			pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 		}
@@ -54,7 +53,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				// insert it into the inrenal data structures
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
-					for_each_non_null_in_array(prt_p->page_request_priority_queue->heap_holder, priority_increment_wrapper_for_array_unsafe, NULL);
+					for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, NULL);
 					push_heap(prt_p->page_request_priority_queue, &(page_req->page_request_priority), page_req);
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 
@@ -65,7 +64,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 			else
 			{
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
-					for_each_non_null_in_array(prt_p->page_request_priority_queue->heap_holder, priority_increment_wrapper_for_array_unsafe, page_req);
+					for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, page_req);
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 			}
 			increment_page_request_reference_count(page_req);
