@@ -14,13 +14,24 @@ static int remove_page_entry_from_lru_if_present_unsafe(lru* lru_p, page_entry* 
 }
 
 // if the given page_entry is absent in the lru
-// insert the given page_entry to the top of the lru
+// insert the given page_entry to the head of the lru
 static void insert_page_entry_in_lru_head_if_absent_unsafe(lru* lru_p, page_entry* page_ent)
 {
 	if(get_by_page_entry(lru_p->node_mapping, page_ent) == NULL)
 	{
 		insert_head(lru_p->page_entries, page_ent);
 		set_by_page_entry(lru_p->node_mapping, page_ent, lru_p->page_entries->head);
+	}
+}
+
+// if the given page_entry is absent in the lru
+// insert the given page_entry to the tail of the lru
+static void insert_page_entry_in_lru_tail_if_absent_unsafe(lru* lru_p, page_entry* page_ent)
+{
+	if(get_by_page_entry(lru_p->node_mapping, page_ent) == NULL)
+	{
+		insert_tail(lru_p->page_entries, page_ent);
+		set_by_page_entry(lru_p->node_mapping, page_ent, lru_p->page_entries->tail);
 	}
 }
 
@@ -64,11 +75,28 @@ int remove_page_entry_from_lru(lru* lru_p, page_entry* page_ent)
 	return result;
 }
 
+int is_page_entry_present_in_lru(lru* lru_p, page_entry* page_ent)
+{
+	pthread_mutex_lock(&(lru_p->page_entries_lock));
+		int result = (get_by_page_entry(lru_p->node_mapping, page_ent) != NULL);
+	pthread_mutex_unlock(&(lru_p->page_entries_lock));
+	return result;
+}
+
 void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->page_entries_lock));
 		remove_page_entry_from_lru_if_present_unsafe(lru_p, page_ent);
 		insert_page_entry_in_lru_head_if_absent_unsafe(lru_p, page_ent);
+	pthread_cond_broadcast(&(lru_p->wait_for_empty));
+	pthread_mutex_unlock(&(lru_p->page_entries_lock));
+}
+
+void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent)
+{
+	pthread_mutex_lock(&(lru_p->page_entries_lock));
+		remove_page_entry_from_lru_if_present_unsafe(lru_p, page_ent);
+		insert_page_entry_in_lru_tail_if_absent_unsafe(lru_p, page_ent);
 	pthread_cond_broadcast(&(lru_p->wait_for_empty));
 	pthread_mutex_unlock(&(lru_p->page_entries_lock));
 }

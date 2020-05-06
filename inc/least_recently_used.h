@@ -39,8 +39,14 @@ void wait_if_lru_is_empty(lru* lru_p);
 // returns 1, if a given page_entry was removed from the mapping from the lru
 int remove_page_entry_from_lru(lru* lru_p, page_entry* page_ent);
 
-// call this method once you have acquired read or write lock on the page_entry
+// returns 1, if a given page_entry is present in the lru
+int is_page_entry_present_in_lru(lru* lru_p, page_entry* page_ent);
+
+// call this method once you have completed your operation (read or write) on the page_entry
 void mark_as_recently_used(lru* lru_p, page_entry* page_ent);
+
+// call this method once you have identified that a particular page was prefetched but was never used
+void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent);
 
 void delete_lru(lru* lru_p);
 
