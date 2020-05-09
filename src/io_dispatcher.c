@@ -3,6 +3,7 @@
 
 static void* io_page_replace_task(bufferpool* buffp)
 {
+	// get the page reqest that is most crucial to fulfill
 	page_request* page_req_to_fulfill = get_highest_priority_page_request_to_fulfill(buffp->rq_tracker);
 
 	if(page_req_to_fulfill == NULL)
@@ -22,6 +23,7 @@ static void* io_page_replace_task(bufferpool* buffp)
 
 		while(is_page_valid == 0)
 		{
+			// get the page entry, that is best fit for replacement
 			page_ent = get_swapable_page(buffp->lru_p);
 
 			if(page_ent == NULL)
@@ -32,6 +34,8 @@ static void* io_page_replace_task(bufferpool* buffp)
 			{
 				pthread_mutex_lock(&(page_ent->page_entry_lock));
 
+				// even though a page_entry may be provided as being fit for replacement, we need to ensure (double check) that 
+				// the page_entry is not pinned and that it is either free or that it is not being referenced by anyone to allow discarding/deleting it altogether
 				if(page_ent->pinned_by_count == 0 &&
 					(
 						page_ent->is_free == 1 ||

@@ -31,13 +31,17 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 {
 	read_lock(prt_p->page_request_tracker_lock);
 		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
+		
+		// if a page_request is found, increment its priority for fulfillment
+		// and increment its reference count before returning it
 		if(page_req != NULL)
 		{
-			increment_page_request_reference_count(page_req);
 			pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
 				for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, page_req);
 				heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
 			pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
+
+			increment_page_request_reference_count(page_req);
 		}
 	read_unlock(prt_p->page_request_tracker_lock);
 
@@ -50,8 +54,9 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				// if not found, create a new page request
 				page_req = get_page_request(page_id);
 
-				// insert it into the inrenal data structures
+				// insert it into the internal data structures
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
+				// increment all the existing page_request, so that we ensure that new page_requests do not easily out prioritize old page_requests
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
 					for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, NULL);
 					push_heap(prt_p->page_request_priority_queue, &(page_req->page_request_priority), page_req);
@@ -63,10 +68,13 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 			}
 			else
 			{
+				// if a page_request is found, just increment its priority inorder to priotize it
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
 					for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, page_req);
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 			}
+
+			// increment the reference count before returning it
 			increment_page_request_reference_count(page_req);
 		write_unlock(prt_p->page_request_tracker_lock);
 	}

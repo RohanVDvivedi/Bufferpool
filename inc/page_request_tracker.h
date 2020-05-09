@@ -41,7 +41,7 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests);
 page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp);
 
 // this function will discard a request from its hashmap, and mark the page_request for deletion
-// after this function call the page_request will be deleted on its own by the thread that dereferences the reult from that page_request
+// after this function call the page_request will be deleted on its own by the thread that dereferences the result from that page_request
 // the function returns 1, if the page_request was successfully discarded and marked for deletion
 int discard_page_request(page_request_tracker* prt_p, uint32_t page_id);
 
