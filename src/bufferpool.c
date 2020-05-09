@@ -195,19 +195,19 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 
 	// necessary task once the lock page_entry memory is released
 	// 1. unpin the page
-	// 2. if it is not pinned by any user thread yet, we have to return the page to the LRU
-	// 3. and if modified mark the page as dirty
+	// 2. and if modified mark the page as dirty
+	// 3. if it is not pinned by any user thread yet, we have to return the page to the LRU
 	if(lock_released)
 	{
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
 			page_ent->pinned_by_count--;
-			if(page_ent->pinned_by_count == 0)
-			{
-				mark_as_recently_used(buffp->lru_p, page_ent);
-			}
 			if(was_modified)
 			{
 				page_ent->is_dirty = 1;
+			}
+			if(page_ent->pinned_by_count == 0)
+			{
+				mark_as_recently_used(buffp->lru_p, page_ent);
 			}
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
