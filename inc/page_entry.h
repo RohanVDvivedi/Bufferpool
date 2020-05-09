@@ -50,6 +50,11 @@ struct page_entry
 	// this is the timestamp, when the last disk io operation was performed on this page_entry
 	uint64_t unix_timestamp_since_last_disk_io_in_ms;
 
+	// this is the count, to keep track of the number of times the given page was accessed, (it is accumuated value of the pinnned_by_count)
+	// since it was brought to memory, this counter keeps count for both reads and writes performed by the user application, and it is zeroed when a new page is read for this page_entry
+	// if a page has 0 usage count, for a long time after last io was performed, it becomes a very good candidate during page replacement by LRU 
+	uint32_t usage_count;
+
 	// pointer to the in-memory copy of the page
 	void* page_memory;
 

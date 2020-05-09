@@ -68,7 +68,12 @@ static void* io_page_replace_task(bufferpool* buffp)
 			// and since the page_entry now contains valid data,  clear the free bit
 			page_ent->page_id = page_id;
 			read_page_from_disk(page_ent);
+
+			// once the page is replaced, mark the page is not a free page
 			page_ent->is_free = 0;
+
+			// also reinitialize the usage count
+			page_ent->usage_count = 0;
 
 			// update the last_io timestamp, acknowledging when was the io performed
 			setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);

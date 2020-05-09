@@ -131,6 +131,8 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	{
 		page_ent->pinned_by_count++;
 
+		page_ent->usage_count++;
+
 		remove_page_entry_from_lru(buffp->lru_p, page_ent);
 
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
