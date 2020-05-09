@@ -94,39 +94,53 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	{
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
 
+		// once we acquire the lock, we must check that the page_id matches,
+		// since there is slight possibility of contention
 		if(page_ent->page_id == page_id)
 		{
 			is_page_entry_found = 1;
 		}
 		else
 		{
+			// else release lock on it
 			pthread_mutex_unlock(&(page_ent->page_entry_lock));
 		}
 	}
 
 	if(!is_page_entry_found)
 	{
+		// search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
 		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp);
 
+		// we block until the page_request io is fullfilled, by the io dispatcher
+		// also it is not safe to reference the same page_request, once this method is called (check page_request.h)
 		page_ent = get_requested_page_entry_and_discard_page_request(page_req);
 
 		if(page_ent != NULL)
 		{
 			pthread_mutex_lock(&(page_ent->page_entry_lock));
 
+			// check if correct page_entry has been acquired
 			if(page_ent->page_id == page_id)
 			{
+				// once the page_entry we desire has been found, we insert it in page_entry mapper of the bufferpool, 
+				// so that is it found efficiently by the next user thread
 				insert_page_entry(buffp->mapp_p, page_ent);
 
 				is_page_entry_found = 1;
 			}
 			else
 			{
+				// else release lock on it
 				pthread_mutex_unlock(&(page_ent->page_entry_lock));
 			}
 		}
 	}
 	
+	// necessary tasks after a correct page entry is in memory
+	// 1. pin it (incrementing the pinned by counter)
+	// 2. mark that it has been used (incrementing the usage counter)
+	// 3. remove the page from the LRU to avoid this page from being victimized for replacement
 	if(is_page_entry_found)
 	{
 		page_ent->pinned_by_count++;
@@ -164,6 +178,8 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 	int lock_released = 0;
 	int was_modified;
 
+	// figure out, if we need to release read lock or write lock on the page_entry, and release it, 
+	// mark the page as modified if the page was acquired for being written by the user thread
 	if(get_readers_count(page_ent->page_memory_lock))
 	{
 		release_read_lock(page_ent);
@@ -177,6 +193,10 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 		was_modified = 1;
 	}
 
+	// necessary task once the lock page_entry memory is released
+	// 1. unpin the page
+	// 2. if it is not pinned by any user thread yet, we have to return the page to the LRU
+	// 3. and if modified mark the page as dirty
 	if(lock_released)
 	{
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
