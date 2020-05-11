@@ -1,12 +1,10 @@
 #ifndef LEAST_RECENTLY_USED_H
 #define LEAST_RECENTLY_USED_H
 
-#include<linkedlist.h>
-
 #include<pthread.h>
 
 #include<page_entry.h>
-#include<page_memory_mapper.h>
+#include<page_entry_linkedlist.h>
 
 typedef struct lru lru;
 struct lru
@@ -14,25 +12,29 @@ struct lru
 	// the calling thread can wait for empty lru on this conditional wait variable
 	pthread_cond_t wait_for_empty;
 
-	// this is in memory linkedlist of pages of the buffer pool cache, being used as a lru
-	// the page entry is put at the head of this queue, after you have used it
-	linkedlist* page_entries;
-	// lock, to protect it
-	pthread_mutex_t page_entries_lock;
+	// lock, to protect both the lists of page_entries
+	pthread_mutex_t lru_lock;
 
-	// this is a mapping from page_entry to the corresponding node in the page_entries linkedlist
-	// this helps in easily identifying the node pointer when removing the node from the lru
-	page_memory_mapper* node_mapping;
+	// this are the in-memory linkedlist of page_entries of the buffer pool, being used in the lru
+	// the page entry is put at the head of these queue, after you have used it
+	// clean_or_free_page_entries is linkedlist meant for inserting clean pages or free pages only
+	// dirty_page_entries is linkedlist meant for inserting dirty pages only
+	// for replacement, a page_entry is picked first from the tail of the clean_or_free_page_entries,
+	// if the clean_or_free_page_entries is empty then only we victimize the dirty page from tail of the dirty_page_entries
+	linkedlist* clean_or_free_page_entries;
+	// and
+	linkedlist* dirty_page_entries;
 };
 
 lru* get_lru(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address);
 
 // you can be assured that the returned replacable page_entry will not exist in the lru,
-// if this function retuns NULL, it means the lru does not have a free page to spare to you
-// so you must use the function below, to wait until there is a free page in your 
+// if this function retuns NULL, it means the lru does not have a page_entry to spare to you
+// so you must use the wait function below, to wait until there is a page_entry in lru
+// the lru will try its best to return a clean/free page_entry for swapping, so that we can avoid writing to the disk (which is costly and inflicting damage on the disk) 
 page_entry* get_swapable_page(lru* lru_p);
 
-// your thread can wait for lru to have atleast one element, before you proceed
+// your thread can wait for lru to have atleast one page_entry, before you proceed
 // you need to use this function, if get_swapable_page() did not return you a page_entry
 void wait_if_lru_is_empty(lru* lru_p);
 

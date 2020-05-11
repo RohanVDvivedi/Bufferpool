@@ -39,7 +39,8 @@ lru* get_lru(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first
 {
 	lru* lru_p = (lru*) malloc(sizeof(lru));
 	pthread_cond_init(&(lru_p->wait_for_empty), NULL);
-	lru_p->page_entries = get_linkedlist(SIMPLE, NULL);
+	lru_p->clean_or_free_page_entries = get_linkedlist(SIMPLE, NULL);
+	lru_p->dirty_page_entries = get_linkedlist(SIMPLE, NULL);
 	pthread_mutex_init(&(lru_p->page_entries_lock), NULL);
 	lru_p->node_mapping = get_page_memory_mapper(first_page_memory_address, page_size_in_bytes, page_entry_count);
 	return lru_p;
