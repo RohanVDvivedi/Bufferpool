@@ -1,6 +1,8 @@
 #ifndef PAGE_ENTRY_LINKEDLIST_H
 #define PAGE_ENTRY_LINKEDLIST_H
 
+#include<stdint.h>
+
 #include<linkedlist.h>
 #include<page_memory_mapper.h>
 
@@ -18,22 +20,31 @@ struct page_entry_linkedlist
 	// this is a mapping from page_entry to the corresponding node in the page_entries linkedlist
 	// this helps in easily identifying the node pointer when removing the node from the lru, or to just query if a page_entry is present in the linkedlist
 	page_memory_mapper* node_mapping;
+
+	uint32_t page_entry_count;
 };
 
 page_entry_linkedlist* get_page_entry_linkedlist(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address);
 
-void insert_head_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);
+// returns 1, if page_entry gets inserted in the linkedlist, this operation will fail and return 0 if the page_entry already existed in the linkedlist
+int insert_head_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);
 
-void insert_tail_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);
+// returns 1, if page_entry gets inserted in the linkedlist, this operation will fail and return 0 if the page_entry already existed in the linkedlist
+int insert_tail_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);
 
+// this will return NULL, if the linkedlist is empty, else it will return the popped page_entry
 page_entry* pop_head_page_entry_linkedlist(page_entry_linkedlist* pel_p);
 
+// this will return NULL, if the linkedlist is empty, else it will return the popped page_entry
 page_entry* pop_tail_page_entry_linkedlist(page_entry_linkedlist* pel_p);
 
+// to check if the given page_entry is already present in the linkedlist
 int is_present_in_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);
 
+// to check if the given page_entry is absent from the linkedlist
 int is_absent_in_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);
 
+// retuns 1, if a page_entry was removed from the linkedlist, it will return 0 if the given page_entry is not present in the linkedlist and so it just can't be removed
 int remove_from_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);
 
 void delete_page_entry_linkedlist(page_entry_linkedlist* pel_p);
