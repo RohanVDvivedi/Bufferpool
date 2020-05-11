@@ -1,4 +1,8 @@
-* necessary refactoring (page_request -> frame)
+* LRU -> to victimize clean page before dirty page
+* cleanup scheduler, to clean pages at preciselty defined rate
+* also clean up, must be queued from the older dirty pages of LRU
+* using open addressing hashmap, for reducing the memory foot print of higly fragmented red black hashmap being used for page_entry_mapper
+* using a conditional timed wait to shutdown bufferpool faster
 * implementeing prefetch
 * prefetch can be requested with a queue, and the page_id is pushed to all the queues once the page_request is fullfilled, hence threads can process threads out of order
 * optimizing the heap access times, while changing priority
