@@ -28,6 +28,7 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 		// in these cases a buffer page has to be returned back for circulation, i.e. it needs to be manually inserted back to LRU
 		if((page_ent->pinned_by_count == 0) && (page_ent->usage_count == 0) && (currentTimeStamp >= page_ent->unix_timestamp_since_last_disk_io_in_ms + buffp->unused_prefetched_page_return_in_ms))
 		{
+			printf("UNUNSED PREFETCHED PAGE %u was returned to buferpool\n", page_ent->page_id);
 			mark_as_not_yet_used(buffp->lru_p, page_ent);
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
