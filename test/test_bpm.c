@@ -25,7 +25,7 @@
 #define PAGE_DATA_FORMAT_PREFIX_CHARS 11
 #define PAGE_DATA_FORMAT "Hello World, This is page number %u -> Buffer pool manager works, %d writes completed..."
 
-#define BLANK_ALL_PAGES_BEFORE_TESTS 1
+#define BLANK_ALL_PAGES_BEFORE_TESTS 0
 
 typedef struct io_task io_task;
 struct io_task
