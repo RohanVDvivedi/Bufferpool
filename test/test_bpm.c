@@ -11,8 +11,8 @@
 
 #define PAGE_SIZE_IN_BYTES 4096
 
-#define PAGES_IN_HEAP_FILE 20
-#define MAX_PAGES_IN_BUFFER_POOL 4
+#define PAGES_IN_HEAP_FILE 40
+#define MAX_PAGES_IN_BUFFER_POOL 8
 #define MAX_IO_THREADS_IN_BUFFER_POOL 4
 #define DIRTY_PAGES_CLEANUP_EVERY_X_ms 1000
 
@@ -25,7 +25,7 @@
 #define PAGE_DATA_FORMAT_PREFIX_CHARS 11
 #define PAGE_DATA_FORMAT "Hello World, This is page number %u -> Buffer pool manager works, %d writes completed..."
 
-#define BLANK_ALL_PAGES_BEFORE_TESTS 1
+#define BLANK_ALL_PAGES_BEFORE_TESTS 0
 
 typedef struct io_task io_task;
 struct io_task
