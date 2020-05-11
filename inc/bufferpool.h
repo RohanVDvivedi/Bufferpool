@@ -59,6 +59,11 @@ struct bufferpool
 	// this ensures that the buffer pool will not let a page be dirty for very long, even if it is not accessed
 	uint64_t cleanup_rate_in_milliseconds;
 
+	// If a page has been requested for prefetch, and once the page has been brought to memory by the buffer,
+	// the corresponding user thread that requested for prefetching the page, must acquire lock and start using the page before atmost unused_prefetched_page_return_in_ms
+	// else this in-memory page is returned back to the bufferpool for reciculartion to fulfill other page requests
+	uint64_t unused_prefetched_page_return_in_ms;
+
 	// ******** bufferpool attributes section end
 
 	// ******** Necessary custom datastructures start
@@ -90,7 +95,7 @@ struct bufferpool
 };
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count, uint64_t cleanup_rate_in_milliseconds);
+bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count, uint64_t cleanup_rate_in_milliseconds, uint64_t unused_prefetched_page_return_in_ms);
 
 // locks the page for reading
 // multiple threads can read the same page simultaneously,

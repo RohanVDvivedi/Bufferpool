@@ -1,6 +1,8 @@
 #include<bufferpool.h>
 #include<cleanup_scheduler.h>
 
+#define MIN(a,b) ((a < b) ? a : b);
+
 // returns 1, if the clean up was required for the page_entry at a given index
 static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index, int clean_up_sync)
 {
@@ -24,7 +26,7 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index
 		// sometimes, a page is requested for prefetch but it does not get used by the user thread for a long time, 
 		// a buffer page_entry is inserted back to LRU only after it is used atleast once and only if it is unpinned, (after the first or first few threads access it)
 		// in these cases a buffer page has to be returned back for circulation, i.e. it needs to be manually inserted back to LRU
-		if((page_ent->pinned_by_count == 0) && (page_ent->usage_count == 0) && (currentTimeStamp >= page_ent->unix_timestamp_since_last_disk_io_in_ms + buffp->cleanup_rate_in_milliseconds))
+		if((page_ent->pinned_by_count == 0) && (page_ent->usage_count == 0) && (currentTimeStamp >= page_ent->unix_timestamp_since_last_disk_io_in_ms + buffp->unused_prefetched_page_return_in_ms))
 		{
 			mark_as_not_yet_used(buffp->lru_p, page_ent);
 		}
@@ -49,10 +51,12 @@ static void* cleanup_scheduler_task_function(void* param)
 {
 	bufferpool* buffp = (bufferpool*) param;
 
+	uint64_t min_sleep_in_ms = MIN(buffp->cleanup_rate_in_milliseconds, buffp->unused_prefetched_page_return_in_ms);
+
 	while(buffp->SHUTDOWN_CALLED == 0)
 	{
 		// wait for prescribed amount for time, after last page_entry cleanup loop
-		sleepForMilliseconds(buffp->cleanup_rate_in_milliseconds);
+		sleepForMilliseconds( min_sleep_in_ms );
 
 		for(uint32_t index = 0; ((index < buffp->maximum_pages_in_cache) && (buffp->SHUTDOWN_CALLED == 0)); index++)
 		{

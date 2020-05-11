@@ -1,6 +1,6 @@
 #include<bufferpool.h>
 
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count, uint64_t cleanup_rate_in_milliseconds)
+bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count, uint64_t cleanup_rate_in_milliseconds, uint64_t unused_prefetched_page_return_in_ms)
 {
 	if(maximum_pages_in_cache == 0)
 	{
@@ -20,6 +20,11 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	if(cleanup_rate_in_milliseconds == 0)
 	{
 		printf("The bufferpool cleanup rate should not be 0 milliseconds, hence buffer pool can not be built\n");
+		return NULL;
+	}
+	if(unused_prefetched_page_return_in_ms == 0)
+	{
+		printf("The bufferpool unused_prefetched_page return time should not be 0 milliseconds, hence buffer pool can not be built\n");
 		return NULL;
 	}
 
@@ -55,6 +60,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
 
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
+	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
 
 	buffp->page_entries = get_array(buffp->maximum_pages_in_cache);
 
