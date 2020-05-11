@@ -1,5 +1,3 @@
-* cleanup scheduler, to clean pages at preciselty defined rate
-* also clean up, must be queued from the older dirty pages of LRU
 * using open addressing hashmap, for reducing the memory foot print of higly fragmented red black hashmap being used for page_entry_mapper
 * using a conditional timed wait to shutdown bufferpool faster
 * implementeing prefetch
