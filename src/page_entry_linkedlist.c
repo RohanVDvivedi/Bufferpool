@@ -10,7 +10,8 @@ page_entry_linkedlist* get_page_entry_linkedlist(uint32_t page_entry_count, uint
 
 int is_empty_page_entry_linkedlist(page_entry_linkedlist* pel_p)
 {
-	return ((pel_p->page_entries->head == NULL) && (pel_p->page_entries->tail == NULL));
+	//return ((pel_p->page_entries->head == NULL) && (pel_p->page_entries->tail == NULL));
+	return (pel_p->page_entry_count == 0);
 }
 
 int is_absent_in_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent)

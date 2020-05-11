@@ -21,10 +21,13 @@ struct page_entry_linkedlist
 	// this helps in easily identifying the node pointer when removing the node from the lru, or to just query if a page_entry is present in the linkedlist
 	page_memory_mapper* node_mapping;
 
+	// a counter to manage the page_entry that are currently in the linkedlist
 	uint32_t page_entry_count;
 };
 
 page_entry_linkedlist* get_page_entry_linkedlist(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address);
+
+int is_empty_page_entry_linkedlist(page_entry_linkedlist* pel_p);
 
 // returns 1, if page_entry gets inserted in the linkedlist, this operation will fail and return 0 if the page_entry already existed in the linkedlist
 int insert_head_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);

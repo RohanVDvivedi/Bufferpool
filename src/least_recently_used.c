@@ -25,7 +25,8 @@ page_entry* get_swapable_page(lru* lru_p)
 void wait_if_lru_is_empty(lru* lru_p)
 {
 	pthread_mutex_lock(&(lru_p->page_entries_lock));
-		while(lru_p->page_entries->tail == NULL)
+		while(is_empty_page_entry_linkedlist(lru_p->clean_or_free_page_entries) 
+			&& is_empty_page_entry_linkedlist(lru_p->dirty_page_entries))
 		{
 			pthread_cond_wait(&(lru_p->wait_for_empty), &(lru_p->page_entries_lock));
 		}
