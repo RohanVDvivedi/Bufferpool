@@ -20,7 +20,7 @@ page_entry* get_swapable_page(lru* lru_p)
 		}
 		else if(!is_empty_page_entry_linkedlist(lru_p->dirty_page_entries))
 		{
-			page_ent = pop_head_page_entry_linkedlist(lru_p->dirty_page_entries);;
+			page_ent = pop_head_page_entry_linkedlist(lru_p->dirty_page_entries);
 		}
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 	return page_ent;
