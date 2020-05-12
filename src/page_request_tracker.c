@@ -9,22 +9,8 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	prt_p->page_request_tracker_lock = get_rwlock();
 	prt_p->page_request_map = get_hashmap((max_requests / 3) + 2, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
 	pthread_mutex_init(&(prt_p->page_request_priority_queue_lock), NULL);
-	prt_p->page_request_priority_queue = get_heap(max_requests, MAX_HEAP, compare_page_priority);
+	prt_p->page_request_priority_queue = get_heap(max_requests, MAX_HEAP, compare_page_priority, priority_queue_index_change_callback, NULL);
 	return prt_p;
-}
-
-// below function is uniquely designed, to increment the priority of only a specific page_request, if the page_request pointer is provided as additional parameters
-// if you do not provide the target page_request, then the check is ignored and the priority is incremented anyway, for the all the page_requests that are in the priority_queue
-static void priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe(const void* key_p, const void* value_p, unsigned long long int heap_index, const void* additional_params)
-{
-	page_request* page_req = (page_request*) (value_p);
-	page_request* target_page_request = (page_request*) additional_params;
-	if(target_page_request == NULL || target_page_request == target_page_request)
-	{
-		page_req->page_request_priority++;
-	}
-	// restore the index of the heap
-	page_req->index_in_priority_queue = heap_index;
 }
 
 page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp)
@@ -37,7 +23,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 		if(page_req != NULL)
 		{
 			pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
-				for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, page_req);
+				page_req->page_request_priority++;
 				heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
 			pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 
@@ -58,7 +44,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
 				// increment all the existing page_request, so that we ensure that new page_requests do not easily out prioritize old page_requests
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
-					for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, NULL);
+					for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_wrapper_for_priority_queue, NULL);
 					push_heap(prt_p->page_request_priority_queue, &(page_req->page_request_priority), page_req);
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 
@@ -70,7 +56,8 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 			{
 				// if a page_request is found, just increment its priority inorder to priotize it
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
-					for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_and_heap_index_mapping_wrapper_for_priority_queue_unsafe, page_req);
+					page_req->page_request_priority++;
+					heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 			}
 
