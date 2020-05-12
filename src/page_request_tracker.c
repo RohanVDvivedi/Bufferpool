@@ -104,6 +104,9 @@ page_request* get_highest_priority_page_request_to_fulfill(page_request_tracker*
 {
 	page_request* page_req = NULL;
 	pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
+		printf("\n\nPRINTING PRIORITY_QUEUE STARTED\n");
+		for_each_entry_in_heap(prt_p->page_request_priority_queue, print_priority_queue, NULL);
+		printf("PRINTING PRIORITY_QUEUE COMPLETE\n\n");
 		page_req = (page_request*)get_top_heap(prt_p->page_request_priority_queue, NULL);
 		if(page_req != NULL)
 		{

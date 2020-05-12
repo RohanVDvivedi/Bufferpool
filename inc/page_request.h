@@ -40,7 +40,7 @@ struct page_request
 	uint32_t page_request_priority;
 
 	// this is the index of the page_request in the priority queue (max heap)
-	uint64_t index_in_priority_queue;
+	unsigned long long int index_in_priority_queue;
 
 	// the mutex below protects the reference and the deletion of the page_request
 	pthread_mutex_t page_request_reference_lock;
