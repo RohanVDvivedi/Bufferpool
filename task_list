@@ -2,4 +2,3 @@
 * using a conditional timed wait to shutdown bufferpool faster
 * implementeing prefetch
 * prefetch can be requested with a queue, and the page_id is pushed to all the queues once the page_request is fullfilled, hence threads can process threads out of order
-* optimizing the heap access times, while changing priority
