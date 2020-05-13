@@ -7,7 +7,7 @@ then
 	sudo time -v ./test_bpm.out $FILENAME
 	sudo stat $FILENAME
 	sudo stat -f $FILENAME
-	sudo cat $FILENAME
+	sudo head -c `expr 512 \* 8 \* 2` $FILENAME
 elif [ $TEST_TYP = "io_speed" ]
 then
 	sudo time -v ./test_io.out $FILENAME 160 8
