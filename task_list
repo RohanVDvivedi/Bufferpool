@@ -1,5 +1,4 @@
 * try to make more sequential io, larger and fewer read/write calls to disk/os
 * using open addressing hashmap, for reducing the memory foot print of higly fragmented red black hashmap being used for page_entry_mapper
-* using a conditional timed wait to shutdown bufferpool faster
 * implementeing prefetch
 * prefetch can be requested with a queue, and the page_id is pushed to all the queues once the page_request is fullfilled, hence threads can process threads out of order

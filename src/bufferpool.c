@@ -231,7 +231,9 @@ int release_page(bufferpool* buffp, void* page_memory)
 
 void request_page_prefetch(bufferpool* buffp, uint32_t page_id)
 {
-
+	// search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
+	// do not request for reference of the page_request, since we will not be immediately waiting for getting page_entry from the page_request
+	find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, 0);
 }
 
 void force_write(bufferpool* buffp, uint32_t page_id)
