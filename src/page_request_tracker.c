@@ -13,9 +13,10 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	return prt_p;
 }
 
-page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp)
+page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp, int reference_required)
 {
 	read_lock(prt_p->page_request_tracker_lock);
+
 		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
 		
 		// if a page_request is found, increment its priority for fulfillment
@@ -27,14 +28,22 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
 			pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 
-			increment_page_request_reference_count(page_req);
+			// if we have to share the reference of the page_request with the callee, 
+			// we must increment the reference count of the page_request
+			if(reference_required)
+			{
+				increment_page_request_reference_count(page_req);
+			}
 		}
+
 	read_unlock(prt_p->page_request_tracker_lock);
 
 	if(page_req == NULL)
 	{
 		write_lock(prt_p->page_request_tracker_lock);
+
 			page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
+
 			if(page_req == NULL)
 			{
 				// if not found, create a new page request
@@ -42,6 +51,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 
 				// insert it into the internal data structures
 				insert_entry_in_hash(prt_p->page_request_map, &(page_req->page_id), page_req);
+
 				// increment all the existing page_request, so that we ensure that new page_requests do not easily out prioritize old page_requests
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
 					for_each_entry_in_heap(prt_p->page_request_priority_queue, priority_increment_wrapper_for_priority_queue, NULL);
@@ -61,12 +71,24 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 			}
 
-			// increment the reference count before returning it
-			increment_page_request_reference_count(page_req);
+			// if we have to share the reference of the page_request with the callee, 
+			// we must increment the reference count of the page_request
+			if(reference_required)
+			{
+				increment_page_request_reference_count(page_req);
+			}
+
 		write_unlock(prt_p->page_request_tracker_lock);
 	}
 
-	return page_req;
+	if(reference_required)
+	{
+		return page_req;
+	}
+	else
+	{
+		return NULL;
+	}
 }
 
 int discard_page_request(page_request_tracker* prt_p, uint32_t page_id)
