@@ -108,10 +108,8 @@ void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_
 
 page_entry* get_requested_page_entry_and_discard_page_request(page_request* page_req)
 {
-	pthread_mutex_lock(&(page_req->job_and_queue_bbq_lock));
-		page_entry* page_ent = (page_entry*) ((page_req->fulfillment_promise != NULL) ? 
+	page_entry* page_ent = (page_entry*) ((page_req->fulfillment_promise != NULL) ? 
 			get_result(page_req->fulfillment_promise) : NULL);
-	pthread_mutex_unlock(&(page_req->job_and_queue_bbq_lock));
 
 	int should_delete_page_request = 0;
 
