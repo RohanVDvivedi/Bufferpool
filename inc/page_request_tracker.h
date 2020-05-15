@@ -12,6 +12,8 @@
 
 #include<io_dispatcher.h>
 
+#include<bounded_blocking_queue.h>
+
 /*
 	This structure is responsible to keep a mapping from page_id to page_request
 	It ensures that if a page request is made multiple times, then only one of the request is processed
@@ -36,12 +38,13 @@ struct page_request_tracker
 
 page_request_tracker* get_page_request_tracker(uint32_t max_requests);
 
-// returns a page_request that was submitted, 
-// or if there was no page_request made then a new page request is created and returned
-// the reference to the page_request is returned only if reference_required parameter is 1 (or non zero/true),
-// if you have the page_request reference returned by this function (if reference_required parameter = 1),
+// finds a page_request that was submitted and it will increment its priority for faster fulfillment,
+// or if there was no page_request made then a new page request is created
+// the reference to the page_request is returned only if bbq is NULL
+// if you have the page_request reference returned by this function (if bbq == NULL),
 // you must to wait on it by calling "get_requested_page_entry_and_discard_page_request" on the page_request
-page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp, int reference_required);
+// if you have provided with valid bbq, the page_id of the page will be pushed into the queue when the request is fulfilled
+page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp, bbqueue* bbq);
 
 // this function will discard a request from its hashmap, and mark the page_request for deletion
 // after this function call the page_request will be deleted on its own by the thread that dereferences the result from that page_request

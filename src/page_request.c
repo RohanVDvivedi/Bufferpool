@@ -3,12 +3,18 @@
 page_request* get_page_request(uint32_t page_id)
 {
 	page_request* page_req = (page_request*) malloc(sizeof(page_request));
+
 	page_req->page_id = page_id;
-	page_req->fulfillment_promise = get_job(NULL, NULL);
 	page_req->page_request_priority = 0;
+
+	pthread_mutex_init(&(page_req->job_and_queue_bbq_lock), NULL);
+	page_req->fulfillment_promise = get_job(NULL, NULL);
+	page_req->queue_of_waiting_bbqs = get_queue(10);
+
 	pthread_mutex_init(&(page_req->page_request_reference_lock), NULL);
 	page_req->page_request_reference_count = 1;
 	page_req->marked_for_deletion = 0;
+
 	return page_req;
 }
 
@@ -58,6 +64,16 @@ uint32_t get_page_request_reference_count(page_request* page_req)
 		uint32_t request_reference_count = page_req->page_request_reference_count;
 	pthread_mutex_unlock(&(page_req->page_request_reference_lock));
 	return request_reference_count;
+}
+
+void insert_to_queue_of_waiting_bbqueues(page_request* page_req, bbqueue* bbq)
+{
+
+}
+
+void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_entry* page_ent)
+{
+	set_result(page_req->fulfillment_promise, page_ent);
 }
 
 page_entry* get_requested_page_entry_and_discard_page_request(page_request* page_req)

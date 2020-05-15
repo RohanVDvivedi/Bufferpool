@@ -87,7 +87,7 @@ static void* io_page_replace_task(bufferpool* buffp)
 
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
-	set_result(page_req_to_fulfill->fulfillment_promise, page_ent);
+	fulfill_requested_page_entry_for_page_request(page_req_to_fulfill, page_ent);
 	
 	return NULL;
 }

@@ -116,8 +116,8 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	if(!is_page_entry_found)
 	{
 		// search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
-		// request for reference of the page_request, since we will immediately wait for getting page_entry from the page_request
-		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, 1);
+		// we do not provide any bbq, since we will immediately wait for getting page_entry from the page_request
+		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, NULL);
 
 		// we block until the page_request io is fullfilled, by the io dispatcher
 		// also it is not safe to reference the same page_request, once this method is called (check page_request.h)
@@ -229,11 +229,20 @@ int release_page(bufferpool* buffp, void* page_memory)
 	return release_used_page_entry(buffp, page_ent);
 }
 
-void request_page_prefetch(bufferpool* buffp, uint32_t page_id)
+void request_page_prefetch(bufferpool* buffp, uint32_t start_page_id, uint32_t page_count, bbqueue* bbq)
 {
-	// search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
-	// do not request for reference of the page_request, since we will not be immediately waiting for getting page_entry from the page_request
-	find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, 0);
+	// ignore page_count atleast for now 
+
+	// you must provide a bbqueue to let us know, where do you want the result, when the page is brought to memory
+	if(bbq != NULL)
+	{
+		// for each page_id search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
+		// do not request for reference of the page_request, since we will not be immediately waiting for getting page_entry from the page_request
+		for(uint32_t i = 0, page_id = start_page_id; i < page_count; i++, page_id++)
+		{
+			find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, bbq);
+		}
+	}
 }
 
 void force_write(bufferpool* buffp, uint32_t page_id)

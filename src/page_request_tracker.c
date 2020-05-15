@@ -13,8 +13,11 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	return prt_p;
 }
 
-page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp, int reference_required)
+page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp, bbqueue* bbq)
 {
+	// we must return the referrence to the callee, if a bbq is not provided, by the callee
+	int reference_return_required = (bbq == NULL);
+
 	read_lock(prt_p->page_request_tracker_lock);
 
 		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
@@ -30,7 +33,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 
 			// if we have to share the reference of the page_request with the callee, 
 			// we must increment the reference count of the page_request
-			if(reference_required)
+			if(reference_return_required)
 			{
 				increment_page_request_reference_count(page_req);
 			}
@@ -73,7 +76,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 
 			// if we have to share the reference of the page_request with the callee, 
 			// we must increment the reference count of the page_request
-			if(reference_required)
+			if(reference_return_required)
 			{
 				increment_page_request_reference_count(page_req);
 			}
@@ -81,12 +84,13 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 		write_unlock(prt_p->page_request_tracker_lock);
 	}
 
-	if(reference_required)
+	if(reference_return_required)
 	{
 		return page_req;
 	}
 	else
 	{
+		insert_to_queue_of_waiting_bbqueues(page_req, bbq);
 		return NULL;
 	}
 }

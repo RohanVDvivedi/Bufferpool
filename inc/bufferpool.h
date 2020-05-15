@@ -22,6 +22,8 @@
 
 #include<cleanup_scheduler.h>
 
+#include<bounded_blocking_queue.h>
+
 // the provided implementation of the bufferpool is a LRU cache
 // for the unordered pages of a heap file
 typedef struct bufferpool bufferpool;
@@ -113,7 +115,13 @@ void* get_page_to_write(bufferpool* buffp, uint32_t page_id);
 // it returns 0, if the lock could not be released
 int release_page(bufferpool* buffp, void* page_memory);
 
-void request_page_prefetch(bufferpool* buffp, uint32_t page_id);
+// to request a page_prefetch, you must provide a start_page_id, and page_count
+// this will help us fetch adjacent pages to memory faster by using sequential io
+// all the parameters must be valid and non NULL for proper operation of this function
+// whenever a page is available in memory, the page_id of that page will be made available to you, as we push the page_id in the bbq
+// if the bbq is already full, page_id will not be pushed and you may not receive the page_id even if it is brought to memory,
+// please ensure to provide a large enough bbq, to hold all page_ids
+void request_page_prefetch(bufferpool* buffp, uint32_t start_page_id, uint32_t page_count, bbqueue* bbq);
 
 // this function is blocking and it will return only when the page write to disk succeeds
 // do not call this function on the page_id, while you have already acquired a read/write lock on that page
