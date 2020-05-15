@@ -94,52 +94,63 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 {
 	int is_page_entry_found = 0;
 
-	page_entry* page_ent = find_page_entry(buffp->mapp_p, page_id);
+	page_entry* page_ent = NULL;
 
-	if(page_ent != NULL)
+	while(page_ent == NULL)
 	{
-		pthread_mutex_lock(&(page_ent->page_entry_lock));
-
-		// once we acquire the lock, we must check that the page_id matches,
-		// since there is slight possibility of contention
-		if(page_ent->page_id == page_id)
-		{
-			is_page_entry_found = 1;
-		}
-		else
-		{
-			// else release lock on it
-			pthread_mutex_unlock(&(page_ent->page_entry_lock));
-		}
-	}
-
-	if(!is_page_entry_found)
-	{
-		// search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
-		// we do not provide any bbq, since we will immediately wait for getting page_entry from the page_request
-		page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, NULL);
-
-		// we block until the page_request io is fullfilled, by the io dispatcher
-		// also it is not safe to reference the same page_request, once this method is called (check page_request.h)
-		page_ent = get_requested_page_entry_and_discard_page_request(page_req);
+		page_ent = find_page_entry(buffp->mapp_p, page_id);
 
 		if(page_ent != NULL)
 		{
 			pthread_mutex_lock(&(page_ent->page_entry_lock));
 
-			// check if correct page_entry has been acquired
+			// once we acquire the lock, we must check that the page_id matches,
+			// since there is slight possibility of contention
 			if(page_ent->page_id == page_id)
 			{
-				// once the page_entry we desire has been found, we insert it in page_entry mapper of the bufferpool, 
-				// so that is it found efficiently by the next user thread
-				insert_page_entry(buffp->mapp_p, page_ent);
-
 				is_page_entry_found = 1;
 			}
 			else
 			{
 				// else release lock on it
 				pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
+				// clear the referenc of the wrong page
+				page_ent = NULL;
+			}
+		}
+
+		if(!is_page_entry_found)
+		{
+			// search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
+			// we do not provide any bbq, since we will immediately wait for getting page_entry from the page_request
+			page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, NULL);
+
+			// we block until the page_request io is fullfilled, by the io dispatcher
+			// also it is not safe to reference the same page_request, once this method is called (check page_request.h)
+			page_ent = get_requested_page_entry_and_discard_page_request(page_req);
+
+			if(page_ent != NULL)
+			{
+				pthread_mutex_lock(&(page_ent->page_entry_lock));
+
+				// check if correct page_entry has been acquired
+				if(page_ent->page_id == page_id)
+				{
+					// once the page_entry we desire has been found, we insert it in page_entry mapper of the bufferpool, 
+					// so that is it found efficiently by the next user thread
+					insert_page_entry(buffp->mapp_p, page_ent);
+
+					is_page_entry_found = 1;
+				}
+				else
+				{
+					// else release lock on it
+					pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
+					// clear the referenc of the wrong page
+					page_ent = NULL;
+				}
 			}
 		}
 	}
