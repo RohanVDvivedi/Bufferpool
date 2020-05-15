@@ -9,10 +9,10 @@ void* producer_function(void* q)
 	{
 		uint32_t val = ((rand() % 500) + 1);
 		printf(" \t produced %u : %u\n", iter++, val);
-		push(bbq, val);
+		push_bbqueue(bbq, val);
 	}
 	printf(" \t produced %u : %u\n", iter, 0);
-	push(bbq, 0);
+	push_bbqueue(bbq, 0);
 	return NULL;
 }
 
@@ -23,7 +23,7 @@ void* consumer_function(void* q)
 	uint32_t iter = 0;
 	do
 	{
-		val = pop(bbq);
+		val = pop_bbqueue(bbq);
 		printf(" \t \t \t \t consumed %u : %u\n", iter++, val);
 	}
 	while(val != 0);
