@@ -32,7 +32,7 @@ int is_bbqueue_full(bbqueue* bbq)
 	return is_full;
 }
 
-void push(bbqueue* bbq, uint32_t page_id)
+void push_bbqueue(bbqueue* bbq, uint32_t page_id)
 {
 	pthread_mutex_lock(&(bbq->exclus_prot));
 
@@ -53,7 +53,7 @@ void push(bbqueue* bbq, uint32_t page_id)
 	pthread_mutex_unlock(&(bbq->exclus_prot));
 }
 
-uint32_t pop(bbqueue* bbq)
+uint32_t pop_bbqueue(bbqueue* bbq)
 {
 	pthread_mutex_lock(&(bbq->exclus_prot));
 

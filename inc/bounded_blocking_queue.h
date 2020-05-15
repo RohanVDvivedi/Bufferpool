@@ -39,8 +39,8 @@ int is_bbqueue_empty(bbqueue* bbq);
 
 int is_bbqueue_full(bbqueue* bbq);
 
-void push(bbqueue* bbq, uint32_t page_id);
+void push_bbqueue(bbqueue* bbq, uint32_t page_id);
 
-uint32_t pop(bbqueue* bbq);
+uint32_t pop_bbqueue(bbqueue* bbq);
 
 #endif
