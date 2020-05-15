@@ -17,8 +17,13 @@
 #define DIRTY_PAGES_CLEANUP_EVERY_X_ms 1000
 #define UNUSED_PREFETCHED_PAGES_RETURN_X_ms 20
 
-#define FIXED_THREAD_POOL_SIZE 8
+#define FIXED_THREAD_POOL_SIZE 10
 #define COUNT_OF_IO_TASKS 100
+
+// starting with 0 prefetch PREFETCH_PAGE_COUNT pages every 20 tasks are completed
+// please keep PREFETCH_EVERY_x_PAGES > PREFETCH_PAGE_COUNT, to avoid extra fetches
+#define PREFETCH_EVERY_x_PAGES 20 
+#define PREFETCH_PAGE_COUNT 7
 
 //#define IO_TASK_LATENCY_IN_MS 150
 //#define DELAY_AFTER_IO_TASKS_ARE_COMPLETED 2000
@@ -36,10 +41,16 @@ struct io_task
 
 	// the page_id on which task has to be performed
 	uint32_t page_id;
+
+	int prefetch_allowed;
+	int pop_page_id_from_queue;
+
+	uint32_t prefetch_page_ids[PREFETCH_PAGE_COUNT];
 };
 
 bufferpool* bpm = NULL;
 executor* exe = NULL;
+bbqueue* bbq = NULL;
 io_task io_tasks[COUNT_OF_IO_TASKS];
 void* io_task_execute(io_task* io_t_p);
 void blankify_new_page(uint32_t page_id);
@@ -74,6 +85,9 @@ int main(int argc, char **argv)
 		}
 	}
 
+	bbq = get_bbqueue(((COUNT_OF_IO_TASKS % PREFETCH_EVERY_x_PAGES) + 1) * PREFETCH_PAGE_COUNT);
+	printf("common Bounded Blocking Queue is being used for prefetched execution\n");
+
 	exe = get_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
@@ -85,6 +99,14 @@ int main(int argc, char **argv)
 		io_task* io_t_p = &(io_tasks[i]);
 		io_t_p->do_write = rand() % 2;
 		io_t_p->page_id = (uint32_t)(rand() % PAGES_IN_HEAP_FILE);
+
+		#if PREFETCH_EVERY_x_PAGES > 0
+			io_t_p->prefetch_allowed = ((i % PREFETCH_EVERY_x_PAGES) == 0);
+		#else
+			io_t_p->prefetch_allowed = 0;
+		#endif
+
+		io_t_p->pop_page_id_from_queue = 0;
 
 		if(io_t_p->do_write)
 		{
@@ -100,6 +122,17 @@ int main(int argc, char **argv)
 	for(uint32_t i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		io_task* io_t_p = &(io_tasks[i]);
+		if(io_t_p->prefetch_allowed)
+		{
+			for(uint32_t j = 0, indx = i+1; j < PREFETCH_PAGE_COUNT; j++, indx++)
+			{
+				io_t_p->prefetch_page_ids[j] = io_tasks[indx].page_id;
+
+				// instead set a dummy page_id, and ask them to pop from queue
+				io_tasks[indx].page_id = PAGES_IN_HEAP_FILE + 1;
+				io_tasks[indx].pop_page_id_from_queue = 1;
+			}
+		}
 		submit_function(exe, (void*(*)(void*))io_task_execute, io_t_p);
 	}
 
@@ -124,6 +157,13 @@ void page_write_and_print(uint32_t page_id);
 
 void* io_task_execute(io_task* io_t_p)
 {
+	// if we are asked to pop the page id to process from the bbqueue
+	if(io_t_p->pop_page_id_from_queue)
+	{
+		io_t_p->page_id = pop_bbqueue(bbq);
+		printf("POPPED FROM PREFETCH_QUEUE %u\n", io_t_p->page_id);
+	}
+
 	switch(io_t_p->do_write)
 	{
 		case 1:
@@ -139,6 +179,15 @@ void* io_task_execute(io_task* io_t_p)
 		default:
 		{
 			break;
+		}
+	}
+
+	if(io_t_p->prefetch_allowed)
+	{
+		for(uint32_t i = 0; i < PREFETCH_PAGE_COUNT; i++)
+		{
+			request_page_prefetch(bpm, io_t_p->prefetch_page_ids[i], 1, bbq);
+			printf("PUSHED FOR PREFETCH %u\n", io_t_p->prefetch_page_ids[i]);
 		}
 	}
 	return NULL;
