@@ -6,7 +6,7 @@
 // returns 1, if the clean up was required for the page_entry at a given index
 static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index, int clean_up_sync)
 {
-	page_entry* page_ent = (page_entry*) get_element(buffp->page_entries, index);
+	page_entry* page_ent = buffp->page_entries + index;
 
 	int clean_up_required = 0;
 

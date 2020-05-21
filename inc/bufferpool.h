@@ -35,7 +35,7 @@ struct bufferpool
 	dbfile* db_file;
 
 	// this is the total memory, as managed by the buffer pool
-	// the address holds memory equal to maximum pages in cache * number_of_blocks_per_page * size_of_block of the hardware + 1
+	// the address holds memory equal to (maximum_pages_in_cache * number_of_blocks_per_page * (size_of_block of the hardware + 1)) + maximum_pages_in_cache * sizeof(page_entry)
 	// the additional block malloced is because, the malloced memory is not block aligned, while we need block aligned memory for direct io using DMA
 	void* memory;
 
@@ -44,6 +44,9 @@ struct bufferpool
 	// We offset from the memory provided by malloc so as to 
 	// align both the ram memory addresses and disk access offsets to the physical block_size of the disk (to get advantage of DMA and DIRECT_IO, else IO will fail)
 	void* first_aligned_block;
+
+	// pointer to the array of all the page_entries of the bufferpool
+	page_entry* page_entries;
 
 	// ******** Memories section end
 
@@ -69,8 +72,6 @@ struct bufferpool
 	// ******** bufferpool attributes section end
 
 	// ******** Necessary custom datastructures start
-
-	array* page_entries;
 
 	page_entry_mapper* mapp_p;
 

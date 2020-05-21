@@ -62,7 +62,7 @@ struct page_entry
 	rwlock* page_memory_lock;
 };
 
-page_entry* get_page_entry(dbfile* dbfile_p, void* page_memory, uint32_t number_of_blocks_in_page);
+void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_memory, uint32_t number_of_blocks_in_page);
 
 void acquire_read_lock(page_entry* page_ent);
 
@@ -76,7 +76,7 @@ int read_page_from_disk(page_entry* page_ent);
 
 int write_page_to_disk(page_entry* page_ent);
 
-void delete_page_entry(page_entry* page_ent);
+void deinitialize_page_entry(page_entry* page_ent);
 
 #endif
 

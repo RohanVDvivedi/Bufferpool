@@ -56,13 +56,16 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
 	buffp->number_of_blocks_per_page = page_size_in_bytes / get_block_size(buffp->db_file);
 
-	buffp->memory = malloc((buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file)) + get_block_size(buffp->db_file));
+	unsigned long long int bytes_required_for_page_entry = buffp->maximum_pages_in_cache * sizeof(page_entry);
+	unsigned long long int bytes_for_bufferpool_frame_memory = buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file);
+	unsigned long long int bytes_additonal_block_alignment = get_block_size(buffp->db_file);
+
+	buffp->memory = malloc(bytes_required_for_page_entry + bytes_for_bufferpool_frame_memory + bytes_additonal_block_alignment);
 	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
+	buffp->page_entries = (page_entry*)(((char*)(buffp->first_aligned_block)) + bytes_for_bufferpool_frame_memory);
 
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
-
-	buffp->page_entries = get_array(buffp->maximum_pages_in_cache);
 
 	buffp->mapp_p = get_page_entry_mapper(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
@@ -74,8 +77,8 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
 		void* page_memory = buffp->first_aligned_block + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
-		page_entry* page_ent = get_page_entry(buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
-		set_element(buffp->page_entries, page_ent, i);
+		page_entry* page_ent = buffp->page_entries + i;
+		initialize_page_entry(page_ent, buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
 		insert_page_entry_to_map_by_page_memory(buffp->mapp_p, page_ent);
 		mark_as_recently_used(buffp->lru_p, page_ent);
 	}
@@ -294,12 +297,11 @@ void delete_bufferpool(bufferpool* buffp)
 	// since now we are sure that there are no dirty page_entries, close the database file
 	close_dbfile(buffp->db_file);
 
-	// delete all the page_entries
+	// deinitialize all the page_entries
 	for(uint32_t i; i < buffp->maximum_pages_in_cache; i++)
 	{
-		delete_page_entry((page_entry*)get_element(buffp->page_entries, i));
+		deinitialize_page_entry(buffp->page_entries + i);
 	}
-	delete_array(buffp->page_entries);
 
 	// free all the memory that the buffer pool acquired, for capturing frames
 	free(buffp->memory);
