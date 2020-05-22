@@ -1,1 +1,2 @@
 * try to make more sequential io, larger and fewer read/write calls to disk/os
+* better hash functions for page_id and priority
