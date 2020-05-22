@@ -6,7 +6,7 @@ page_entry_mapper* get_page_entry_mapper(uint32_t page_entry_count, uint32_t pag
 {
 	page_entry_mapper* pem_p = (page_entry_mapper*) malloc(sizeof(page_entry_mapper));
 	pem_p->mem_to_entry_mapping = get_page_memory_mapper(first_page_memory_address, page_size_in_bytes, page_entry_count);
-	pem_p->page_entry_map = get_hashmap((page_entry_count / 3) + 2, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
+	pem_p->page_entry_map = get_hashmap((page_entry_count * 3) + 2, hash_page_id, compare_page_id, ROBINHOOD_HASHING);
 	pem_p->page_entry_map_lock = get_rwlock();
 	return pem_p;
 }
