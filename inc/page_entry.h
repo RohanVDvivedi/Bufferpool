@@ -10,13 +10,16 @@
 
 #include<dbfile.h>
 
-// in general
-// page_id = block_id / blocks_count
-// page_size (in bytes) = blocks_count * block_size (in bytes)
+/*
+	This data structure holds infromation,
+	about the page_memory assigned to it
+	page_memory is a block of memory of an equal division from all the memory of the bufferpool
+	each page_entry points to a page_memory that had been brough from disk to memory
+*/
 
-// the priority of the page suggests its importance,
-// higher the priority value page, tends to stay more in cache memory, 
-// and gets preferred in getting written to disk
+// in general
+// page_id = start_block_id / blocks_count
+// page_size (in bytes) = number_of_blocks_in_page * block_size (in bytes)
 
 typedef struct page_entry page_entry;
 struct page_entry
@@ -58,7 +61,7 @@ struct page_entry
 	// pointer to the in-memory copy of the page
 	void* page_memory;
 
-	// this lock ensures only 1 thread attempts to read or write the page to the disk
+	// this lock also ensures concurrency for attempts to read or write the page to/from the disk
 	rwlock* page_memory_lock;
 };
 
