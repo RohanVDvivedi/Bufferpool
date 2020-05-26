@@ -28,7 +28,7 @@ struct lru
 	page_entry_linkedlist* dirty_page_entries;
 };
 
-lru* get_lru(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address);
+lru* get_lru(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address);
 
 // you can be assured that the returned replacable page_entry will not exist in the lru,
 // if this function retuns NULL, it means the lru does not have a page_entry to spare to you
