@@ -2,7 +2,7 @@
 
 #include<page_id_helper_functions.h>
 
-page_entry_mapper* get_page_entry_mapper(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address)
+page_entry_mapper* get_page_entry_mapper(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address)
 {
 	page_entry_mapper* pem_p = (page_entry_mapper*) malloc(sizeof(page_entry_mapper));
 	pem_p->mem_to_entry_mapping = get_page_memory_mapper(first_page_memory_address, page_size_in_bytes, page_entry_count);
@@ -11,7 +11,7 @@ page_entry_mapper* get_page_entry_mapper(uint32_t page_entry_count, uint32_t pag
 	return pem_p;
 }
 
-page_entry* find_page_entry(page_entry_mapper* pem_p, uint32_t page_id)
+page_entry* find_page_entry(page_entry_mapper* pem_p, PAGE_ID page_id)
 {
 	read_lock(pem_p->page_entry_map_lock);
 		page_entry* page_ent = (page_entry*) find_value_from_hash(pem_p->page_entry_map, &page_id);

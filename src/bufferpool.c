@@ -1,6 +1,6 @@
 #include<bufferpool.h>
 
-bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache, uint32_t page_size_in_bytes, uint8_t io_thread_count, uint64_t cleanup_rate_in_milliseconds, uint64_t unused_prefetched_page_return_in_ms)
+bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cache, SIZE_IN_BYTES page_size_in_bytes, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
 {
 	if(maximum_pages_in_cache == 0)
 	{
@@ -56,9 +56,9 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
 	buffp->number_of_blocks_per_page = page_size_in_bytes / get_block_size(buffp->db_file);
 
-	unsigned long long int bytes_required_for_page_entry = buffp->maximum_pages_in_cache * sizeof(page_entry);
-	unsigned long long int bytes_for_bufferpool_frame_memory = buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file);
-	unsigned long long int bytes_additonal_block_alignment = get_block_size(buffp->db_file);
+	SIZE_IN_BYTES bytes_required_for_page_entry = buffp->maximum_pages_in_cache * sizeof(page_entry);
+	SIZE_IN_BYTES bytes_for_bufferpool_frame_memory = buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file);
+	SIZE_IN_BYTES bytes_additonal_block_alignment = get_block_size(buffp->db_file);
 
 	buffp->memory = malloc(bytes_required_for_page_entry + bytes_for_bufferpool_frame_memory + bytes_additonal_block_alignment);
 	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
@@ -74,7 +74,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
 
 	// initialize empty page entries, and place them in clean page entries list
-	for(uint32_t i = 0; i < buffp->maximum_pages_in_cache; i++)
+	for(PAGE_COUNT i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
 		void* page_memory = buffp->first_aligned_block + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = buffp->page_entries + i;
@@ -93,7 +93,7 @@ bufferpool* get_bufferpool(char* heap_file_name, uint32_t maximum_pages_in_cache
 	return buffp;
 }
 
-static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
+static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 {
 	int is_page_entry_found = 0;
 
@@ -176,7 +176,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, uint32_t page_id)
 	return page_ent;
 }
 
-void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
+void* get_page_to_read(bufferpool* buffp, PAGE_ID page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 
@@ -185,7 +185,7 @@ void* get_page_to_read(bufferpool* buffp, uint32_t page_id)
 	return page_ent->page_memory;
 }
 
-void* get_page_to_write(bufferpool* buffp, uint32_t page_id)
+void* get_page_to_write(bufferpool* buffp, PAGE_ID page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 
@@ -243,7 +243,7 @@ int release_page(bufferpool* buffp, void* page_memory)
 	return release_used_page_entry(buffp, page_ent);
 }
 
-void request_page_prefetch(bufferpool* buffp, uint32_t start_page_id, uint32_t page_count, bbqueue* bbq)
+void request_page_prefetch(bufferpool* buffp, PAGE_ID start_page_id, PAGE_COUNT page_count, bbqueue* bbq)
 {
 	// ignore page_count atleast for now 
 
@@ -252,14 +252,16 @@ void request_page_prefetch(bufferpool* buffp, uint32_t start_page_id, uint32_t p
 	{
 		// for each page_id search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
 		// do not request for reference of the page_request, since we will not be immediately waiting for getting page_entry from the page_request
-		for(uint32_t i = 0, page_id = start_page_id; i < page_count; i++, page_id++)
+		PAGE_ID page_id = start_page_id;
+		for(PAGE_COUNT i = 0; i < page_count; i++)
 		{
 			find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, bbq);
+			page_id++;
 		}
 	}
 }
 
-void force_write(bufferpool* buffp, uint32_t page_id)
+void force_write(bufferpool* buffp, PAGE_ID page_id)
 {
 	page_entry* page_ent = find_page_entry(buffp->mapp_p, page_id);
 
@@ -298,7 +300,7 @@ void delete_bufferpool(bufferpool* buffp)
 	close_dbfile(buffp->db_file);
 
 	// deinitialize all the page_entries
-	for(uint32_t i; i < buffp->maximum_pages_in_cache; i++)
+	for(PAGE_COUNT i; i < buffp->maximum_pages_in_cache; i++)
 	{
 		deinitialize_page_entry(buffp->page_entries + i);
 	}

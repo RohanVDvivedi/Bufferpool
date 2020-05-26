@@ -4,13 +4,13 @@
 #define MIN(a,b) ((a < b) ? a : b);
 
 // returns 1, if the clean up was required for the page_entry at a given index
-static int check_and_queue_if_cleanup_required(bufferpool* buffp, uint32_t index, int clean_up_sync)
+static int check_and_queue_if_cleanup_required(bufferpool* buffp, PAGE_COUNT index, int clean_up_sync)
 {
 	page_entry* page_ent = buffp->page_entries + index;
 
 	int clean_up_required = 0;
 
-	uint64_t currentTimeStamp = 0;
+	TIMESTAMP_ms currentTimeStamp = 0;
 	setToCurrentUnixTimestamp(currentTimeStamp);
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
@@ -54,20 +54,20 @@ static void* cleanup_scheduler_task_function(void* param)
 {
 	bufferpool* buffp = (bufferpool*) param;
 
-	uint64_t min_sleep_in_ms = MIN(buffp->cleanup_rate_in_milliseconds, buffp->unused_prefetched_page_return_in_ms);
+	TIME_ms min_sleep_in_ms = MIN(buffp->cleanup_rate_in_milliseconds, buffp->unused_prefetched_page_return_in_ms);
 
 	while(buffp->SHUTDOWN_CALLED == 0)
 	{
 		// wait for prescribed amount for time, after last page_entry cleanup loop
 		sleepForMilliseconds( min_sleep_in_ms );
 
-		for(uint32_t index = 0; ((index < buffp->maximum_pages_in_cache) && (buffp->SHUTDOWN_CALLED == 0)); index++)
+		for(PAGE_COUNT index = 0; ((index < buffp->maximum_pages_in_cache) && (buffp->SHUTDOWN_CALLED == 0)); index++)
 		{
 			check_and_queue_if_cleanup_required(buffp, index, 1);
 		}
 	}
 
-	for(uint32_t index = 0; index < buffp->maximum_pages_in_cache; index++)
+	for(PAGE_COUNT index = 0; index < buffp->maximum_pages_in_cache; index++)
 	{
 		// the pages that require clean up are only queued, here
 		// so the buffer pool io_dispatcher is required to wait for all threads to complete
