@@ -24,7 +24,9 @@
 	also check the valid page_memory address using the formula
 	is_valid_page_memory_address = (((page_memory - 0x0ff00)%0x0100) == 0) && ((page_memory - 0x0ff00)/0x0100 < 4)
 
-	you may get further details by readin the implementation in the source file
+	you may get further details by read in the implementation in the source file
+
+	It effectively provides a O(1) look up (no collisions) hash table for other in-memory datastructures of the bufferpool
 */
 
 typedef struct page_memory_mapper page_memory_mapper;
@@ -32,26 +34,24 @@ struct page_memory_mapper
 {
 	void* first_page_memory_address;
 
-	uint32_t page_size_in_bytes;
+	SIZE_IN_BYTES page_size_in_bytes;
 
-	uint32_t number_of_pages;
+	PAGE_COUNT number_of_pages;
 
 	void** external_references;
 };
 
-page_memory_mapper* get_page_memory_mapper(void* first_page_memory_address, uint32_t page_size_in_bytes, uint32_t number_of_pages);
+page_memory_mapper* get_page_memory_mapper(void* first_page_memory_address, SIZE_IN_BYTES page_size_in_bytes, PAGE_COUNT number_of_pages);
 
 int is_valid_page_memory_address(page_memory_mapper* pmm_p, void* page_mem);
 
 // getters return NULL, if the page_mem provided is not a valid address
 // or if there is really a NULL stored corresponding to the page_memory, so double check if you receive NULL
 void* get_by_page_memory(page_memory_mapper* pmm_p, void* page_mem);
-
 void* get_by_page_entry(page_memory_mapper* pmm_p, page_entry* page_ent);
 
 // setters return 0, if the page_mem provided is not a valid address
 int set_by_page_memory(page_memory_mapper* pmm_p, void* page_mem, void* ref);
-
 int set_by_page_entry(page_memory_mapper* pmm_p, page_entry* page_ent, void* ref);
 
 void for_each_reference(page_memory_mapper* pmm_p, void (*operation)(void* reference, void* additional_param), void* additional_param);
