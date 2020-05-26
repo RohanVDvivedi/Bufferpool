@@ -1,6 +1,8 @@
 #ifndef LEAST_RECENTLY_USED_H
 #define LEAST_RECENTLY_USED_H
 
+#include<buffer_pool_man_types.h>
+
 #include<pthread.h>
 
 #include<page_entry.h>

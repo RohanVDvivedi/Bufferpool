@@ -1,6 +1,8 @@
 #ifndef CLEANUP_SCHEDULER
 #define CLEANUP_SCHEDULER
 
+#include<buffer_pool_man_types.h>
+
 #include<page_entry.h>
 #include<io_dispatcher.h>
 

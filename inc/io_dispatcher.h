@@ -1,9 +1,7 @@
 #ifndef IO_DISPATCHER_H
 #define IO_DISPATCHER_H
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<stdint.h>
+#include<buffer_pool_man_types.h>
 
 #include<executor.h>
 

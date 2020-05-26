@@ -1,6 +1,8 @@
 #ifndef PAGE_REQUEST_TRACKER_H
 #define PAGE_REQUEST_TRACKER_H
 
+#include<buffer_pool_man_types.h>
+
 #include<pthread.h>
 
 #include<rwlock.h>

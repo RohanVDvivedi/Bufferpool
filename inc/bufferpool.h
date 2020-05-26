@@ -1,13 +1,9 @@
 #ifndef BUFFER_POOL_MANAGER_H
 #define BUFFER_POOL_MANAGER_H
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<stdint.h>
+#include<buffer_pool_man_types.h>
 
 #include<executor.h>
-
-#include<buffer_pool_man_types.h>
 
 #include<dbfile.h>
 

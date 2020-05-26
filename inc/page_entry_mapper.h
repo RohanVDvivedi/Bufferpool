@@ -1,6 +1,8 @@
 #ifndef PAGE_ENTRY_MAPPER_H
 #define PAGE_ENTRY_MAPPER_H
 
+#include<buffer_pool_man_types.h>
+
 #include<rwlock.h>
 #include<hashmap.h>
 

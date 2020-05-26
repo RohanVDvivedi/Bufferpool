@@ -1,6 +1,8 @@
 #ifndef PAGE_PRIORITY_HELPER_FUNCTIONS_H
 #define PAGE_PRIORITY_HELPER_FUNCTIONS_H
 
+#include<buffer_pool_man_types.h>
+
 static int compare_page_priority(const void* key1, const void* key2)
 {
 	uint32_t page_priority1 = *((uint32_t*)key1);

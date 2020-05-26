@@ -1,6 +1,8 @@
 #ifndef PAGE_ID_HELPER_FUNCTIONS_H
 #define PAGE_ID_HELPER_FUNCTIONS_H
 
+#include<buffer_pool_man_types.h>
+
 static unsigned long long int hash_page_id(const void* key)
 {
 	uint32_t page_id = *((uint32_t*)key);

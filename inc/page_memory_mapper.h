@@ -1,6 +1,8 @@
 #ifndef PAGE_MEMORY_MAPPER
 #define PAGE_MEMORY_MAPPER
 
+#include<buffer_pool_man_types.h>
+
 #include<page_entry.h>
 
 /*

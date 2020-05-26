@@ -1,8 +1,8 @@
 #ifndef BOUNDED_BLOCKING_QUEUE_H
 #define BOUNDED_BLOCKING_QUEUE_H
 
-#include<stdlib.h>
-#include<stdint.h>
+#include<buffer_pool_man_types.h>
+
 #include<pthread.h>
 
 typedef struct bbqueue bbqueue;

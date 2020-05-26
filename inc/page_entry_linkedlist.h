@@ -1,7 +1,7 @@
 #ifndef PAGE_ENTRY_LINKEDLIST_H
 #define PAGE_ENTRY_LINKEDLIST_H
 
-#include<stdint.h>
+#include<buffer_pool_man_types.h>
 
 #include<linkedlist.h>
 #include<page_memory_mapper.h>
