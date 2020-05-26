@@ -1,8 +1,8 @@
 #include<bounded_blocking_queue.h>
 
-bbqueue* get_bbqueue(uint32_t size)
+bbqueue* get_bbqueue(uint16_t size)
 {
-	bbqueue* bbq = (bbqueue*) malloc(sizeof(bbqueue) + (sizeof(uint32_t) * size));
+	bbqueue* bbq = (bbqueue*) malloc(sizeof(bbqueue) + (sizeof(PAGE_ID) * size));
 
 	pthread_mutex_init(&(bbq->exclus_prot), NULL);
 	pthread_cond_init(&(bbq->full_wait), NULL);
@@ -32,7 +32,7 @@ int is_bbqueue_full(bbqueue* bbq)
 	return is_full;
 }
 
-void push_bbqueue(bbqueue* bbq, uint32_t page_id)
+void push_bbqueue(bbqueue* bbq, PAGE_ID page_id)
 {
 	pthread_mutex_lock(&(bbq->exclus_prot));
 
@@ -53,7 +53,7 @@ void push_bbqueue(bbqueue* bbq, uint32_t page_id)
 	pthread_mutex_unlock(&(bbq->exclus_prot));
 }
 
-uint32_t pop_bbqueue(bbqueue* bbq)
+PAGE_ID pop_bbqueue(bbqueue* bbq)
 {
 	pthread_mutex_lock(&(bbq->exclus_prot));
 
@@ -64,7 +64,7 @@ uint32_t pop_bbqueue(bbqueue* bbq)
 		}
 
 		// pop element
-		uint32_t page_id = bbq->queue_values[bbq->first_index];
+		PAGE_ID page_id = bbq->queue_values[bbq->first_index];
 		bbq->first_index = ((bbq->first_index + 1) % bbq->queue_size);
 		bbq->element_count--;
 
@@ -74,4 +74,13 @@ uint32_t pop_bbqueue(bbqueue* bbq)
 	pthread_mutex_unlock(&(bbq->exclus_prot));
 
 	return page_id;
+}
+
+void delete_bbqueue(bbqueue* bbq)
+{
+	pthread_mutex_destroy(&(bbq->exclus_prot));
+	pthread_cond_destroy(&(bbq->full_wait));
+	pthread_cond_destroy(&(bbq->empty_wait));
+
+	free(bbq);
 }

@@ -18,29 +18,31 @@ struct bbqueue
 	pthread_cond_t empty_wait;
 
 	// index where oldest element was inserted
-	uint32_t first_index;
+	uint16_t first_index;
 
 	// index where the last newest element was inserted
-	uint32_t last_index;
+	uint16_t last_index;
 
 	// total number of elements in the queue
-	uint32_t element_count;
+	uint16_t element_count;
 
 	// total size of queue array
-	uint32_t queue_size;
+	uint16_t queue_size;
 
 	// queue array
 	uint32_t queue_values[];
 };
 
-bbqueue* get_bbqueue(uint32_t size);
+bbqueue* get_bbqueue(uint16_t size);
 
 int is_bbqueue_empty(bbqueue* bbq);
 
 int is_bbqueue_full(bbqueue* bbq);
 
-void push_bbqueue(bbqueue* bbq, uint32_t page_id);
+void push_bbqueue(bbqueue* bbq, PAGE_ID page_id);
 
-uint32_t pop_bbqueue(bbqueue* bbq);
+PAGE_ID pop_bbqueue(bbqueue* bbq);
+
+void delete_bbqueue(bbqueue* bbq);
 
 #endif
