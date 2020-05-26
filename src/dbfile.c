@@ -79,7 +79,7 @@ uint32_t get_block_size(dbfile* dbfile_p)
 			int device_fd = open(device_path, O_RDONLY);
 			if(device_fd > 0)
 			{
-				int physical_block_size = -1;
+				SIZE_IN_BYTES physical_block_size = -1;
 				int err_return = ioctl(device_fd, BLKSSZGET, &physical_block_size);
 				close(device_fd);
 				if(err_return != -1)
@@ -109,24 +109,24 @@ uint32_t get_block_size(dbfile* dbfile_p)
 	return dbfile_p->physical_block_size;
 }
 
-uint32_t get_size(dbfile* dbfile_p)
+SIZE_IN_BYTES get_size(dbfile* dbfile_p)
 {
 	return dbfile_p->dbfstat.st_size;
 }
 
-int resize_file(dbfile* dbfile_p, uint32_t num_blocks)
+int resize_file(dbfile* dbfile_p, BLOCK_COUNT num_blocks)
 {
 	int result = ftruncate(dbfile_p->db_fd, num_blocks * get_block_size(dbfile_p) );
 	result = fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	return result;
 }
 
-int write_blocks_to_disk(dbfile* dbfile_p, void* blocks_in_main_memory, uint32_t starting_block_id, uint32_t num_blocks_to_write)
+int write_blocks_to_disk(dbfile* dbfile_p, void* blocks_in_main_memory, BLOCK_ID starting_block_id, BLOCK_COUNT num_blocks_to_write)
 {
 	return write_blocks(dbfile_p->db_fd, blocks_in_main_memory, starting_block_id, num_blocks_to_write, get_block_size(dbfile_p));
 }
 
-int read_blocks_from_disk(dbfile* dbfile_p, void* blocks_in_main_memory, uint32_t starting_block_id, uint32_t num_blocks_to_read)
+int read_blocks_from_disk(dbfile* dbfile_p, void* blocks_in_main_memory, BLOCK_ID starting_block_id, BLOCK_COUNT num_blocks_to_read)
 {
 	return read_blocks(dbfile_p->db_fd, blocks_in_main_memory, starting_block_id, num_blocks_to_read, get_block_size(dbfile_p));
 }

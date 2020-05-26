@@ -20,7 +20,7 @@ int open_db_file(char* heap_file_name)
 	return db_fd;
 }
 
-int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size)
+int read_blocks(int db_fd, void* blocks_in_main_memory, BLOCK_ID block_id, BLOCK_COUNT block_count, SIZE_IN_BYTES block_size)
 {
 	off_t start_offset = block_id * block_size;
 	size_t bytes_count = block_count * block_size;
@@ -36,7 +36,7 @@ int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint3
 	return bytes_read;
 }
 
-int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size)
+int write_blocks(int db_fd, void* blocks_in_main_memory, BLOCK_COUNT block_id, BLOCK_COUNT block_count, SIZE_IN_BYTES block_size)
 {
 	off_t start_offset = block_id * block_size;
 	size_t bytes_count = block_count * block_size;

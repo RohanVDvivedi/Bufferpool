@@ -15,6 +15,7 @@
 #include<stdio.h>
 #include<errno.h>
 
+#include<buffer_pool_man_types.h>
 
 #if defined __linux__
 	// no redefinition required
@@ -38,11 +39,11 @@ int open_db_file(char* heap_file_name);
 
 // reads blocks of file on disk starting at block_id * block_size to ((block_id + blocks_count) * block_size) - 1 to blocks_in_main_memory
 // returs 0 for success, -1 on error
-int read_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size);
+int read_blocks(int db_fd, void* blocks_in_main_memory, BLOCK_ID block_id, BLOCK_COUNT block_count, SIZE_IN_BYTES block_size);
 
 // writes blocks of file on disk starting at block_id * block_size to ((block_id + blocks_count) * block_size) - 1 with blocks_in_main_memory
 // returs 0 for success, -1 on error
-int write_blocks(int db_fd, void* blocks_in_main_memory, uint32_t block_id, uint32_t block_count, uint32_t block_size);
+int write_blocks(int db_fd, void* blocks_in_main_memory, BLOCK_ID block_id, BLOCK_COUNT block_count, SIZE_IN_BYTES block_size);
 
 // close the given open file discriptor of the
 // returns 0 on success, else returns 1
