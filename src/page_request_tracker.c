@@ -3,7 +3,7 @@
 #include<page_id_helper_functions.h>
 #include<page_priority_helper_functions.h>
 
-page_request_tracker* get_page_request_tracker(uint32_t max_requests)
+page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests)
 {
 	page_request_tracker* prt_p = (page_request_tracker*) malloc(sizeof(page_request_tracker));
 	prt_p->page_request_tracker_lock = get_rwlock();
@@ -13,7 +13,7 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests)
 	return prt_p;
 }
 
-page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp, bbqueue* bbq)
+page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PAGE_ID page_id, bufferpool* buffp, bbqueue* bbq)
 {
 	// we must return the referrence to the callee, if a bbq is not provided, by the callee
 	int reference_return_required = (bbq == NULL);
@@ -99,7 +99,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 	}
 }
 
-int discard_page_request(page_request_tracker* prt_p, uint32_t page_id)
+int discard_page_request(page_request_tracker* prt_p, PAGE_ID page_id)
 {
 	int is_discarded = 0;
 	write_lock(prt_p->page_request_tracker_lock);
@@ -113,7 +113,7 @@ int discard_page_request(page_request_tracker* prt_p, uint32_t page_id)
 	return is_discarded;
 }
 
-int discard_page_request_if_not_referenced(page_request_tracker* prt_p, uint32_t page_id)
+int discard_page_request_if_not_referenced(page_request_tracker* prt_p, PAGE_ID page_id)
 {
 	int is_discarded = 0;
 	write_lock(prt_p->page_request_tracker_lock);

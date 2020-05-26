@@ -19,7 +19,7 @@
 /*
 	This structure is responsible to keep a mapping from page_id to page_request
 	It ensures that if a page request is made multiple times, then only one of the request is processed
-	It is also responsible to maintain a heap for page_request-s this will help us find the most requested page first to process for io
+	It is also responsible to maintain a heap for page_request-s on their page_request_priority this will help us find the most requested page first to process for io
 */
 
 typedef struct page_request_tracker page_request_tracker;
@@ -38,7 +38,7 @@ struct page_request_tracker
 	heap* page_request_priority_queue;
 };
 
-page_request_tracker* get_page_request_tracker(uint32_t max_requests);
+page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests);
 
 // finds a page_request that was submitted and it will increment its priority for faster fulfillment,
 // or if there was no page_request made then a new page request is created
@@ -46,18 +46,18 @@ page_request_tracker* get_page_request_tracker(uint32_t max_requests);
 // if you have the page_request reference returned by this function (if bbq == NULL),
 // you must to wait on it by calling "get_requested_page_entry_and_discard_page_request" on the page_request
 // if you have provided with valid bbq, the page_id of the page will be pushed into the queue when the request is fulfilled
-page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, uint32_t page_id, bufferpool* buffp, bbqueue* bbq);
+page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PAGE_ID page_id, bufferpool* buffp, bbqueue* bbq);
 
 // this function will discard a request from its hashmap, and mark the page_request for deletion
 // after this function call the page_request will be deleted on its own by the thread that dereferences the result from that page_request
 // the function returns 1, if the page_request was successfully discarded and marked for deletion
-int discard_page_request(page_request_tracker* prt_p, uint32_t page_id);
+int discard_page_request(page_request_tracker* prt_p, PAGE_ID page_id);
 
 // this function will discard a request from its hashmap, and mark the page_request for deletion, 
 // if and only if the page_request is currently not being referenced by any thread or data structure
 // since effectively the page_request is not being referenced by any_one, when it is being marked for deletion it gets deleted internally by the same thread that calls this function
 // the function returns 1, if the page_request was successfully discarded and deleted
-int discard_page_request_if_not_referenced(page_request_tracker* prt_p, uint32_t page_id);
+int discard_page_request_if_not_referenced(page_request_tracker* prt_p, PAGE_ID page_id);
 
 // the below function will query the priority queue (max heap) of the page_request tracker, and provide you with a page_request to fullfill
 // the io_dispatcher of the bufferpool is suppossed to fullfill the highest priority page_requests before others
