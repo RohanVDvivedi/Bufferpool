@@ -20,8 +20,6 @@
 
 #include<bounded_blocking_queue.h>
 
-// the provided implementation of the bufferpool is a LRU cache
-// for the unordered pages of a heap file
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
@@ -31,8 +29,11 @@ struct bufferpool
 	dbfile* db_file;
 
 	// this is the total memory, as managed by the buffer pool
-	// the address holds memory equal to (maximum_pages_in_cache * number_of_blocks_per_page * (size_of_block of the hardware + 1)) + maximum_pages_in_cache * sizeof(page_entry)
-	// the additional block malloced is because, the malloced memory is not block aligned, while we need block aligned memory for direct io using DMA
+	// the address holds memory equal to 
+	// (maximum_pages_in_cache * number_of_blocks_per_page * (size_of_block of the hardware))
+	// + (size_of_block of the hardware)
+	// + (maximum_pages_in_cache * sizeof(page_entry))
+	// the additional block mallocked is because, the mallocked memory is not block aligned, while we need block aligned memory for direct io using DMA
 	void* memory;
 
 	// the address of the first aligned block, located in the allocated memory (the field immediately above)
@@ -62,7 +63,7 @@ struct bufferpool
 
 	// If a page has been requested for prefetch, and once the page has been brought to memory by the buffer,
 	// the corresponding user thread that requested for prefetching the page, must acquire lock and start using the page before atmost unused_prefetched_page_return_in_ms
-	// else this in-memory page is returned back to the bufferpool for reciculartion to fulfill other page requests
+	// else this in-memory page is returned back to the bufferpool for recirculartion to fulfill other page requests
 	TIME_ms unused_prefetched_page_return_in_ms;
 
 	// ******** bufferpool attributes section end
@@ -116,8 +117,8 @@ int release_page(bufferpool* buffp, void* page_memory);
 // this will help us fetch adjacent pages to memory faster by using sequential io
 // all the parameters must be valid and non NULL for proper operation of this function
 // whenever a page is available in memory, the page_id of that page will be made available to you, as we push the page_id in the bbq
-// if the bbq is already full, page_id will not be pushed and you may not receive the page_id even if it is brought to memory,
-// please ensure to provide a large enough bbq, to hold all page_ids
+// if the bbq is already full, the bufferpool will go into wait state, taking all important lock with it, this is not at all good,
+// SO PLEASE PLEASE PLEASE, keep the size of bounded_blocking_queue more than enough, to accomodate the number of pages, at any instant
 void request_page_prefetch(bufferpool* buffp, PAGE_ID start_page_id, PAGE_COUNT page_count, bbqueue* bbq);
 
 // this function is blocking and it will return only when the page write to disk succeeds
