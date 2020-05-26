@@ -11,11 +11,7 @@
 #include<queue.h>
 
 /*
-	This will be regarded as a constant structure for different page_id
-	It will not/can not be modified throughout its life cycle
-	no locks required to protect it
-
-	EXCEPT for
+	Each component of page_request is protected individually by different locks
 
 	the page_request_priority (and index_in_priority_queue), it is to be managed by the external data structure to prioritize
 	the fulfillment of this page request, hence it needs to be protected by the lock of external structure that is managing it
@@ -28,14 +24,14 @@ typedef struct page_request page_request;
 struct page_request
 {
 	// this is the page_id, for which the request is made
-	uint32_t page_id;
+	PAGE_ID page_id;
 
 	// this number represents the effective number of times or how long ago was this request created
-	// the page_request with higher priority is fullfilled first
+	// the page_request with higher priority must be fullfilled first
 	// this variable needs to be protected under the read/write lock of the data structure that manages the page request
-	uint32_t page_request_priority;
+	uint8_t page_request_priority;
 
-	// this is the index of the page_request in the priority queue (max heap)
+	// this is the index of the page_request in the priority queue (max heap), managed and protected by the page_request_tracker
 	unsigned long long int index_in_priority_queue;
 
 
@@ -50,6 +46,7 @@ struct page_request
 	job* fulfillment_promise;
 
 	// this is a queue of all the bbq's that user threads have submitted a prefetch request on, for this page 
+	// once a page_request is fullfilled, all the elements of queue_of_waiting_bbqs, must be popped and each individually should be pushed with the page_id
 	queue* queue_of_waiting_bbqs;
 
 
@@ -66,20 +63,21 @@ struct page_request
 
 // this function returns a new page_request, whose reference count is already 1
 // we assume that you are going to reference this page_request if you are creating it
-page_request* get_page_request(uint32_t page_id);
+page_request* get_page_request(PAGE_ID page_id);
 
 /* Below are the functions to be used by the data structures/threads that are responsible for creation and maintenance of the page_requests */
 
-	// it will plainly increment the page_request, this function needs to be called, 
+	// it will plainly increment the page_request_reference_counter, this function needs to be called, 
 	// when you are sharing the page_request with other data structures or threads in the project
 	// returns 1, if the page_request reference counter is incremented
 	// you are allowed to share the page_request only if this function returns 1
+	// this function returns 0, if it was marked for deletion, before you called this function
 	int increment_page_request_reference_count(page_request* page_req);
 
-	// it will decrement the page_request counter, 
+	// it will decrement the page_request_reference_count counter, 
 	// it is assumed that the thread that calls this would no longer require the page_request
 	// the page_request might be deleted here itself, if no one is referencing it currently
-	// MAKE SURE YOU ARE NOT HOLDING ANY REFERENCE/POINTER TO THE PAGE_REQUEST WHEN YOU MARK THE PAGE_REQUEST FOR DELETION
+	// MAKE SURE YOU ARE NOT HOLDING ANY REFERENCE/POINTER TO THE PAGE_REQUEST AFTER YOU MARK THE PAGE_REQUEST FOR DELETION
 	// DONOT ATTEMPT TO USE THIS PAGE REQUEST OR SHARE IT AFTER MARKING IT FOR DELETION
 	void mark_page_request_for_deletion(page_request* page_req);
 
