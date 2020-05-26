@@ -1,6 +1,6 @@
 #include<page_entry_linkedlist.h>
 
-page_entry_linkedlist* get_page_entry_linkedlist(uint32_t page_entry_count, uint32_t page_size_in_bytes, void* first_page_memory_address)
+page_entry_linkedlist* get_page_entry_linkedlist(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address)
 {
 	page_entry_linkedlist* pel_p = (page_entry_linkedlist*) malloc(sizeof(page_entry_linkedlist));
 	pel_p->page_entries = get_linkedlist(SIMPLE, NULL);
