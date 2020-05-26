@@ -65,6 +65,11 @@ struct page_request
 // we assume that you are going to reference this page_request if you are creating it
 page_request* get_page_request(PAGE_ID page_id);
 
+// no mentioned earlier, no locks are being used here, it will only increment the page_request_priority
+// it will return 0, and not increment the page_request_priority, if the priority value was 0xff, 
+// which is max value for the datatype used for priority
+int increment_page_request_priority(page_request* page_req);
+
 /* Below are the functions to be used by the data structures/threads that are responsible for creation and maintenance of the page_requests */
 
 	// it will plainly increment the page_request_reference_counter, this function needs to be called, 

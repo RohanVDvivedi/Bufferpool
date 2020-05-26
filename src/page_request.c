@@ -25,6 +25,16 @@ static void delete_page_request(page_request* page_req)
 	free(page_req);
 }
 
+int increment_page_request_priority(page_request* page_req)
+{
+	if(page_req->page_request_priority != 0xff)
+	{
+		page_req->page_request_priority++;
+		return 1;
+	}
+	return 0;
+}
+
 int increment_page_request_reference_count(page_request* page_req)
 {
 	int is_page_request_sharable = 0;

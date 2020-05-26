@@ -27,8 +27,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 		if(page_req != NULL)
 		{
 			pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
-				page_req->page_request_priority++;
-				heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
+				if(increment_page_request_priority(page_req))
+				{
+					heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
+				}
 			pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 
 			// if we have to share the reference of the page_request with the callee, 
@@ -69,8 +71,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, ui
 			{
 				// if a page_request is found, just increment its priority inorder to priotize it
 				pthread_mutex_lock(&(prt_p->page_request_priority_queue_lock));
-					page_req->page_request_priority++;
-					heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
+					if(increment_page_request_priority(page_req))
+					{
+						heapify_at(prt_p->page_request_priority_queue, page_req->index_in_priority_queue);
+					}
 				pthread_mutex_unlock(&(prt_p->page_request_priority_queue_lock));
 			}
 
