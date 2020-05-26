@@ -14,6 +14,8 @@ bbqueue* get_bbqueue(uint16_t size)
 
 	bbq->first_index = 2;
 	bbq->last_index = 1;
+
+	return bbq;
 }
 
 int is_bbqueue_empty(bbqueue* bbq)

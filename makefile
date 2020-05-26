@@ -16,7 +16,7 @@ OBJECTS:=$(patsubst $(SRC_DIR)%.c,$(OBJ_DIR)%.o,${SOURCES})
 TARGET:=${BIN_DIR}/libbufferpoolman.a
 
 # place your include directories -I flag here
-CFLAGS=-I${INC_DIR} -I${CUTLERY_PATH}/inc -I${RWLOCK_PATH}/inc -I${BOOMPAR_PATH}/inc
+CFLAGS=-Wall -I${INC_DIR} -I${CUTLERY_PATH}/inc -I${RWLOCK_PATH}/inc -I${BOOMPAR_PATH}/inc
 
 # the header files from external libraries
 HEADER_DEPENDENCIES=${CUTLERY_PATH}/inc/*.h ${RWLOCK_PATH}/inc/*.h ${BOOMPAR_PATH}/inc/*.h

@@ -73,6 +73,8 @@ static void* cleanup_scheduler_task_function(void* param)
 		// so the buffer pool io_dispatcher is required to wait for all threads to complete
 		check_and_queue_if_cleanup_required(buffp, index, 0);
 	}
+
+	return NULL;
 }
 
 void start_async_cleanup_scheduler(bufferpool* buffp)

@@ -9,13 +9,17 @@
 #include<dbfile.h>
 
 /*
-	This data structure holds infromation,
-	about the page_memory assigned to it
-	page_memory is a block of memory of an equal division from all the memory of the bufferpool
-	each page_entry points to a page_memory that had been brough from disk to memory
+	This data structure holds information, about the page_memory that was assigned to it by the buffer pool
+	page_memory is a block of memory of an equal division from all the buffer memory of the bufferpool for storing in memory pages
+	each page_entry points to a page_memory that had been brought from disk to memory
+	The pointer to the page_memory, corresponding to the page_entry is always constant,
+	i.e. page_entry->page_memory pointer will remain constant, what so ever even though the page being help by it chnages
+	we essentially always go to page_entry and then to its page_memory and copy disk contents to the location pointer to by page_memory
+	and the page_memory pointers of all the page_entries are pointing to contigous blocks, 
+	and this structure has been exploited in page_memory mapper to get immutable keyed, non-colliding hashtable for various other datastructures of the buffer pool
 */
 
-// in general
+// for general reference
 // page_id = start_block_id / blocks_count
 // page_size (in bytes) = number_of_blocks_in_page * block_size (in bytes)
 
@@ -29,10 +33,10 @@ struct page_entry
 	dbfile* dbfile_p;
 
 	// this is the actual page id of the page that the buffer pool is holding
-	uint32_t page_id;
+	PAGE_ID page_id;
 
 	// this is the number of blocks, that make up this page
-	uint32_t number_of_blocks_in_page;
+	BLOCK_COUNT number_of_blocks_in_page;
 
 	// if the page is dirty, this byte is set to 1, else 0
 	// if a page is dirty, it is yet to be written to disk
@@ -49,7 +53,7 @@ struct page_entry
 	uint32_t pinned_by_count;
 
 	// this is the timestamp, when the last disk io operation was performed on this page_entry
-	uint64_t unix_timestamp_since_last_disk_io_in_ms;
+	TIMESTAMP_ms unix_timestamp_since_last_disk_io_in_ms;
 
 	// this is the count, to keep track of the number of times the given page was accessed, (it is accumuated value of the pinnned_by_count)
 	// since it was brought to memory, this counter keeps count for both reads and writes performed by the user application, and it is zeroed when a new page is read for this page_entry
@@ -63,7 +67,7 @@ struct page_entry
 	rwlock* page_memory_lock;
 };
 
-void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_memory, uint32_t number_of_blocks_in_page);
+void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_memory, BLOCK_COUNT number_of_blocks_in_page);
 
 void acquire_read_lock(page_entry* page_ent);
 
@@ -102,8 +106,11 @@ void deinitialize_page_entry(page_entry* page_ent);
 	to gain exclusive access to the page entry
 
 	Do not access any of the attributes of the page_entry without taking page_entry_lock
-	Do not access page memory without taking page_entry_lock
+	Do not access page_memory without taking appropriate (read or write) page_memory_lock
 	
 	to call write_page_to_disk(), surround it with acquire_read_lock() and release_read_lock()
 	to call read_page_to_disk(), surround it with acquire_write_lock() and release_write_lock()
+
+	updating a page_entry->page_memory contents by reading from disk is a write operation on the page_memory,
+	while updating the disk with the dirty contents of page_entry->page_memory is a read operation on the page_memory.
 */
