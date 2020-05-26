@@ -1,6 +1,21 @@
 #ifndef BUFFER_POOL_MAN_TYPES
 #define BUFFER_POOL_MAN_TYPES
 
+#include<stdio.h>
+#include<stdlib.h>
+#include<stdint.h>
+
+typedef uint32_t 	PAGE_ID;
+typedef uint32_t	PAGE_COUNT;
+
+typedef uint32_t 	BLOCK_ID;
+typedef uint32_t	BLOCK_COUNT;
+
+typedef uint64_t 	TIMESTAMP_ms;
+typedef uint64_t 	TIME_ms;
+
+typedef uint32_t 	SIZE_IN_BYTES;
+
 #include<errno.h>
 #include<time.h>
 #include<sys/time.h>
