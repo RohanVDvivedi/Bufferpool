@@ -1,6 +1,8 @@
 #ifndef BUFFER_POOL_MANAGER_H
 #define BUFFER_POOL_MANAGER_H
 
+#include<sys/mman.h>
+
 #include<buffer_pool_man_types.h>
 
 #include<executor.h>

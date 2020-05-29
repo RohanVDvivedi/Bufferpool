@@ -60,9 +60,17 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	SIZE_IN_BYTES bytes_for_bufferpool_frame_memory = buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file);
 	SIZE_IN_BYTES bytes_additonal_block_alignment = get_block_size(buffp->db_file);
 
-	buffp->memory = malloc(bytes_required_for_page_entry + bytes_for_bufferpool_frame_memory + bytes_additonal_block_alignment);
+	SIZE_IN_BYTES total_bufferpool_memory = bytes_required_for_page_entry + bytes_for_bufferpool_frame_memory + bytes_additonal_block_alignment;
+
+	buffp->memory = malloc(total_bufferpool_memory);
 	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
 	buffp->page_entries = (page_entry*)(((char*)(buffp->first_aligned_block)) + bytes_for_bufferpool_frame_memory);
+
+	// We want the OS to always keep the page_entry and the bufferpool page_memory in the memory and never swap them out
+	if(mlock(buffp->memory, total_bufferpool_memory))
+	{
+		printf("Error mlocking bufferpool memory\n");
+	}
 
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
