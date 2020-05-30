@@ -308,7 +308,7 @@ void delete_bufferpool(bufferpool* buffp)
 	close_dbfile(buffp->db_file);
 
 	// deinitialize all the page_entries
-	for(PAGE_COUNT i; i < buffp->maximum_pages_in_cache; i++)
+	for(PAGE_COUNT i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
 		deinitialize_page_entry(buffp->page_entries + i);
 	}

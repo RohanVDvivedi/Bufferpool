@@ -30,7 +30,7 @@ struct bbqueue
 	uint16_t queue_size;
 
 	// queue array
-	uint32_t queue_values[];
+	PAGE_ID queue_values[];
 };
 
 bbqueue* get_bbqueue(uint16_t size);
