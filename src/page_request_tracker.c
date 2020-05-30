@@ -6,7 +6,7 @@
 page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests)
 {
 	page_request_tracker* prt_p = (page_request_tracker*) malloc(sizeof(page_request_tracker));
-	prt_p->page_request_tracker_lock = get_rwlock();
+	initialize_rwlock(&(prt_p->page_request_tracker_lock));
 	prt_p->page_request_map = get_hashmap((max_requests / 3) + 2, hash_page_id, compare_page_id, ELEMENTS_AS_RED_BLACK_BST);
 	pthread_mutex_init(&(prt_p->page_request_priority_queue_lock), NULL);
 	prt_p->page_request_priority_queue = get_heap(max_requests, MAX_HEAP, compare_page_priority, priority_queue_index_change_callback, NULL);
@@ -18,7 +18,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 	// we must return the referrence to the callee, if a bbq is not provided, by the callee
 	int reference_return_required = (bbq == NULL);
 
-	read_lock(prt_p->page_request_tracker_lock);
+	read_lock(&(prt_p->page_request_tracker_lock));
 
 		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
 		
@@ -41,11 +41,11 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 			}
 		}
 
-	read_unlock(prt_p->page_request_tracker_lock);
+	read_unlock(&(prt_p->page_request_tracker_lock));
 
 	if(page_req == NULL)
 	{
-		write_lock(prt_p->page_request_tracker_lock);
+		write_lock(&(prt_p->page_request_tracker_lock));
 
 			page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
 
@@ -85,7 +85,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 				increment_page_request_reference_count(page_req);
 			}
 
-		write_unlock(prt_p->page_request_tracker_lock);
+		write_unlock(&(prt_p->page_request_tracker_lock));
 	}
 
 	if(reference_return_required)
@@ -102,21 +102,21 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 int discard_page_request(page_request_tracker* prt_p, PAGE_ID page_id)
 {
 	int is_discarded = 0;
-	write_lock(prt_p->page_request_tracker_lock);
+	write_lock(&(prt_p->page_request_tracker_lock));
 		page_request* page_req = NULL;
 		is_discarded = delete_entry_from_hash(prt_p->page_request_map, &page_id, NULL, (const void **)(&page_req));
 		if(is_discarded)
 		{
 			mark_page_request_for_deletion(page_req);
 		}
-	write_unlock(prt_p->page_request_tracker_lock);
+	write_unlock(&(prt_p->page_request_tracker_lock));
 	return is_discarded;
 }
 
 int discard_page_request_if_not_referenced(page_request_tracker* prt_p, PAGE_ID page_id)
 {
 	int is_discarded = 0;
-	write_lock(prt_p->page_request_tracker_lock);
+	write_lock(&(prt_p->page_request_tracker_lock));
 		page_request* page_req = (page_request*) find_value_from_hash(prt_p->page_request_map, &page_id);
 		if(page_req != NULL && get_page_request_reference_count(page_req) == 1)
 		{
@@ -126,7 +126,7 @@ int discard_page_request_if_not_referenced(page_request_tracker* prt_p, PAGE_ID 
 				mark_page_request_for_deletion(page_req);
 			}
 		}
-	write_unlock(prt_p->page_request_tracker_lock);
+	write_unlock(&(prt_p->page_request_tracker_lock));
 	return is_discarded;
 }
 
@@ -150,14 +150,14 @@ static void mark_existing_page_request_for_deletion_wrapper(const void* key, con
 
 void delete_page_request_tracker(page_request_tracker* prt_p)
 {
-	read_lock(prt_p->page_request_tracker_lock);
+	read_lock(&(prt_p->page_request_tracker_lock));
 		for_each_entry_in_hash(prt_p->page_request_map, mark_existing_page_request_for_deletion_wrapper, NULL);
-	read_unlock(prt_p->page_request_tracker_lock);
+	read_unlock(&(prt_p->page_request_tracker_lock));
 
 	pthread_mutex_destroy(&(prt_p->page_request_priority_queue_lock));
 	delete_heap(prt_p->page_request_priority_queue);
 
-	delete_rwlock(prt_p->page_request_tracker_lock);
+	deinitialize_rwlock(&(prt_p->page_request_tracker_lock));
 	delete_hashmap(prt_p->page_request_map);
 
 	free(prt_p);

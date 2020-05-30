@@ -29,7 +29,7 @@ struct page_entry_mapper
 	hashmap* page_entry_map;
 
 	// lock
-	rwlock* page_entry_map_lock;
+	rwlock page_entry_map_lock;
 };
 
 page_entry_mapper* get_page_entry_mapper(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address);

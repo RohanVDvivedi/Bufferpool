@@ -28,27 +28,27 @@ void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_me
 	// all other attributes of this struct are protected by the page_entry_lock
 	// if threads want to access page memory for the disk, they only need to have page_memory_lock,
 	// they need not have page_entry_lock for the corresponding page
-	page_ent->page_memory_lock = get_rwlock();
+	initialize_rwlock(&(page_ent->page_memory_lock));
 }
 
 void acquire_read_lock(page_entry* page_ent)
 {
-	read_lock(page_ent->page_memory_lock);
+	read_lock(&(page_ent->page_memory_lock));
 }
 
 void release_read_lock(page_entry* page_ent)
 {
-	read_unlock(page_ent->page_memory_lock);
+	read_unlock(&(page_ent->page_memory_lock));
 }
 
 void acquire_write_lock(page_entry* page_ent)
 {
-	write_lock(page_ent->page_memory_lock);
+	write_lock(&(page_ent->page_memory_lock));
 }
 
 void release_write_lock(page_entry* page_ent)
 {
-	write_unlock(page_ent->page_memory_lock);
+	write_unlock(&(page_ent->page_memory_lock));
 }
 
 int read_page_from_disk(page_entry* page_ent)
@@ -64,5 +64,5 @@ int write_page_to_disk(page_entry* page_ent)
 void deinitialize_page_entry(page_entry* page_ent)
 {
 	pthread_mutex_destroy(&(page_ent->page_entry_lock));
-	delete_rwlock(page_ent->page_memory_lock);
+	deinitialize_rwlock(&(page_ent->page_memory_lock));
 }

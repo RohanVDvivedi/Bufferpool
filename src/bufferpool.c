@@ -209,13 +209,13 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 
 	// figure out, if we need to release read lock or write lock on the page_entry memory, and release it, 
 	// mark the page as modified if the page was acquired for being written by the user thread
-	if(get_readers_count(page_ent->page_memory_lock))
+	if(get_readers_count(&(page_ent->page_memory_lock)))
 	{
 		release_read_lock(page_ent);
 		lock_released = 1;
 		was_modified = 0;
 	}
-	else if(get_writers_count(page_ent->page_memory_lock))
+	else if(get_writers_count(&(page_ent->page_memory_lock)))
 	{
 		release_write_lock(page_ent);
 		lock_released = 1;

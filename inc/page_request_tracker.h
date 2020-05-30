@@ -26,7 +26,7 @@ typedef struct page_request_tracker page_request_tracker;
 struct page_request_tracker
 {
 	// lock -> protects page_request_map and page_request_max_heap
-	rwlock* page_request_tracker_lock;
+	rwlock page_request_tracker_lock;
 
 	// hashmap from page_id -> page_request
 	hashmap* page_request_map;

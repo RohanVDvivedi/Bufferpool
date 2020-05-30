@@ -64,7 +64,7 @@ struct page_entry
 	void* page_memory;
 
 	// this lock also ensures concurrency for attempts to read or write the page to/from the disk
-	rwlock* page_memory_lock;
+	rwlock page_memory_lock;
 };
 
 void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_memory, BLOCK_COUNT number_of_blocks_in_page);
