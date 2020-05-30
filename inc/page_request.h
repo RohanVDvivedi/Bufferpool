@@ -43,11 +43,11 @@ struct page_request
 	// this is the job reference, external threads are asked to wait on this job,
 	// it is effectively a promise that the waiting threads will be woken up when the page_request is fulfilled
 	// if they want to directly acquire the page when it comes to the main memory
-	job* fulfillment_promise;
+	job fulfillment_promise;
 
 	// this is a queue of all the bbq's that user threads have submitted a prefetch request on, for this page 
 	// once a page_request is fullfilled, all the elements of queue_of_waiting_bbqs, must be popped and each individually should be pushed with the page_id
-	queue* queue_of_waiting_bbqs;
+	queue queue_of_waiting_bbqs;
 
 
 

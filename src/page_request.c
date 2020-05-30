@@ -8,8 +8,8 @@ page_request* get_page_request(PAGE_ID page_id)
 	page_req->page_request_priority = 0;
 
 	pthread_mutex_init(&(page_req->job_and_queue_bbq_lock), NULL);
-	page_req->fulfillment_promise = get_job(NULL, NULL);
-	page_req->queue_of_waiting_bbqs = get_queue(10);
+	initialize_job(&(page_req->fulfillment_promise), NULL, NULL);
+	initialize_queue(&(page_req->queue_of_waiting_bbqs), 10);
 
 	pthread_mutex_init(&(page_req->page_request_reference_lock), NULL);
 	page_req->page_request_reference_count = 1;
@@ -21,7 +21,8 @@ page_request* get_page_request(PAGE_ID page_id)
 static void delete_page_request(page_request* page_req)
 {
 	pthread_mutex_destroy(&(page_req->page_request_reference_lock));
-	delete_job(page_req->fulfillment_promise);
+	deinitialize_queue(&(page_req->queue_of_waiting_bbqs));
+	deinitialize_job(&(page_req->fulfillment_promise));
 	free(page_req);
 }
 
@@ -81,7 +82,7 @@ void insert_to_queue_of_waiting_bbqueues(page_request* page_req, bbqueue* bbq)
 	pthread_mutex_lock(&(page_req->job_and_queue_bbq_lock));
 
 		// if the result is ready, we push the page_id to the given bbq
-		if(check_result_ready(page_req->fulfillment_promise))
+		if(check_result_ready(&(page_req->fulfillment_promise)))
 		{
 			// push the page_id to the bbq
 			push_bbqueue(bbq, page_req->page_id);
@@ -90,7 +91,7 @@ void insert_to_queue_of_waiting_bbqueues(page_request* page_req, bbqueue* bbq)
 		else
 		{
 			// push bbq to the queue_of_waiting_bbqs
-			push_queue(page_req->queue_of_waiting_bbqs, bbq);
+			push_queue(&(page_req->queue_of_waiting_bbqs), bbq);
 		}
 		
 	pthread_mutex_unlock(&(page_req->job_and_queue_bbq_lock));
@@ -99,27 +100,26 @@ void insert_to_queue_of_waiting_bbqueues(page_request* page_req, bbqueue* bbq)
 void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(page_req->job_and_queue_bbq_lock));
-		set_result(page_req->fulfillment_promise, page_ent);
+		set_result(&(page_req->fulfillment_promise), page_ent);
 
 		// for all the bbqs in queue_of_waiting_bbqs, push the page_id
-		while(!isQueueEmpty(page_req->queue_of_waiting_bbqs))
+		while(!isQueueEmpty(&(page_req->queue_of_waiting_bbqs)))
 		{
 			// get top bbq from queue_of_waiting_bbqs
-			bbqueue* bbq = (bbqueue*) get_top_queue(page_req->queue_of_waiting_bbqs);
+			bbqueue* bbq = (bbqueue*) get_top_queue(&(page_req->queue_of_waiting_bbqs));
 
 			// push the page_id to the bbq
 			push_bbqueue(bbq, page_req->page_id);
 
 			// pop the top bbq from the queue_of_waiting_bbqs
-			pop_queue(page_req->queue_of_waiting_bbqs);
+			pop_queue(&(page_req->queue_of_waiting_bbqs));
 		}
 	pthread_mutex_unlock(&(page_req->job_and_queue_bbq_lock));
 }
 
 page_entry* get_requested_page_entry_and_discard_page_request(page_request* page_req)
 {
-	page_entry* page_ent = (page_entry*) ((page_req->fulfillment_promise != NULL) ? 
-			get_result(page_req->fulfillment_promise) : NULL);
+	page_entry* page_ent = (page_entry*) get_result(&(page_req->fulfillment_promise));
 
 	int should_delete_page_request = 0;
 
