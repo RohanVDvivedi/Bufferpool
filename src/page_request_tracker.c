@@ -159,4 +159,6 @@ void delete_page_request_tracker(page_request_tracker* prt_p)
 
 	delete_rwlock(prt_p->page_request_tracker_lock);
 	delete_hashmap(prt_p->page_request_map);
+
+	free(prt_p);
 }
