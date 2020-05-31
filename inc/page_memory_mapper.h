@@ -43,6 +43,8 @@ struct page_memory_mapper
 
 page_memory_mapper* get_page_memory_mapper(void* first_page_memory_address, SIZE_IN_BYTES page_size_in_bytes, PAGE_COUNT number_of_pages);
 
+void initialize_page_memory_mapper(page_memory_mapper* pmm_p, void* first_page_memory_address, SIZE_IN_BYTES page_size_in_bytes, PAGE_COUNT number_of_pages);
+
 int is_valid_page_memory_address(page_memory_mapper* pmm_p, void* page_mem);
 
 // getters return NULL, if the page_mem provided is not a valid address
@@ -55,6 +57,8 @@ int set_by_page_memory(page_memory_mapper* pmm_p, void* page_mem, void* ref);
 int set_by_page_entry(page_memory_mapper* pmm_p, page_entry* page_ent, void* ref);
 
 void for_each_reference(page_memory_mapper* pmm_p, void (*operation)(void* reference, void* additional_param), void* additional_param);
+
+void deinitialize_page_memory_mapper(page_memory_mapper* pmm_p);
 
 void delete_page_memory_mapper(page_memory_mapper* pmm_p);
 
