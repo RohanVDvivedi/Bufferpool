@@ -108,11 +108,11 @@ void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_
 			// get top bbq from queue_of_waiting_bbqs
 			bbqueue* bbq = (bbqueue*) get_top_queue(&(page_req->queue_of_waiting_bbqs));
 
-			// push the page_id to the bbq
-			push_bbqueue(bbq, page_req->page_id);
-
 			// pop the top bbq from the queue_of_waiting_bbqs
 			pop_queue(&(page_req->queue_of_waiting_bbqs));
+
+			// push the page_id to the bbq
+			push_bbqueue(bbq, page_req->page_id);
 		}
 	pthread_mutex_unlock(&(page_req->job_and_queue_bbq_lock));
 }
