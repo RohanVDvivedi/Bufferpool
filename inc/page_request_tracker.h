@@ -29,13 +29,13 @@ struct page_request_tracker
 	rwlock page_request_tracker_lock;
 
 	// hashmap from page_id -> page_request
-	hashmap* page_request_map;
+	hashmap page_request_map;
 
 	// it protects the priorities of all the page_requests, and the max heap (priority queue) of page_requests (based on priorities)
 	pthread_mutex_t page_request_priority_queue_lock;
 
 	// the request priority queue is used to help the buffer pool kow which request is more important to process first
-	heap* page_request_priority_queue;
+	heap page_request_priority_queue;
 };
 
 page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests);

@@ -26,7 +26,7 @@ struct page_entry_mapper
 
 	// this is in-memory hashmap of data pages in memory
 	// page_id vs page_entry
-	hashmap* page_entry_map;
+	hashmap page_entry_map;
 
 	// lock
 	rwlock page_entry_map_lock;
