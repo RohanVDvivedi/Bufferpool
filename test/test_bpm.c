@@ -144,6 +144,8 @@ int main(int argc, char **argv)
 	#if defined DELAY_AFTER_IO_TASKS_ARE_COMPLETED
 		usleep(DELAY_AFTER_IO_TASKS_ARE_COMPLETED * 1000);
 	#endif
+
+	delete_bbqueue(bbq);
 	delete_bufferpool(bpm);
 	printf("Buffer pool and executor deleted\n\n");
 
