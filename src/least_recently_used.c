@@ -5,8 +5,8 @@ lru* get_lru(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void
 	lru* lru_p = (lru*) malloc(sizeof(lru));
 	pthread_cond_init(&(lru_p->wait_for_empty), NULL);
 	pthread_mutex_init(&(lru_p->lru_lock), NULL);
-	lru_p->clean_or_free_page_entries = get_page_entry_linkedlist(page_entry_count, page_size_in_bytes, first_page_memory_address);
-	lru_p->dirty_page_entries = get_page_entry_linkedlist(page_entry_count, page_size_in_bytes, first_page_memory_address);
+	initialize_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries), page_entry_count, page_size_in_bytes, first_page_memory_address);
+	initialize_page_entry_linkedlist(&(lru_p->dirty_page_entries), page_entry_count, page_size_in_bytes, first_page_memory_address);
 	return lru_p;
 }
 
@@ -14,13 +14,13 @@ page_entry* get_swapable_page(lru* lru_p)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
 		page_entry* page_ent = NULL;
-		if(!is_empty_page_entry_linkedlist(lru_p->clean_or_free_page_entries))
+		if(!is_empty_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries)))
 		{
-			page_ent = pop_head_page_entry_linkedlist(lru_p->clean_or_free_page_entries);
+			page_ent = pop_head_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries));
 		}
-		else if(!is_empty_page_entry_linkedlist(lru_p->dirty_page_entries))
+		else if(!is_empty_page_entry_linkedlist(&(lru_p->dirty_page_entries)))
 		{
-			page_ent = pop_head_page_entry_linkedlist(lru_p->dirty_page_entries);
+			page_ent = pop_head_page_entry_linkedlist(&(lru_p->dirty_page_entries));
 		}
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 	return page_ent;
@@ -29,8 +29,8 @@ page_entry* get_swapable_page(lru* lru_p)
 void wait_if_lru_is_empty(lru* lru_p)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
-		while(is_empty_page_entry_linkedlist(lru_p->clean_or_free_page_entries) 
-			&& is_empty_page_entry_linkedlist(lru_p->dirty_page_entries))
+		while(is_empty_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries)) 
+			&& is_empty_page_entry_linkedlist(&(lru_p->dirty_page_entries)))
 		{
 			pthread_cond_wait(&(lru_p->wait_for_empty), &(lru_p->lru_lock));
 		}
@@ -40,8 +40,8 @@ void wait_if_lru_is_empty(lru* lru_p)
 int remove_page_entry_from_lru(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
-		int result = remove_from_page_entry_linkedlist(lru_p->clean_or_free_page_entries, page_ent) 
-				|| remove_from_page_entry_linkedlist(lru_p->dirty_page_entries, page_ent);
+		int result = remove_from_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries), page_ent) 
+				|| remove_from_page_entry_linkedlist(&(lru_p->dirty_page_entries), page_ent);
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 	return result;
 }
@@ -49,8 +49,8 @@ int remove_page_entry_from_lru(lru* lru_p, page_entry* page_ent)
 int is_page_entry_present_in_lru(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
-		int result = is_present_in_page_entry_linkedlist(lru_p->clean_or_free_page_entries, page_ent)
-				|| is_present_in_page_entry_linkedlist(lru_p->dirty_page_entries, page_ent);
+		int result = is_present_in_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries), page_ent)
+				|| is_present_in_page_entry_linkedlist(&(lru_p->dirty_page_entries), page_ent);
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 	return result;
 }
@@ -58,15 +58,15 @@ int is_page_entry_present_in_lru(lru* lru_p, page_entry* page_ent)
 void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
-		remove_from_page_entry_linkedlist(lru_p->clean_or_free_page_entries, page_ent);
-		remove_from_page_entry_linkedlist(lru_p->dirty_page_entries, page_ent);
+		remove_from_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries), page_ent);
+		remove_from_page_entry_linkedlist(&(lru_p->dirty_page_entries), page_ent);
 		if(page_ent->is_dirty)
 		{
-			insert_tail_page_entry_linkedlist(lru_p->dirty_page_entries, page_ent);
+			insert_tail_page_entry_linkedlist(&(lru_p->dirty_page_entries), page_ent);
 		}
 		else // else it is clean (i.e. !is_dirty || is_free)
 		{
-			insert_tail_page_entry_linkedlist(lru_p->clean_or_free_page_entries, page_ent);
+			insert_tail_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries), page_ent);
 		}
 	pthread_cond_broadcast(&(lru_p->wait_for_empty));
 	pthread_mutex_unlock(&(lru_p->lru_lock));
@@ -75,15 +75,15 @@ void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
-		remove_from_page_entry_linkedlist(lru_p->clean_or_free_page_entries, page_ent);
-		remove_from_page_entry_linkedlist(lru_p->dirty_page_entries, page_ent);
+		remove_from_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries), page_ent);
+		remove_from_page_entry_linkedlist(&(lru_p->dirty_page_entries), page_ent);
 		if(page_ent->is_dirty)
 		{
-			insert_head_page_entry_linkedlist(lru_p->dirty_page_entries, page_ent);
+			insert_head_page_entry_linkedlist(&(lru_p->dirty_page_entries), page_ent);
 		}
 		else // else it is clean (i.e. !is_dirty || is_free)
 		{
-			insert_head_page_entry_linkedlist(lru_p->clean_or_free_page_entries, page_ent);
+			insert_head_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries), page_ent);
 		}
 	pthread_cond_broadcast(&(lru_p->wait_for_empty));
 	pthread_mutex_unlock(&(lru_p->lru_lock));
@@ -93,7 +93,7 @@ void delete_lru(lru* lru_p)
 {
 	pthread_cond_destroy(&(lru_p->wait_for_empty));
 	pthread_mutex_destroy(&(lru_p->lru_lock));
-	delete_page_entry_linkedlist(lru_p->clean_or_free_page_entries);
-	delete_page_entry_linkedlist(lru_p->dirty_page_entries);
+	delete_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries));
+	delete_page_entry_linkedlist(&(lru_p->dirty_page_entries));
 	free(lru_p);
 }

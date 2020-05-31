@@ -23,9 +23,9 @@ struct lru
 	// dirty_page_entries is linkedlist meant for inserting dirty pages only
 	// for replacement, a page_entry is picked first from the tail of the clean_or_free_page_entries,
 	// if the clean_or_free_page_entries is empty then only we victimize the dirty page from tail of the dirty_page_entries
-	page_entry_linkedlist* clean_or_free_page_entries;
+	page_entry_linkedlist clean_or_free_page_entries;
 	// and
-	page_entry_linkedlist* dirty_page_entries;
+	page_entry_linkedlist dirty_page_entries;
 };
 
 lru* get_lru(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address);
