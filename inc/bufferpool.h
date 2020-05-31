@@ -10,7 +10,7 @@
 #include<dbfile.h>
 
 #include<page_entry.h>
-#include<page_entry_mapper.h>
+#include<page_table.h>
 #include<least_recently_used.h>
 
 #include<page_request.h>
@@ -72,7 +72,7 @@ struct bufferpool
 
 	// ******** Necessary custom datastructures start
 
-	page_entry_mapper* mapp_p;
+	page_table* pg_tbl;
 
 	lru* lru_p;
 

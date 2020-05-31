@@ -75,7 +75,7 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
 
-	buffp->mapp_p = get_page_entry_mapper(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
+	buffp->pg_tbl = get_page_table(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
 	buffp->lru_p = get_lru(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
 
@@ -87,7 +87,7 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 		void* page_memory = buffp->first_aligned_block + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = buffp->page_entries + i;
 		initialize_page_entry(page_ent, buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
-		insert_page_entry_to_map_by_page_memory(buffp->mapp_p, page_ent);
+		insert_page_entry_to_map_by_page_memory(buffp->pg_tbl, page_ent);
 		mark_as_recently_used(buffp->lru_p, page_ent);
 	}
 
@@ -109,7 +109,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 
 	while(page_ent == NULL)
 	{
-		page_ent = find_page_entry(buffp->mapp_p, page_id);
+		page_ent = find_page_entry(buffp->pg_tbl, page_id);
 
 		if(page_ent != NULL)
 		{
@@ -150,7 +150,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 				{
 					// once the page_entry we desire has been found, we insert it in page_entry mapper of the bufferpool, 
 					// so that is it found efficiently by the next user thread
-					insert_page_entry(buffp->mapp_p, page_ent);
+					insert_page_entry(buffp->pg_tbl, page_ent);
 
 					is_page_entry_found = 1;
 				}
@@ -246,7 +246,7 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 
 int release_page(bufferpool* buffp, void* page_memory)
 {
-	page_entry* page_ent = get_page_entry_by_page_memory(buffp->mapp_p, page_memory);
+	page_entry* page_ent = get_page_entry_by_page_memory(buffp->pg_tbl, page_memory);
 
 	return release_used_page_entry(buffp, page_ent);
 }
@@ -271,7 +271,7 @@ void request_page_prefetch(bufferpool* buffp, PAGE_ID start_page_id, PAGE_COUNT 
 
 void force_write(bufferpool* buffp, PAGE_ID page_id)
 {
-	page_entry* page_ent = find_page_entry(buffp->mapp_p, page_id);
+	page_entry* page_ent = find_page_entry(buffp->pg_tbl, page_id);
 
 	if(page_ent != NULL)
 	{
@@ -318,7 +318,7 @@ void delete_bufferpool(bufferpool* buffp)
 
 	// delete the lru, page_entry_mapper and the request tracker data structures
 	delete_lru(buffp->lru_p);
-	delete_page_entry_mapper(buffp->mapp_p);
+	delete_page_table(buffp->pg_tbl);
 	delete_page_request_tracker(buffp->rq_tracker);
 
 	// free the buffer pool struct

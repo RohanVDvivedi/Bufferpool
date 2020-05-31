@@ -55,7 +55,7 @@ static void* io_page_replace_task(bufferpool* buffp)
 		}
 	}
 
-	discard_page_entry(buffp->mapp_p, page_ent);
+	discard_page_entry(buffp->pg_tbl, page_ent);
 
 	if(page_ent->page_id != page_id || page_ent->is_free)
 	{
