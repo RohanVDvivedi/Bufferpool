@@ -93,7 +93,7 @@ void delete_lru(lru* lru_p)
 {
 	pthread_cond_destroy(&(lru_p->wait_for_empty));
 	pthread_mutex_destroy(&(lru_p->lru_lock));
-	delete_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries));
-	delete_page_entry_linkedlist(&(lru_p->dirty_page_entries));
+	deinitialize_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries));
+	deinitialize_page_entry_linkedlist(&(lru_p->dirty_page_entries));
 	free(lru_p);
 }
