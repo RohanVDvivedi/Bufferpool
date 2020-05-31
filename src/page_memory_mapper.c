@@ -1,27 +1,31 @@
+#include<bufferpool.h>
 #include<page_memory_mapper.h>
+
+static bufferpool* initializing_buffp = NULL;
+
+void setup_initialization_for_bufferpool(bufferpool* buffp)
+{
+	initializing_buffp = buffp;
+}
 
 static PAGE_COUNT get_index_from_page_memory_address(page_memory_mapper* pmm_p, void* page_mem)
 {
 	return (PAGE_COUNT)(((uintptr_t)(page_mem - pmm_p->first_page_memory_address)) / pmm_p->page_size_in_bytes);
 }
 
-page_memory_mapper* get_page_memory_mapper(void* first_page_memory_address, SIZE_IN_BYTES page_size_in_bytes, PAGE_COUNT number_of_pages)
+page_memory_mapper* get_page_memory_mapper()
 {
 	page_memory_mapper* pmm_p = (page_memory_mapper*) malloc(sizeof(page_memory_mapper));
-	initialize_page_memory_mapper(pmm_p, first_page_memory_address, page_size_in_bytes, number_of_pages);
+	initialize_page_memory_mapper(pmm_p);
 	return pmm_p;
 }
 
-void initialize_page_memory_mapper(page_memory_mapper* pmm_p, void* first_page_memory_address, SIZE_IN_BYTES page_size_in_bytes, PAGE_COUNT number_of_pages)
+void initialize_page_memory_mapper(page_memory_mapper* pmm_p)
 {
-	pmm_p->first_page_memory_address = first_page_memory_address;
-	pmm_p->page_size_in_bytes = page_size_in_bytes;
-	pmm_p->number_of_pages = number_of_pages;
-	pmm_p->external_references = (void**) malloc(sizeof(void*) * number_of_pages);
-	for(PAGE_COUNT i = 0; i < number_of_pages; i++)
-	{
-		pmm_p->external_references[i] = NULL;
-	}
+	pmm_p->first_page_memory_address = initializing_buffp->first_aligned_block;
+	pmm_p->page_size_in_bytes = initializing_buffp->number_of_blocks_per_page * get_block_size(initializing_buffp->db_file);
+	pmm_p->number_of_pages = initializing_buffp->maximum_pages_in_cache;
+	pmm_p->external_references = (void**) calloc(pmm_p->number_of_pages, sizeof(void*));
 }
 
 int is_valid_page_memory_address(page_memory_mapper* pmm_p, void* page_mem)

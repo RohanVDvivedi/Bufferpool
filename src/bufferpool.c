@@ -75,9 +75,15 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
 
-	buffp->pg_tbl = get_page_table(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
+	// before intializing the components of the bufferpool
+	// we need to first initialize the static buffp variable in page_memory_mapper.c 
+	// that aids in initializing the page_memory_mapper
+	// page_memory_mapper is used as an effecient lookup table in the internals of the components of the bufferpool
+	setup_initialization_for_bufferpool(buffp);
 
-	buffp->lru_p = get_lru(buffp->maximum_pages_in_cache, page_size_in_bytes, buffp->first_aligned_block);
+	buffp->pg_tbl = get_page_table(buffp->maximum_pages_in_cache);
+
+	buffp->lru_p = get_lru();
 
 	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
 

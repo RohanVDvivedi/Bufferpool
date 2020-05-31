@@ -2,10 +2,10 @@
 
 #include<page_id_helper_functions.h>
 
-page_table* get_page_table(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address)
+page_table* get_page_table(PAGE_COUNT page_entry_count)
 {
 	page_table* pg_tbl = (page_table*) malloc(sizeof(page_table));
-	initialize_page_memory_mapper(&(pg_tbl->mem_to_entry_mapping), first_page_memory_address, page_size_in_bytes, page_entry_count);
+	initialize_page_memory_mapper(&(pg_tbl->mem_to_entry_mapping));
 	initialize_hashmap(&(pg_tbl->page_entry_map), (page_entry_count * 2) + 3, hash_page_id, compare_page_id, ROBINHOOD_HASHING);
 	initialize_rwlock(&(pg_tbl->page_entry_map_lock));
 	return pg_tbl;

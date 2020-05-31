@@ -32,7 +32,7 @@ struct page_table
 	rwlock page_entry_map_lock;
 };
 
-page_table* get_page_table(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address);
+page_table* get_page_table(PAGE_COUNT page_entry_count);
 
 // returns NULL, if a page_entry was not found
 page_entry* find_page_entry(page_table* pg_tbl, PAGE_ID page_id);

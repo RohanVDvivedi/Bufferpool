@@ -1,16 +1,16 @@
 #include<page_entry_linkedlist.h>
 
-page_entry_linkedlist* get_page_entry_linkedlist(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address)
+page_entry_linkedlist* get_page_entry_linkedlist()
 {
 	page_entry_linkedlist* pel_p = (page_entry_linkedlist*) malloc(sizeof(page_entry_linkedlist));
-	initialize_page_entry_linkedlist(pel_p, page_entry_count, page_size_in_bytes, first_page_memory_address);
+	initialize_page_entry_linkedlist(pel_p);
 	return pel_p;
 }
 
-void initialize_page_entry_linkedlist(page_entry_linkedlist* pel_p, PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address)
+void initialize_page_entry_linkedlist(page_entry_linkedlist* pel_p)
 {
 	pel_p->page_entries = get_linkedlist(SIMPLE, NULL);
-	initialize_page_memory_mapper(&(pel_p->node_mapping), first_page_memory_address, page_size_in_bytes, page_entry_count);
+	initialize_page_memory_mapper(&(pel_p->node_mapping));
 	pel_p->page_entry_count = 0;
 }
 

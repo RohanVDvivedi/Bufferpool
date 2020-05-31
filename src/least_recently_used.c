@@ -1,12 +1,12 @@
 #include<least_recently_used.h>
 
-lru* get_lru(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address)
+lru* get_lru()
 {
 	lru* lru_p = (lru*) malloc(sizeof(lru));
 	pthread_cond_init(&(lru_p->wait_for_empty), NULL);
 	pthread_mutex_init(&(lru_p->lru_lock), NULL);
-	initialize_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries), page_entry_count, page_size_in_bytes, first_page_memory_address);
-	initialize_page_entry_linkedlist(&(lru_p->dirty_page_entries), page_entry_count, page_size_in_bytes, first_page_memory_address);
+	initialize_page_entry_linkedlist(&(lru_p->clean_or_free_page_entries));
+	initialize_page_entry_linkedlist(&(lru_p->dirty_page_entries));
 	return lru_p;
 }
 

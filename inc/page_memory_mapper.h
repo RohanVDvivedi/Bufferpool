@@ -41,9 +41,16 @@ struct page_memory_mapper
 	void** external_references;
 };
 
-page_memory_mapper* get_page_memory_mapper(void* first_page_memory_address, SIZE_IN_BYTES page_size_in_bytes, PAGE_COUNT number_of_pages);
+typedef struct bufferpool bufferpool;
+struct bufferpool;
 
-void initialize_page_memory_mapper(page_memory_mapper* pmm_p, void* first_page_memory_address, SIZE_IN_BYTES page_size_in_bytes, PAGE_COUNT number_of_pages);
+// you must call this function as an initialization step in bufferpool manager
+// to allow the initialization of page_memory_mapper in various internal datastructures of the bufferpool
+void setup_initialization_for_bufferpool(bufferpool* buffp);
+
+page_memory_mapper* get_page_memory_mapper();
+
+void initialize_page_memory_mapper(page_memory_mapper* pmm_p);
 
 int is_valid_page_memory_address(page_memory_mapper* pmm_p, void* page_mem);
 

@@ -24,9 +24,9 @@ struct page_entry_linkedlist
 	uint32_t page_entry_count;
 };
 
-page_entry_linkedlist* get_page_entry_linkedlist(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address);
+page_entry_linkedlist* get_page_entry_linkedlist();
 
-void initialize_page_entry_linkedlist(page_entry_linkedlist* pel_p, PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address);
+void initialize_page_entry_linkedlist(page_entry_linkedlist* pel_p);
 
 int is_empty_page_entry_linkedlist(page_entry_linkedlist* pel_p);
 
