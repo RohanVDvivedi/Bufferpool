@@ -5,7 +5,7 @@
 page_entry_mapper* get_page_entry_mapper(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address)
 {
 	page_entry_mapper* pem_p = (page_entry_mapper*) malloc(sizeof(page_entry_mapper));
-	pem_p->mem_to_entry_mapping = get_page_memory_mapper(first_page_memory_address, page_size_in_bytes, page_entry_count);
+	initialize_page_memory_mapper(&(pem_p->mem_to_entry_mapping), first_page_memory_address, page_size_in_bytes, page_entry_count);
 	initialize_hashmap(&(pem_p->page_entry_map), (page_entry_count * 2) + 3, hash_page_id, compare_page_id, ROBINHOOD_HASHING);
 	initialize_rwlock(&(pem_p->page_entry_map_lock));
 	return pem_p;
@@ -44,22 +44,22 @@ int discard_page_entry(page_entry_mapper* pem_p, page_entry* page_ent)
 
 int insert_page_entry_to_map_by_page_memory(page_entry_mapper* pem_p, page_entry* page_ent)
 {
-	return set_by_page_memory(pem_p->mem_to_entry_mapping, page_ent->page_memory, page_ent);
+	return set_by_page_memory(&(pem_p->mem_to_entry_mapping), page_ent->page_memory, page_ent);
 }
 
 page_entry* get_page_entry_by_page_memory(page_entry_mapper* pem_p, void* page_memory)
 {
-	return (page_entry*) get_by_page_memory(pem_p->mem_to_entry_mapping, page_memory);
+	return (page_entry*) get_by_page_memory(&(pem_p->mem_to_entry_mapping), page_memory);
 }
 
 void for_each_page_entry_in_page_entry_mapper(page_entry_mapper* pem_p, void (*operation)(page_entry* page_ent, void* additional_param), void* additional_param)
 {
-	for_each_reference(pem_p->mem_to_entry_mapping, (void (*)(void*, void*))(operation), additional_param);
+	for_each_reference(&(pem_p->mem_to_entry_mapping), (void (*)(void*, void*))(operation), additional_param);
 }
 
 void delete_page_entry_mapper(page_entry_mapper* pem_p)
 {
-	delete_page_memory_mapper(pem_p->mem_to_entry_mapping);
+	deinitialize_page_memory_mapper(&(pem_p->mem_to_entry_mapping));
 	deinitialize_hashmap(&(pem_p->page_entry_map));
 	deinitialize_rwlock(&(pem_p->page_entry_map_lock));
 	free(pem_p);

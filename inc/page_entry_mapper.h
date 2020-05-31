@@ -22,7 +22,7 @@ struct page_entry_mapper
 	// We must recall that the page_memory address remains the same, even if the page_entry is holding a page of different page_id
 	// It will be a read only data structure, so no locks needed for it
 	// since it is static look up table (i.e. it does not change), we do not use locking to protect it
-	page_memory_mapper* mem_to_entry_mapping;
+	page_memory_mapper mem_to_entry_mapping;
 
 	// this is in-memory hashmap of data pages in memory
 	// page_id vs page_entry

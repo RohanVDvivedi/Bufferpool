@@ -18,13 +18,15 @@ struct page_entry_linkedlist
 
 	// this is a mapping from page_entry to the corresponding node in the page_entries linkedlist
 	// this helps in easily identifying the node pointer when removing the node from the lru, or to just query if a page_entry is present in the linkedlist
-	page_memory_mapper* node_mapping;
+	page_memory_mapper node_mapping;
 
 	// a counter for the the page_entry that are currently in the linkedlist
 	uint32_t page_entry_count;
 };
 
 page_entry_linkedlist* get_page_entry_linkedlist(PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address);
+
+void initialize_page_entry_linkedlist(page_entry_linkedlist* pel_p, PAGE_COUNT page_entry_count, SIZE_IN_BYTES page_size_in_bytes, void* first_page_memory_address);
 
 int is_empty_page_entry_linkedlist(page_entry_linkedlist* pel_p);
 
@@ -48,6 +50,8 @@ int is_absent_in_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry*
 
 // retuns 1, if a page_entry was removed from the linkedlist, it will return 0 if the given page_entry is not present in the linkedlist and so it just can't be removed
 int remove_from_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* page_ent);
+
+void deinitialize_page_entry_linkedlist(page_entry_linkedlist* pel_p);
 
 void delete_page_entry_linkedlist(page_entry_linkedlist* pel_p);
 
