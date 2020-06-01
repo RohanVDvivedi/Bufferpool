@@ -101,7 +101,7 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	buffp->SHUTDOWN_CALLED = 0;
 
 	// start necessary threads/jobs
-	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, 0);
+	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, 0, NULL, NULL, NULL);
 	start_async_cleanup_scheduler(buffp);
 
 	return buffp;
