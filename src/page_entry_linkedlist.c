@@ -9,7 +9,7 @@ page_entry_linkedlist* get_page_entry_linkedlist()
 
 void initialize_page_entry_linkedlist(page_entry_linkedlist* pel_p)
 {
-	pel_p->page_entries = get_linkedlist(SIMPLE, NULL);
+	initialize_linkedlist(&(pel_p->page_entries), SIMPLE, NULL);
 	initialize_page_memory_mapper(&(pel_p->node_mapping));
 	pel_p->page_entry_count = 0;
 }
@@ -35,8 +35,8 @@ int insert_head_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* 
 	int inserted = 0;
 	if(is_absent_in_page_entry_linkedlist(pel_p, page_ent))
 	{
-		insert_head(pel_p->page_entries, page_ent);
-		set_by_page_entry(&(pel_p->node_mapping), page_ent, pel_p->page_entries->head);
+		insert_head(&(pel_p->page_entries), page_ent);
+		set_by_page_entry(&(pel_p->node_mapping), page_ent, pel_p->page_entries.head);
 		inserted = 1;
 		pel_p->page_entry_count++;
 	}
@@ -48,8 +48,8 @@ int insert_tail_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* 
 	int inserted = 0;
 	if(is_absent_in_page_entry_linkedlist(pel_p, page_ent))
 	{
-		insert_tail(pel_p->page_entries, page_ent);
-		set_by_page_entry(&(pel_p->node_mapping), page_ent, pel_p->page_entries->tail);
+		insert_tail(&(pel_p->page_entries), page_ent);
+		set_by_page_entry(&(pel_p->node_mapping), page_ent, pel_p->page_entries.tail);
 		inserted = 1;
 		pel_p->page_entry_count++;
 	}
@@ -61,7 +61,7 @@ page_entry* pop_head_page_entry_linkedlist(page_entry_linkedlist* pel_p)
 	page_entry* page_ent = NULL;
 	if(!is_empty_page_entry_linkedlist(pel_p))
 	{
-		page_ent = (page_entry*) get_head_data(pel_p->page_entries);
+		page_ent = (page_entry*) get_head_data(&(pel_p->page_entries));
 		remove_from_page_entry_linkedlist(pel_p, page_ent);
 	}
 	return page_ent;
@@ -72,7 +72,7 @@ page_entry* pop_tail_page_entry_linkedlist(page_entry_linkedlist* pel_p)
 	page_entry* page_ent = NULL;
 	if(!is_empty_page_entry_linkedlist(pel_p))
 	{
-		page_ent = (page_entry*) get_tail_data(pel_p->page_entries);
+		page_ent = (page_entry*) get_tail_data(&(pel_p->page_entries));
 		remove_from_page_entry_linkedlist(pel_p, page_ent);
 	}
 	return page_ent;
@@ -83,7 +83,7 @@ int remove_from_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* 
 	int removed_page_entry = 0;
 	if(is_present_in_page_entry_linkedlist(pel_p, page_ent))
 	{
-		remove_node(pel_p->page_entries, get_by_page_entry(&(pel_p->node_mapping), page_ent));
+		remove_node(&(pel_p->page_entries), get_by_page_entry(&(pel_p->node_mapping), page_ent));
 		set_by_page_entry(&(pel_p->node_mapping), page_ent, NULL);
 		pel_p->page_entry_count--;
 		removed_page_entry = 1;
@@ -93,7 +93,7 @@ int remove_from_page_entry_linkedlist(page_entry_linkedlist* pel_p, page_entry* 
 
 void deinitialize_page_entry_linkedlist(page_entry_linkedlist* pel_p)
 {
-	delete_linkedlist(pel_p->page_entries);
+	deinitialize_linkedlist(&(pel_p->page_entries));
 	deinitialize_page_memory_mapper(&(pel_p->node_mapping));
 }
 

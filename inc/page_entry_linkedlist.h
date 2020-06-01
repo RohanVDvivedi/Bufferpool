@@ -14,7 +14,7 @@ typedef struct page_entry_linkedlist page_entry_linkedlist;
 struct page_entry_linkedlist
 {
 	// this is the actual linkedlist that will be maintained internally by the page_entry_linkedlist
-	linkedlist* page_entries;
+	linkedlist page_entries;
 
 	// this is a mapping from page_entry to the corresponding node in the page_entries linkedlist
 	// this helps in easily identifying the node pointer when removing the node from the lru, or to just query if a page_entry is present in the linkedlist
