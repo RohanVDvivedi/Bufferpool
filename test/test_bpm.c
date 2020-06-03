@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 	bbq = get_bbqueue(((COUNT_OF_IO_TASKS % PREFETCH_EVERY_x_PAGES) + 1) * PREFETCH_PAGE_COUNT);
 	printf("common Bounded Blocking Queue is being used for prefetched execution\n");
 
-	exe = get_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0);
+	exe = get_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
 	printf("Initializing IO tasks\n\n");
