@@ -6,7 +6,7 @@
 #include<pthread.h>
 
 #include<page_entry.h>
-#include<page_entry_linkedlist.h>
+#include<linkedlist.h>
 
 typedef struct lru lru;
 struct lru
@@ -23,9 +23,9 @@ struct lru
 	// dirty_page_entries is linkedlist meant for inserting dirty pages only
 	// for replacement, a page_entry is picked first from the tail of the clean_or_free_page_entries,
 	// if the clean_or_free_page_entries is empty then only we victimize the dirty page from tail of the dirty_page_entries
-	page_entry_linkedlist clean_or_free_page_entries;
+	linkedlist clean_or_free_page_entries;
 	// and
-	page_entry_linkedlist dirty_page_entries;
+	linkedlist dirty_page_entries;
 };
 
 lru* get_lru();

@@ -3,10 +3,14 @@
 
 #include<buffer_pool_man_types.h>
 
+#include<page_id_helper_functions.h>
+
 #include<pthread.h>
 #include<rwlock.h>
 
 #include<dbfile.h>
+
+#include<linkedlist.h>
 
 /*
 	This data structure holds information, about the page_memory that was assigned to it by the buffer pool
@@ -65,6 +69,12 @@ struct page_entry
 
 	// this lock also ensures concurrency for attempts to read or write the page to/from the disk
 	rwlock page_memory_lock;
+
+
+
+	// linkedlist node for LRU
+	// protected by locks of LRU
+	llnode lru_ll_node;
 };
 
 void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_memory, BLOCK_COUNT number_of_blocks_in_page);
@@ -82,6 +92,10 @@ int read_page_from_disk(page_entry* page_ent);
 int write_page_to_disk(page_entry* page_ent);
 
 void deinitialize_page_entry(page_entry* page_ent);
+
+int compare_page_entry_by_page_id(const void* page_ent1, const void* page_ent2);
+
+unsigned long long int hash_page_entry_by_page_id(const void* page_ent);
 
 #endif
 

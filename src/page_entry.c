@@ -29,6 +29,8 @@ void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_me
 	// if threads want to access page memory for the disk, they only need to have page_memory_lock,
 	// they need not have page_entry_lock for the corresponding page
 	initialize_rwlock(&(page_ent->page_memory_lock));
+
+	initialize_llnode((&(page_ent->lru_ll_node)));
 }
 
 void acquire_read_lock(page_entry* page_ent)
@@ -65,4 +67,14 @@ void deinitialize_page_entry(page_entry* page_ent)
 {
 	pthread_mutex_destroy(&(page_ent->page_entry_lock));
 	deinitialize_rwlock(&(page_ent->page_memory_lock));
+}
+
+int compare_page_entry_by_page_id(const void* page_ent1, const void* page_ent2)
+{
+	return compare_page_id(((page_entry*)page_ent1)->page_id, ((page_entry*)page_ent2)->page_id);
+}
+
+unsigned long long int hash_page_entry_by_page_id(const void* page_ent)
+{
+	return hash_page_id(((page_entry*)page_ent)->page_id);
 }

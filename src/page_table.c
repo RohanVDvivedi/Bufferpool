@@ -1,12 +1,10 @@
 #include<page_table.h>
 
-#include<page_id_helper_functions.h>
-
 page_table* get_page_table(PAGE_COUNT page_entry_count)
 {
 	page_table* pg_tbl = (page_table*) malloc(sizeof(page_table));
 	initialize_page_memory_mapper(&(pg_tbl->mem_to_entry_mapping));
-	initialize_hashmap(&(pg_tbl->page_entry_map), (page_entry_count * 2) + 3, hash_page_id, compare_page_id, ROBINHOOD_HASHING);
+	initialize_hashmap(&(pg_tbl->page_entry_map), ROBINHOOD_HASHING, (page_entry_count * 2) + 3, hash_page_entry_by_page_id, compare_page_entry_by_page_id, 0);
 	initialize_rwlock(&(pg_tbl->page_entry_map_lock));
 	return pg_tbl;
 }
@@ -14,7 +12,9 @@ page_table* get_page_table(PAGE_COUNT page_entry_count)
 page_entry* find_page_entry(page_table* pg_tbl, PAGE_ID page_id)
 {
 	read_lock(&(pg_tbl->page_entry_map_lock));
-		page_entry* page_ent = (page_entry*) find_value_from_hash(&(pg_tbl->page_entry_map), &page_id);
+		page_entry dummy_entry;
+		dummy_entry.page_id = page_id;
+		page_entry* page_ent = (page_entry*) find_equals_in_hashmap(&(pg_tbl->page_entry_map), &dummy_entry);
 	read_unlock(&(pg_tbl->page_entry_map_lock));
 	return page_ent;
 }
@@ -23,11 +23,10 @@ int insert_page_entry(page_table* pg_tbl, page_entry* page_ent)
 {
 	int is_entry_inserted = 0;
 	write_lock(&(pg_tbl->page_entry_map_lock));
-		page_entry* page_ent_temp = (page_entry*) find_value_from_hash(&(pg_tbl->page_entry_map), &(page_ent->page_id));
+		page_entry* page_ent_temp = (page_entry*) find_equals_in_hashmap(&(pg_tbl->page_entry_map), page_ent);
 		if(page_ent_temp == NULL)
 		{
-			insert_entry_in_hash(&(pg_tbl->page_entry_map), &(page_ent->page_id), page_ent);
-			is_entry_inserted = 1;
+			is_entry_inserted = insert_in_hashmap(&(pg_tbl->page_entry_map), &page_ent);
 		}
 	write_unlock(&(pg_tbl->page_entry_map_lock));
 	return is_entry_inserted;
@@ -35,9 +34,8 @@ int insert_page_entry(page_table* pg_tbl, page_entry* page_ent)
 
 int discard_page_entry(page_table* pg_tbl, page_entry* page_ent)
 {
-	int is_entry_discarded = 0;
 	write_lock(&(pg_tbl->page_entry_map_lock));
-		is_entry_discarded = delete_entry_from_hash(&(pg_tbl->page_entry_map), &(page_ent->page_id), NULL, NULL);
+		int is_entry_discarded = remove_from_hashmap(&(pg_tbl->page_entry_map), &page_ent);
 	write_unlock(&(pg_tbl->page_entry_map_lock));
 	return is_entry_discarded;
 }
