@@ -12,6 +12,9 @@
 
 #include<bst.h>
 
+#include<page_id_helper_functions.h>
+#include<page_priority_helper_functions.h>
+
 /*
 	Each component of page_request is protected individually by different locks
 
@@ -115,5 +118,17 @@ void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_
 // MAKE SURE YOU ARE NOT HOLDING ANY REFERENCE/POINTER TO THE PAGE_REQUEST AFTER YOU CALL THE BELOW FUNCTION
 // DO NOT ATTEMPT TO USE THIS PAGE REQUEST OR SHARE IT AFTER THIS FUNCTION RETURNS YOU YOUR PAGE_ENTRY
 page_entry* get_requested_page_entry_and_discard_page_request(page_request* page_req);
+
+
+
+
+
+//*** UTILITY FUNCTIONS TO ALLOW PAGE_REQUEST_TRACKER TO BUILD MORE COMPLEX DATASTRUCTURES
+
+int compare_page_request_by_page_id(const void* page_req1, const void* page_req2);
+
+unsigned long long int hash_page_request_by_page_id(const void* page_req);
+
+int compare_page_request_by_page_priority(const void* page_req1, const void* page_req2);
 
 #endif

@@ -93,6 +93,12 @@ int write_page_to_disk(page_entry* page_ent);
 
 void deinitialize_page_entry(page_entry* page_ent);
 
+
+
+
+
+//*** UTILITY FUNCTIONS TO ALLOW PAGE_REQUEST_TRACKER TO BUILD MORE COMPLEX DATASTRUCTURES
+
 int compare_page_entry_by_page_id(const void* page_ent1, const void* page_ent2);
 
 unsigned long long int hash_page_entry_by_page_id(const void* page_ent);

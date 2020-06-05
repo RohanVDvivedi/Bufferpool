@@ -141,3 +141,18 @@ page_entry* get_requested_page_entry_and_discard_page_request(page_request* page
 
 	return page_ent;
 }
+
+int compare_page_request_by_page_id(const void* page_req1, const void* page_req2)
+{
+	return compare_page_id(((page_request*)page_req1)->page_id, ((page_request*)page_req2)->page_id);
+}
+
+unsigned long long int hash_page_request_by_page_id(const void* page_req)
+{
+	return hash_page_id(((page_request*)page_req)->page_id);
+}
+
+int compare_page_request_by_page_priority(const void* page_req1, const void* page_req2)
+{
+	return compare_page_priority(((page_request*)page_req1)->page_request_priority, ((page_request*)page_req2)->page_request_priority);
+}
