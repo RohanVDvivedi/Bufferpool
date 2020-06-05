@@ -30,7 +30,7 @@ void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_me
 	// they need not have page_entry_lock for the corresponding page
 	initialize_rwlock(&(page_ent->page_memory_lock));
 
-	initialize_llnode((&(page_ent->lru_ll_node)));
+	initialize_llnode(&(page_ent->lru_ll_node));
 }
 
 void acquire_read_lock(page_entry* page_ent)

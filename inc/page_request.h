@@ -10,6 +10,8 @@
 #include<bounded_blocking_queue.h>
 #include<queue.h>
 
+#include<bst.h>
+
 /*
 	Each component of page_request is protected individually by different locks
 
@@ -59,6 +61,10 @@ struct page_request
 	uint32_t page_request_reference_count;
 
 	uint8_t marked_for_deletion;
+
+
+	// *** bst node for binary search tree inside hashmap of page request tracker
+	bstnode page_request_tracker_node;
 };
 
 // this function returns a new page_request, whose reference count is already 1
