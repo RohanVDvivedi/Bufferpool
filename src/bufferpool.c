@@ -94,7 +94,7 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 		page_entry* page_ent = buffp->page_entries + i;
 		initialize_page_entry(page_ent, buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
 		insert_page_entry_to_map_by_page_memory(buffp->pg_tbl, page_ent);
-		mark_as_recently_used(buffp->lru_p, page_ent);
+		mark_as_not_yet_used(buffp->lru_p, page_ent);
 	}
 
 	// no shutdown yet :p
