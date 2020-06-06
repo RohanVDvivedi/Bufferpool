@@ -19,12 +19,12 @@ struct lru
 
 	// this are the in-memory linkedlist of page_entries of the buffer pool, being used in the lru
 	// the page entry is put at the head of these queue, after you have used it
-	// clean_or_free_page_entries is linkedlist meant for inserting clean pages or free pages only
+	// free_page_entries is linkedlist meant for inserting free pages only
+	// clean_page_entries is linkedlist meant for inserting clean pages only
 	// dirty_page_entries is linkedlist meant for inserting dirty pages only
-	// for replacement, a page_entry is picked first from the tail of the clean_or_free_page_entries,
-	// if the clean_or_free_page_entries is empty then only we victimize the dirty page from tail of the dirty_page_entries
-	linkedlist clean_or_free_page_entries;
-	// and
+	// for replacement, a page_entry is picked first from the tail of the free_page_entries, clean_page_entries and dirty_page_entries in the same order
+	linkedlist free_page_entries;
+	linkedlist clean_page_entries;
 	linkedlist dirty_page_entries;
 };
 
@@ -33,7 +33,7 @@ lru* get_lru();
 // you can be assured that the returned replacable page_entry will not exist in the lru,
 // if this function retuns NULL, it means the lru does not have a page_entry to spare to you
 // so you must use the wait function below, to wait until there is a page_entry in lru
-// the lru will try its best to return a clean/free page_entry for swapping, so that we can avoid writing to the disk (which is costly and inflicting damage on the disk) 
+// the lru will try its best to return a free or clear page_entry for swapping, so that we can avoid writing to the disk (which is costly and inflicting damage on the disk) 
 page_entry* get_swapable_page(lru* lru_p);
 
 // your thread can wait for lru to have atleast one page_entry, before you proceed
