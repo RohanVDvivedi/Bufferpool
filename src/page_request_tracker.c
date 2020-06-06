@@ -4,7 +4,7 @@ page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests)
 {
 	page_request_tracker* prt_p = (page_request_tracker*) malloc(sizeof(page_request_tracker));
 	initialize_rwlock(&(prt_p->page_request_tracker_lock));
-	initialize_hashmap(&(prt_p->page_request_map), ELEMENTS_AS_RED_BLACK_BST, (max_requests / 3) + 2, hash_page_request_by_page_id, compare_page_request_by_page_id, offsetof(page_request, page_id));
+	initialize_hashmap(&(prt_p->page_request_map), ELEMENTS_AS_RED_BLACK_BST, (max_requests / 3) + 2, hash_page_request_by_page_id, compare_page_request_by_page_id, offsetof(page_request, page_request_tracker_node));
 	pthread_mutex_init(&(prt_p->page_request_priority_queue_lock), NULL);
 	initialize_heap(&(prt_p->page_request_priority_queue), max_requests, MAX_HEAP, compare_page_request_by_page_priority, priority_queue_index_change_callback, NULL);
 	return prt_p;
