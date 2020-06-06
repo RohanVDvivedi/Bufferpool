@@ -1,5 +1,2 @@
 * try to make more sequential io, larger and fewer read/write calls to disk/os
-* refactor page_request_tracker
-* separate out linkedlist for clean and free pages
-* clean pages unused for a long time, because they are unused by someone because they did not use it in time get inserted to free page list and are made free by lru
 * selectively made dirty pages become clean and get inserted in clean pages lru queue

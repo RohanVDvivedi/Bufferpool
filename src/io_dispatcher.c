@@ -120,6 +120,14 @@ static void* io_clean_up_task(page_entry* page_ent)
 			// there is a possibility that for some reason the page_entry was found already clean, and so the clean up action was not performed
 			page_ent->is_queued_for_cleanup = 0;
 
+			// if the page is not pinned, i.e. it is not in use by anyone, we simple insert it it lru
+			// and mark that it has not been used since long
+			if(page_ent->pinned_by_count == 0)
+			{
+				// this function handles reinserts on its own, so no need to worry about that
+				mark_as_not_yet_used(buffp->lru_p, page_ent);
+			}
+
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
 
