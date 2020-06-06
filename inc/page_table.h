@@ -10,6 +10,8 @@
 #include<page_entry.h>
 #include<page_request_tracker.h>
 
+#include<stddef.h>
+
 // the task of this structure and functions is to map page entries, 
 // it maps
 // page_memory (pointer value) 		-> 		page_entry  	[using mem_to_entry_mapping]
