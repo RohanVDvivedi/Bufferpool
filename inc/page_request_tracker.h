@@ -8,6 +8,7 @@
 #include<rwlock.h>
 #include<hashmap.h>
 #include<heap.h>
+#include<queue.h>
 
 #include<page_entry.h>
 #include<page_request.h>

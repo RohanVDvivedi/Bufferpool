@@ -100,44 +100,25 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 	}
 }
 
-/*
-int discard_page_request(page_request_tracker* prt_p, PAGE_ID page_id)
-{
-	// dummy page_request to call search on
-	page_request dummy_page_request;
-	dummy_page_request.page_id = page_id;
-
-	int is_discarded = 0;
-	write_lock(&(prt_p->page_request_tracker_lock));
-		page_request* page_req = NULL;
-		is_discarded = remove_from_hashmap(&(prt_p->page_request_map), &page_id, NULL, (const void **)(&page_req));
-		if(is_discarded)
-		{
-			mark_page_request_for_deletion(page_req);
-		}
-	write_unlock(&(prt_p->page_request_tracker_lock));
-	return is_discarded;
-}*/
-
 int discard_page_request_if_not_referenced(page_request_tracker* prt_p, PAGE_ID page_id)
 {
 	// dummy page_request to call search on
 	page_request dummy_page_request;
 	dummy_page_request.page_id = page_id;
 
-	int is_discarded = 0;
+	int discarded = 0;
 	write_lock(&(prt_p->page_request_tracker_lock));
 		page_request* page_req = (page_request*) find_equals_in_hashmap(&(prt_p->page_request_map), &dummy_page_request);
 		if(page_req != NULL && get_page_request_reference_count(page_req) == 1)
 		{
-			is_discarded = remove_from_hashmap(&(prt_p->page_request_map), page_req);
-			if(is_discarded)
+			discarded = remove_from_hashmap(&(prt_p->page_request_map), page_req);
+			if(discarded)
 			{
 				mark_page_request_for_deletion(page_req);
 			}
 		}
 	write_unlock(&(prt_p->page_request_tracker_lock));
-	return is_discarded;
+	return discarded;
 }
 
 page_request* get_highest_priority_page_request_to_fulfill(page_request_tracker* prt_p)
@@ -153,15 +134,27 @@ page_request* get_highest_priority_page_request_to_fulfill(page_request_tracker*
 	return page_req;
 }
 
-static void mark_existing_page_request_for_deletion_wrapper(const void* page_req, const void* additional_params)
+static void add_page_requests_to_queue_wrapper(const void* page_req, const void* additional_params)
 {
-	mark_page_request_for_deletion((page_request*) page_req);
+	push_queue((queue*)additional_params, (page_request*)page_req);
 }
 
 void delete_page_request_tracker(page_request_tracker* prt_p)
 {
 	read_lock(&(prt_p->page_request_tracker_lock));
-		for_each_in_hashmap(&(prt_p->page_request_map), mark_existing_page_request_for_deletion_wrapper, NULL);
+		if(prt_p->page_request_map.occupancy > 0)
+		{
+			queue page_requests_to_delete;
+			initialize_queue(&page_requests_to_delete, prt_p->page_request_map.occupancy);
+			for_each_in_hashmap(&(prt_p->page_request_map), add_page_requests_to_queue_wrapper, &page_requests_to_delete);
+			while(!isQueueEmpty(&page_requests_to_delete))
+			{
+				page_request* page_req = (page_request*) get_top_queue(&page_requests_to_delete);
+				mark_page_request_for_deletion(page_req);
+				pop_queue(&page_requests_to_delete);
+			}
+			deinitialize_queue(&page_requests_to_delete);
+		}
 	read_unlock(&(prt_p->page_request_tracker_lock));
 
 	pthread_mutex_destroy(&(prt_p->page_request_priority_queue_lock));
