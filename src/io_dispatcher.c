@@ -120,15 +120,6 @@ static void* io_clean_up_task(page_entry* page_ent)
 			// there is a possibility that for some reason the page_entry was found already clean, and so the clean up action was not performed
 			page_ent->is_queued_for_cleanup = 0;
 
-			// if the page is not pinned, i.e. it is not in use by anyone, we simple insert it it lru
-			// and mark that it has not been used since long
-			if(page_ent->pinned_by_count == 0)
-			{
-				// this function handles reinserts on its own, so no need to worry about that
-				// TODO later
-				// mark_as_not_yet_used(buffp->lru_p, page_ent);
-			}
-
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
 
@@ -153,20 +144,33 @@ void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 
 void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 {
-	job* cleanup_job_p = NULL;
+	int cleanup_job_queued = 0;
+	job cleanup_job;
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 		if(!page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
 		{
-			cleanup_job_p = get_job((void*(*)(void*))io_clean_up_task, page_ent);
-			submit_job(buffp->io_dispatcher, cleanup_job_p);
+			initialize_job(&cleanup_job, (void*(*)(void*))io_clean_up_task, page_ent);
+			submit_job(buffp->io_dispatcher, &cleanup_job);
 			page_ent->is_queued_for_cleanup = 1;
+			cleanup_job_queued = 1;
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
-	if(cleanup_job_p != NULL)
+	if(cleanup_job_queued)
 	{
-		get_result(cleanup_job_p);
-		delete_job(cleanup_job_p);
+		get_result(&cleanup_job);
+
+		// take lock to reposition the page entry in lru, so as to make the lsu know that this dirty page was cleaned
+		pthread_mutex_lock(&(page_ent->page_entry_lock));
+			// if the page is not pinned, i.e. it is not in use by anyone, we simple insert it it lru
+			// and mark that it has not been used since long
+			// only unpinned pages must be inserted to the LRU
+			if(page_ent->pinned_by_count == 0)
+			{
+				// this function handles reinserts on its own, so no need to worry about that
+				mark_as_not_yet_used(buffp->lru_p, page_ent);
+			}
+		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
 }
