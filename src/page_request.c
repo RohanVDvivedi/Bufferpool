@@ -103,7 +103,6 @@ void insert_to_queue_of_waiting_bbqueues(page_request* page_req, bbqueue* bbq)
 void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(page_req->job_and_queue_bbq_lock));
-		set_result(&(page_req->fulfillment_promise), page_ent);
 
 		// for all the bbqs in queue_of_waiting_bbqs, push the page_id
 		while(!isQueueEmpty(&(page_req->queue_of_waiting_bbqs)))
@@ -118,6 +117,8 @@ void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_
 			push_bbqueue(bbq, page_req->page_id);
 		}
 	pthread_mutex_unlock(&(page_req->job_and_queue_bbq_lock));
+
+	set_result(&(page_req->fulfillment_promise), page_ent);
 }
 
 page_entry* get_requested_page_entry_and_discard_page_request(page_request* page_req)

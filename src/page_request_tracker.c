@@ -40,6 +40,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 			{
 				increment_page_request_reference_count(page_req);
 			}
+			else
+			{
+				insert_to_queue_of_waiting_bbqueues(page_req, bbq);
+			}
 		}
 
 	read_unlock(&(prt_p->page_request_tracker_lock));
@@ -85,6 +89,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 			{
 				increment_page_request_reference_count(page_req);
 			}
+			else
+			{
+				insert_to_queue_of_waiting_bbqueues(page_req, bbq);
+			}
 
 		write_unlock(&(prt_p->page_request_tracker_lock));
 	}
@@ -95,7 +103,6 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 	}
 	else
 	{
-		insert_to_queue_of_waiting_bbqueues(page_req, bbq);
 		return NULL;
 	}
 }
