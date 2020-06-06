@@ -53,8 +53,8 @@ int remove_page_entry_from_lru(lru* lru_p, page_entry* page_ent)
 int is_page_entry_present_in_lru(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
-		int result = exist_in_list(&(lru_p->clean_or_free_page_entries), page_ent)
-				|| exist_in_list(&(lru_p->dirty_page_entries), page_ent);
+		int result = exists_in_list(&(lru_p->clean_or_free_page_entries), page_ent)
+				|| exists_in_list(&(lru_p->dirty_page_entries), page_ent);
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 	return result;
 }
