@@ -16,6 +16,8 @@
 
 #include<bounded_blocking_queue.h>
 
+#include<stddef.h>
+
 /*
 	This structure is responsible to keep a mapping from page_id to page_request
 	It ensures that if a page request is made multiple times, then only one of the request is processed
