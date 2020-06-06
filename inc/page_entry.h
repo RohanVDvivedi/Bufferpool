@@ -75,10 +75,6 @@ struct page_entry
 	// linkedlist node for LRU
 	// protected by locks of LRU
 	llnode lru_ll_node;
-
-	// linkedlist node for page_table
-	// protected by locks of LRU
-	llnode pagetable_ll_node;
 };
 
 void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_memory, BLOCK_COUNT number_of_blocks_in_page);

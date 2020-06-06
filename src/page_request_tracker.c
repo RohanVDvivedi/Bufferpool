@@ -142,16 +142,24 @@ static void add_page_requests_to_queue_wrapper(const void* page_req, const void*
 void delete_page_request_tracker(page_request_tracker* prt_p)
 {
 	read_lock(&(prt_p->page_request_tracker_lock));
+		// deleting all the page requests
 		if(prt_p->page_request_map.occupancy > 0)
 		{
 			queue page_requests_to_delete;
 			initialize_queue(&page_requests_to_delete, prt_p->page_request_map.occupancy);
+			// first queue all the existing page requests that need to be deleted
 			for_each_in_hashmap(&(prt_p->page_request_map), add_page_requests_to_queue_wrapper, &page_requests_to_delete);
 			while(!isQueueEmpty(&page_requests_to_delete))
 			{
+				// dequeue the page request that needs to be deleted
 				page_request* page_req = (page_request*) get_top_queue(&page_requests_to_delete);
-				mark_page_request_for_deletion(page_req);
 				pop_queue(&page_requests_to_delete);
+
+				// remove from the hashmap => this step is not required, but still to maintain consistency of the datastructures we do this
+				remove_from_hashmap(&(prt_p->page_request_map), page_req);
+				
+				// mark the page_request for deletion, so that it is deleted when no longer any thread/data structures references it
+				mark_page_request_for_deletion(page_req);
 			}
 			deinitialize_queue(&page_requests_to_delete);
 		}
