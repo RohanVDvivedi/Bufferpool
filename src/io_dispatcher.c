@@ -125,7 +125,8 @@ static void* io_clean_up_task(page_entry* page_ent)
 			if(page_ent->pinned_by_count == 0)
 			{
 				// this function handles reinserts on its own, so no need to worry about that
-				mark_as_not_yet_used(buffp->lru_p, page_ent);
+				// TODO later
+				// mark_as_not_yet_used(buffp->lru_p, page_ent);
 			}
 
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
