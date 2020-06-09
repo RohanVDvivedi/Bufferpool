@@ -66,26 +66,16 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 					MAP_ANONYMOUS | MAP_SHARED | MAP_POPULATE,
 					0, 0);
 	if(errno)
-	{
-		perror(0);
-	}
+		perror("Buffer Memory mmap error : ");
 
 	SIZE_IN_BYTES page_entries_size = buffp->maximum_pages_in_cache * sizeof(page_entry);
 	buffp->page_entries = malloc(page_entries_size);
 
-	int err1 = mlock(buffp->buffer_memory, buffp->buffer_memory_size);
-	if(err1)
-	{
-		printf("Error mlocking buffer_frames : %p with %d %d\n", buffp->buffer_memory, err1, errno);
-		perror(0);
-	}
+	if(mlock(buffp->page_entries, page_entries_size))
+		perror("Page entries memory mlock error : ");
 
-	int err2 = mlock(buffp->page_entries, page_entries_size);
-	if(err2)
-	{
-		printf("Error mlocking page_entries  : %p with %d %d\n", buffp->page_entries, err2, errno);
-		perror(0);
-	}
+	if(mlock(buffp->buffer_memory, buffp->buffer_memory_size))
+		perror("Buffer Memory mlock error : ");
 
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
@@ -335,7 +325,8 @@ void delete_bufferpool(bufferpool* buffp)
 	}
 
 	// free all the memory that the buffer pool acquired, for capturing frames
-	munmap(buffp->buffer_memory, buffp->buffer_memory_size);
+	if(munmap(buffp->buffer_memory, buffp->buffer_memory_size))
+		perror("Buffer Memory munmap error : ");
 
 	// free all memory occupied by the page entries
 	free(buffp->page_entries);
