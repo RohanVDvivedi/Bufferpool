@@ -22,8 +22,8 @@ page_memory_mapper* get_page_memory_mapper()
 
 void initialize_page_memory_mapper(page_memory_mapper* pmm_p)
 {
-	pmm_p->first_page_memory_address = initializing_buffp->first_aligned_block;
-	pmm_p->page_size_in_bytes = initializing_buffp->number_of_blocks_per_page * get_block_size(initializing_buffp->db_file);
+	pmm_p->first_page_memory_address = initializing_buffp->buffer_memory;
+	pmm_p->page_size_in_bytes = initializing_buffp->buffer_memory_size / initializing_buffp->maximum_pages_in_cache;
 	pmm_p->number_of_pages = initializing_buffp->maximum_pages_in_cache;
 	pmm_p->external_references = (void**) calloc(pmm_p->number_of_pages, sizeof(void*));
 }

@@ -1,5 +1,7 @@
 #include<bufferpool.h>
 
+#include<errno.h>
+
 bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cache, SIZE_IN_BYTES page_size_in_bytes, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
 {
 	if(maximum_pages_in_cache == 0)
@@ -54,22 +56,35 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	buffp->db_file = dbf;
 
 	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
-	buffp->number_of_blocks_per_page = page_size_in_bytes / get_block_size(buffp->db_file);
 
-	SIZE_IN_BYTES bytes_required_for_page_entry = buffp->maximum_pages_in_cache * sizeof(page_entry);
-	SIZE_IN_BYTES bytes_for_bufferpool_frame_memory = buffp->maximum_pages_in_cache * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file);
-	SIZE_IN_BYTES bytes_additonal_block_alignment = get_block_size(buffp->db_file);
-
-	SIZE_IN_BYTES total_bufferpool_memory = bytes_required_for_page_entry + bytes_for_bufferpool_frame_memory + bytes_additonal_block_alignment;
-
-	buffp->memory = malloc(total_bufferpool_memory);
-	buffp->first_aligned_block = (void*)((((uintptr_t)buffp->memory) & (~(get_block_size(buffp->db_file) - 1))) + get_block_size(buffp->db_file));
-	buffp->page_entries = (page_entry*)(((char*)(buffp->first_aligned_block)) + bytes_for_bufferpool_frame_memory);
-
-	// We want the OS to always keep the page_entry and the bufferpool page_memory in the memory and never swap them out
-	if(mlock(buffp->memory, total_bufferpool_memory))
+	BLOCK_COUNT number_of_blocks_per_page = page_size_in_bytes / get_block_size(buffp->db_file);
+	
+	buffp->buffer_memory_size = maximum_pages_in_cache * number_of_blocks_per_page * get_block_size(buffp->db_file);
+	buffp->buffer_memory = mmap(NULL, 
+					buffp->buffer_memory_size, 
+					PROT_READ | PROT_WRITE,
+					MAP_ANONYMOUS | MAP_SHARED | MAP_POPULATE,
+					0, 0);
+	if(errno)
 	{
-		printf("Error mlocking bufferpool memory\n");
+		perror(0);
+	}
+
+	SIZE_IN_BYTES page_entries_size = buffp->maximum_pages_in_cache * sizeof(page_entry);
+	buffp->page_entries = malloc(page_entries_size);
+
+	int err1 = mlock(buffp->buffer_memory, buffp->buffer_memory_size);
+	if(err1)
+	{
+		printf("Error mlocking buffer_frames : %p with %d %d\n", buffp->buffer_memory, err1, errno);
+		perror(0);
+	}
+
+	int err2 = mlock(buffp->page_entries, page_entries_size);
+	if(err2)
+	{
+		printf("Error mlocking page_entries  : %p with %d %d\n", buffp->page_entries, err2, errno);
+		perror(0);
 	}
 
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
@@ -90,9 +105,9 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	// initialize empty page entries, and place them in clean page entries list
 	for(PAGE_COUNT i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
-		void* page_memory = buffp->first_aligned_block + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
+		void* page_memory = buffp->buffer_memory + (i * number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = buffp->page_entries + i;
-		initialize_page_entry(page_ent, buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
+		initialize_page_entry(page_ent, buffp->db_file, page_memory, number_of_blocks_per_page);
 		insert_page_entry_to_map_by_page_memory(buffp->pg_tbl, page_ent);
 		mark_as_not_yet_used(buffp->lru_p, page_ent);
 	}
@@ -320,7 +335,10 @@ void delete_bufferpool(bufferpool* buffp)
 	}
 
 	// free all the memory that the buffer pool acquired, for capturing frames
-	free(buffp->memory);
+	munmap(buffp->buffer_memory, buffp->buffer_memory_size);
+
+	// free all memory occupied by the page entries
+	free(buffp->page_entries);
 
 	// delete the lru, page_entry_mapper and the request tracker data structures
 	delete_lru(buffp->lru_p);

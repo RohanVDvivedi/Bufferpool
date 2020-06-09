@@ -30,33 +30,22 @@ struct bufferpool
 	// this is the database file, the current implementation allows only 1 file per bufferpool
 	dbfile* db_file;
 
-	// this is the total memory, as managed by the buffer pool
-	// the address holds memory equal to 
-	// (maximum_pages_in_cache * number_of_blocks_per_page * (size_of_block of the hardware))
-	// + (size_of_block of the hardware)
-	// + (maximum_pages_in_cache * sizeof(page_entry))
-	// the additional block mallocked is because, the mallocked memory is not block aligned, while we need block aligned memory for direct io using DMA
-	void* memory;
+	// this is the total memory, as managed by the buffer pool, for all the buffers buffer_memory_size bytes
+	// it is mmaped MAP_ANONYMOUS, called with NULL, hence it is os block aligned (4kb) and hence physical block aligned for DMA
+	void* buffer_memory;
 
-	// the address of the first aligned block, located in the allocated memory (the field immediately above)
-	// the first_aligned_block >= memory and  first_aligned_block <= memory + get_block_size(dbfile)
-	// We offset from the memory provided by malloc so as to 
-	// align both the ram memory addresses and disk access offsets to the physical block_size of the disk (to get advantage of DMA and DIRECT_IO, else IO will fail)
-	void* first_aligned_block;
+	// = (maximum_pages_in_cache * number_of_blocks_per_page * (size_of_block of the hardware))
+	SIZE_IN_BYTES buffer_memory_size;
 
 	// pointer to the array of all the page_entries of the bufferpool
+	// it is malloced memory pointing to (maximum_pages_in_cache * sizeof(page_entry)) bytes of memory
 	page_entry* page_entries;
 
 	// ******** Memories section end
 
 	// ******** bufferpool attributes section start
 
-	// this is the maximum number of pages that will exist in buffer pool cache at any moment
 	PAGE_COUNT maximum_pages_in_cache;
-
-	// this will define the size of the page, a standard block size is 512 bytes
-	// people generally go with 8 blocks per page
-	BLOCK_COUNT number_of_blocks_per_page;
 
 	// This is the rate at which the bufferpool will clean up dirty pages
 	// if the clean up rate is 3000 ms, that means at every 3 seconds the buffer pool will queue one dirty page to be written to disk
