@@ -78,3 +78,13 @@ unsigned long long int hash_page_entry_by_page_id(const void* page_ent)
 {
 	return hash_page_id(((page_entry*)page_ent)->page_id);
 }
+
+int compare_page_entry_by_page_memory(const void* page_ent1, const void* page_ent2)
+{
+	return (((page_entry*)page_ent1)->page_memory) == (((page_entry*)page_ent2)->page_memory);
+}
+
+unsigned long long int hash_page_entry_by_page_memory(const void* page_ent)
+{
+	return ((uintptr_t)((page_entry*)page_ent)->page_memory) / 512;
+}

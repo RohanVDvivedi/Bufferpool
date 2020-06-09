@@ -97,11 +97,15 @@ void deinitialize_page_entry(page_entry* page_ent);
 
 
 
-//*** UTILITY FUNCTIONS TO ALLOW PAGE_REQUEST_TRACKER TO BUILD MORE COMPLEX DATASTRUCTURES
+//*** UTILITY FUNCTIONS TO ALLOW PAGE_TABLE CREATE HASHMAPS TO EFFECIENTLY FIND PAGE ENTRIES WHEN NEEDED
 
 int compare_page_entry_by_page_id(const void* page_ent1, const void* page_ent2);
 
 unsigned long long int hash_page_entry_by_page_id(const void* page_ent);
+
+int compare_page_entry_by_page_memory(const void* page_ent1, const void* page_ent2);
+
+unsigned long long int hash_page_entry_by_page_memory(const void* page_ent);
 
 #endif
 
