@@ -50,7 +50,7 @@ void push_bbqueue(bbqueue* bbq, PAGE_ID page_id)
 		bbq->element_count++;
 
 		// wake up any thread waiting on empty conditional wait
-		pthread_cond_broadcast(&(bbq->empty_wait));
+		pthread_cond_signal(&(bbq->empty_wait));
 
 	pthread_mutex_unlock(&(bbq->exclus_prot));
 }
@@ -71,7 +71,7 @@ PAGE_ID pop_bbqueue(bbqueue* bbq)
 		bbq->element_count--;
 
 		// wake up any thread waiting on empty conditional wait
-		pthread_cond_broadcast(&(bbq->full_wait));
+		pthread_cond_signal(&(bbq->full_wait));
 
 	pthread_mutex_unlock(&(bbq->exclus_prot));
 
