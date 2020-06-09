@@ -80,12 +80,6 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
 
-	// before intializing the components of the bufferpool
-	// we need to first initialize the static buffp variable in page_memory_mapper.c 
-	// that aids in initializing the page_memory_mapper
-	// page_memory_mapper is used as an effecient lookup table in the internals of the components of the bufferpool
-	setup_initialization_for_bufferpool(buffp);
-
 	buffp->pg_tbl = get_page_table(buffp->maximum_pages_in_cache);
 
 	buffp->lru_p = get_lru();
@@ -98,7 +92,6 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 		void* page_memory = buffp->buffer_memory + (i * number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = buffp->page_entries + i;
 		initialize_page_entry(page_ent, buffp->db_file, page_memory, number_of_blocks_per_page);
-		insert_page_entry_to_map_by_page_memory(buffp->pg_tbl, page_ent);
 		mark_as_not_yet_used(buffp->lru_p, page_ent);
 	}
 
@@ -120,7 +113,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 
 	while(page_ent == NULL)
 	{
-		page_ent = find_page_entry(buffp->pg_tbl, page_id);
+		page_ent = find_page_entry_by_page_id(buffp->pg_tbl, page_id);
 
 		if(page_ent != NULL)
 		{
@@ -257,7 +250,7 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 
 int release_page(bufferpool* buffp, void* page_memory)
 {
-	page_entry* page_ent = get_page_entry_by_page_memory(buffp->pg_tbl, page_memory);
+	page_entry* page_ent = find_page_entry_by_page_memory(buffp->pg_tbl, page_memory);
 
 	return release_used_page_entry(buffp, page_ent);
 }
@@ -282,7 +275,7 @@ void request_page_prefetch(bufferpool* buffp, PAGE_ID start_page_id, PAGE_COUNT 
 
 void force_write(bufferpool* buffp, PAGE_ID page_id)
 {
-	page_entry* page_ent = find_page_entry(buffp->pg_tbl, page_id);
+	page_entry* page_ent = find_page_entry_by_page_id(buffp->pg_tbl, page_id);
 
 	if(page_ent != NULL)
 	{

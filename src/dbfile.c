@@ -13,7 +13,7 @@ dbfile* create_dbfile(char* filename)
 	}
 	else
 	{
-		int result = fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+		/*int result = */fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	}
 	return dbfile_p;
 }
@@ -31,7 +31,7 @@ dbfile* open_dbfile(char* filename)
 	}
 	else
 	{
-		int result = fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
+		/*int result = */fstat(dbfile_p->db_fd, &(dbfile_p->dbfstat));
 	}
 	return dbfile_p;
 }
