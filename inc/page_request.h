@@ -37,7 +37,7 @@ struct page_request
 	uint8_t page_request_priority;
 
 	// this is the index of the page_request in the priority queue (max heap), managed and protected by the page_request_tracker
-	unsigned long long int index_in_priority_queue;
+	unsigned int index_in_priority_queue;
 
 
 	// MAIN LOGIC FOR PAGE REQUEST JOB FULFILLMENT AND QUEUING PAGE_ID TO ALL THE WAITING USER THREADS
@@ -127,7 +127,7 @@ page_entry* get_requested_page_entry_and_discard_page_request(page_request* page
 
 int compare_page_request_by_page_id(const void* page_req1, const void* page_req2);
 
-unsigned long long int hash_page_request_by_page_id(const void* page_req);
+unsigned int hash_page_request_by_page_id(const void* page_req);
 
 int compare_page_request_by_page_priority(const void* page_req1, const void* page_req2);
 

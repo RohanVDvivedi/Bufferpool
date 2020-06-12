@@ -101,11 +101,11 @@ void deinitialize_page_entry(page_entry* page_ent);
 
 int compare_page_entry_by_page_id(const void* page_ent1, const void* page_ent2);
 
-unsigned long long int hash_page_entry_by_page_id(const void* page_ent);
+unsigned int hash_page_entry_by_page_id(const void* page_ent);
 
 int compare_page_entry_by_page_memory(const void* page_ent1, const void* page_ent2);
 
-unsigned long long int hash_page_entry_by_page_memory(const void* page_ent);
+unsigned int hash_page_entry_by_page_memory(const void* page_ent);
 
 #endif
 
