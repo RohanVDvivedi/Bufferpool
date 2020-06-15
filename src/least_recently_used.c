@@ -7,9 +7,9 @@ lru* get_lru()
 	lru* lru_p = (lru*) malloc(sizeof(lru));
 	pthread_cond_init(&(lru_p->wait_for_empty), NULL);
 	pthread_mutex_init(&(lru_p->lru_lock), NULL);
-	initialize_linkedlist(&( lru_p->free_page_entries), offsetof(page_entry, lru_ll_node), compare_page_entry_by_page_id);
-	initialize_linkedlist(&(lru_p->clean_page_entries), offsetof(page_entry, lru_ll_node), compare_page_entry_by_page_id);
-	initialize_linkedlist(&(lru_p->dirty_page_entries), offsetof(page_entry, lru_ll_node), compare_page_entry_by_page_id);
+	initialize_linkedlist(&( lru_p->free_page_entries), offsetof(page_entry, lru_ll_node));
+	initialize_linkedlist(&(lru_p->clean_page_entries), offsetof(page_entry, lru_ll_node));
+	initialize_linkedlist(&(lru_p->dirty_page_entries), offsetof(page_entry, lru_ll_node));
 	return lru_p;
 }
 
