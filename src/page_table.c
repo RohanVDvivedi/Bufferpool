@@ -12,8 +12,7 @@ page_table* get_page_table(PAGE_COUNT page_entry_count)
 page_entry* find_page_entry_by_page_id(page_table* pg_tbl, PAGE_ID page_id)
 {
 	read_lock(&(pg_tbl->page_entry_map_lock));
-		page_entry dummy_entry;
-		dummy_entry.page_id = page_id;
+		page_entry dummy_entry = {.page_id = page_id};
 		page_entry* page_ent = (page_entry*) find_equals_in_hashmap(&(pg_tbl->page_entry_map), &dummy_entry);
 	read_unlock(&(pg_tbl->page_entry_map_lock));
 	return page_ent;
@@ -22,8 +21,7 @@ page_entry* find_page_entry_by_page_id(page_table* pg_tbl, PAGE_ID page_id)
 page_entry* find_page_entry_by_page_memory(page_table* pg_tbl, void* page_memory)
 {
 	read_lock(&(pg_tbl->page_entry_map_lock));
-		page_entry dummy_entry;
-		dummy_entry.page_memory = page_memory;
+		page_entry dummy_entry = {.page_memory = page_memory};
 		page_entry* page_ent = (page_entry*) find_equals_in_hashmap(&(pg_tbl->mem_mapping), &dummy_entry);
 	read_unlock(&(pg_tbl->page_entry_map_lock));
 	return page_ent;
@@ -45,9 +43,8 @@ int insert_page_entry(page_table* pg_tbl, page_entry* page_ent)
 
 int discard_page_entry(page_table* pg_tbl, page_entry* page_ent)
 {
-	int discarded = 0;
 	write_lock(&(pg_tbl->page_entry_map_lock));
-		discarded = remove_from_hashmap(&(pg_tbl->page_entry_map), page_ent)
+		int discarded = remove_from_hashmap(&(pg_tbl->page_entry_map), page_ent)
 				&& remove_from_hashmap(&(pg_tbl->mem_mapping), page_ent);
 	write_unlock(&(pg_tbl->page_entry_map_lock));
 	return discarded;
