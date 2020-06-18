@@ -64,8 +64,15 @@ struct page_entry
 	// if a page has 0 usage count, for a long time after last io was performed, it becomes a very good candidate during page replacement by LRU 
 	uint32_t usage_count;
 
-	// pointer to the in-memory copy of the page
-	void* page_memory;
+
+
+	// pointer to the compressed in-memory copy of the page
+	void* page_memory_c;
+
+	// pointer to the uncompressed in-memory copy of the page
+	void* page_memory_uc;
+
+	// note : one of the above pointer will always be null
 
 	// this lock also ensures concurrency for attempts to read or write the page to/from the disk
 	rwlock page_memory_lock;
