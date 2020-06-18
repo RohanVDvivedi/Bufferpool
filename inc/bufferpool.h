@@ -15,6 +15,7 @@
 
 #include<page_request.h>
 #include<page_request_tracker.h>
+#include<page_request_prioritizer.h>
 
 #include<io_dispatcher.h>
 
@@ -66,6 +67,8 @@ struct bufferpool
 	lru* lru_p;
 
 	page_request_tracker* rq_tracker;
+
+	page_request_prioritizer* rq_prioritizer;
 
 	// ******** Necessary custom datastructures end
 

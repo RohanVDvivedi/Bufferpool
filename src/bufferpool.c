@@ -86,6 +86,8 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 
 	buffp->rq_tracker = get_page_request_tracker(buffp->maximum_pages_in_cache * 3);
 
+	buffp->rq_prioritizer = get_page_request_prioritizer(buffp->maximum_pages_in_cache * 3);
+
 	// initialize empty page entries, and place them in clean page entries list
 	for(PAGE_COUNT i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
@@ -283,15 +285,11 @@ void force_write(bufferpool* buffp, PAGE_ID page_id)
 
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
 			if(page_id == page_ent->page_id)
-			{
 				is_cleanup_required = 1;
-			}
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
 		if(is_cleanup_required)
-		{
 			queue_and_wait_for_page_entry_clean_up_if_dirty(buffp, page_ent);
-		}
 	}
 }
 
@@ -313,9 +311,7 @@ void delete_bufferpool(bufferpool* buffp)
 
 	// deinitialize all the page_entries
 	for(PAGE_COUNT i = 0; i < buffp->maximum_pages_in_cache; i++)
-	{
 		deinitialize_page_entry(buffp->page_entries + i);
-	}
 
 	// free all the memory that the buffer pool acquired, for capturing frames
 	if(munmap(buffp->buffer_memory, buffp->buffer_memory_size))
@@ -328,6 +324,7 @@ void delete_bufferpool(bufferpool* buffp)
 	delete_lru(buffp->lru_p);
 	delete_page_table(buffp->pg_tbl);
 	delete_page_request_tracker(buffp->rq_tracker);
+	delete_page_request_prioritizer(buffp->rq_prioritizer);
 
 	// free the buffer pool struct
 	free(buffp);

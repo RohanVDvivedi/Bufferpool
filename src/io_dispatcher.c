@@ -4,7 +4,7 @@
 static void* io_page_replace_task(bufferpool* buffp)
 {
 	// get the page reqest that is most crucial to fulfill
-	page_request* page_req_to_fulfill = get_highest_priority_page_request_to_fulfill(buffp->rq_tracker);
+	page_request* page_req_to_fulfill = get_highest_priority_page_request_to_fulfill(buffp->rq_prioritizer);
 
 	if(page_req_to_fulfill == NULL)
 	{

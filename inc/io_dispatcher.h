@@ -2,7 +2,7 @@
 #define IO_DISPATCHER_H
 
 #include<buffer_pool_man_types.h>
-
+#include<page_entry.h>
 #include<executor.h>
 
 typedef struct bufferpool bufferpool;
