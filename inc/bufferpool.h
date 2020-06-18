@@ -104,8 +104,10 @@ void* get_page_to_write(bufferpool* buffp, PAGE_ID page_id);
 // this will unlock the page, provide the page_memory for the specific page
 // call this functions only  on the address returned after calling any one of get_page_to_* functions respectively
 // the release page method can be called, to release a page read/write lock,
+// if okay_to_evict is set, the page_entry is evicted if it is not being used by anyone else
+// this can be used to allow evictions while performing a sequential scan
 // it returns 0, if the lock could not be released
-int release_page(bufferpool* buffp, void* page_memory);
+int release_page(bufferpool* buffp, void* page_memory, int okay_to_evict);
 
 // to request a page_prefetch, you must provide a start_page_id, and page_count
 // this will help us fetch adjacent pages to memory faster by using sequential io

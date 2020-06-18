@@ -24,6 +24,9 @@ struct lru
 	// dirty_page_entries is linkedlist meant for inserting dirty pages only
 	// for replacement, a page_entry is picked first from the tail of the free_page_entries, clean_page_entries and dirty_page_entries in the same order
 	linkedlist free_page_entries;
+	linkedlist evictable_page_entries;	// evictable page entries can be clean or dirty pages
+										// they have been used but it has been identified that it may not be used in near future again
+										// example pages used during a sequential scan
 	linkedlist clean_page_entries;
 	linkedlist dirty_page_entries;
 };
@@ -51,6 +54,9 @@ void mark_as_recently_used(lru* lru_p, page_entry* page_ent);
 
 // call this method once you have identified that a particular page was prefetched but was never used
 void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent);
+
+// call this method once a used page will not be used again in near future
+void mark_as_evictable(lru* lru_p, page_entry* page_ent);
 
 void delete_lru(lru* lru_p);
 

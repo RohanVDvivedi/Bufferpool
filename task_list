@@ -5,4 +5,4 @@
 * int okay_to_evict flag while releasing the page, so the buffer pool will pick that page for eviction next
 * lru with victimizable queue, for the pages with all this flaws
 * build sloppy and use sloppy for page_request and page_entry structures
-* segregate page heap logic from the page request tracker
+* build page directory manager, to manage a map of compressed on disk pages

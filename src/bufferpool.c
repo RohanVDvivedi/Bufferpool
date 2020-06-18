@@ -208,7 +208,7 @@ void* get_page_to_write(bufferpool* buffp, PAGE_ID page_id)
 	return page_ent->page_memory;
 }
 
-static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
+static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int okay_to_evict)
 {
 	int lock_released = 0;
 	int was_modified;
@@ -242,7 +242,10 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 			}
 			if(page_ent->pinned_by_count == 0)
 			{
-				mark_as_recently_used(buffp->lru_p, page_ent);
+				if(!okay_to_evict)
+					mark_as_recently_used(buffp->lru_p, page_ent);
+				else
+					mark_as_evictable(buffp->lru_p, page_ent);
 			}
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
@@ -250,11 +253,11 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent)
 	return lock_released;
 }
 
-int release_page(bufferpool* buffp, void* page_memory)
+int release_page(bufferpool* buffp, void* page_memory, int okay_to_evict)
 {
 	page_entry* page_ent = find_page_entry_by_page_memory(buffp->pg_tbl, page_memory);
 
-	return release_used_page_entry(buffp, page_ent);
+	return release_used_page_entry(buffp, page_ent, okay_to_evict);
 }
 
 void request_page_prefetch(bufferpool* buffp, PAGE_ID start_page_id, PAGE_COUNT page_count, bbqueue* bbq)
