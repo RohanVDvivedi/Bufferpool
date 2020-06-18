@@ -68,9 +68,13 @@ static void* io_page_replace_task(bufferpool* buffp)
 				page_ent->is_dirty = 0;
 			}
 
-			// update the page_id, and read the requested page from disk,
+			// no compression support yet
+			page_ent->is_compressed = 0;
+
+			// update the page_id, start_block_id, number_of_blocks and memory to write to
+			// and read the requested page from disk,
 			// and since the page_entry now contains valid data,  clear the free bit
-			page_ent->page_id = page_id;
+			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, page_ent->page_memory);
 			read_page_from_disk(page_ent);
 
 			// once the page is replaced, mark the page is not a free page

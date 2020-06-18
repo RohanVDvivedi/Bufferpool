@@ -48,6 +48,13 @@ struct bufferpool
 
 	PAGE_COUNT maximum_pages_in_cache;
 
+	// this is uncompressed size of each page of the bufferpool
+	// the user will always get to deal with this page size
+	SIZE_IN_BYTES page_size;
+
+	// this is the number of blocks that will be stored on disk, if the pages were not compressed
+	BLOCK_COUNT number_of_blocks_per_page;
+
 	// This is the rate at which the bufferpool will clean up dirty pages
 	// if the clean up rate is 3000 ms, that means at every 3 seconds the buffer pool will queue one dirty page to be written to disk
 	// this ensures that the buffer pool will not let a page be dirty for very long, even if it is not accessed

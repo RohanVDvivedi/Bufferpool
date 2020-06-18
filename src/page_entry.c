@@ -2,7 +2,6 @@
 
 void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_memory, BLOCK_COUNT number_of_blocks_in_page)
 {
-
 	pthread_mutex_init(&(page_ent->page_entry_lock), NULL);
 	// This lock is needed to be acquired to access page attributes only,
 	// use page_memory_lock, to gain access to memory of the page
@@ -10,10 +9,11 @@ void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_me
 	page_ent->dbfile_p = dbfile_p;
 
 	page_ent->page_id = 0;
-
-	page_ent->number_of_blocks_in_page = number_of_blocks_in_page;
+	page_ent->start_block_id = 0;
+	page_ent->number_of_blocks = number_of_blocks_in_page;
 
 	// set appropriate bits for the page entry, (recognizing that the page_entry is initially clean and free, and no cleanup io has been queued on its creation)
+	page_ent->is_compressed = 0;
 	page_ent->is_dirty = 0;
 	page_ent->is_free = 1;
 	page_ent->is_queued_for_cleanup = 0;
@@ -53,14 +53,22 @@ void release_write_lock(page_entry* page_ent)
 	write_unlock(&(page_ent->page_memory_lock));
 }
 
+void reset_page_to(page_entry* page_ent, PAGE_ID page_id, BLOCK_ID start_block_id, BLOCK_COUNT number_of_blocks, void* page_memory)
+{
+	page_ent->page_id = page_id;
+	page_ent->start_block_id = start_block_id;
+	page_ent->number_of_blocks = number_of_blocks;
+	page_ent->page_memory = page_memory;
+}
+
 int read_page_from_disk(page_entry* page_ent)
 {
-	return read_blocks_from_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->page_id * page_ent->number_of_blocks_in_page, page_ent->number_of_blocks_in_page);
+	return read_blocks_from_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->start_block_id, page_ent->number_of_blocks);
 }
 
 int write_page_to_disk(page_entry* page_ent)
 {
-	return write_blocks_to_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->page_id * page_ent->number_of_blocks_in_page, page_ent->number_of_blocks_in_page);
+	return write_blocks_to_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->start_block_id, page_ent->number_of_blocks);
 }
 
 void deinitialize_page_entry(page_entry* page_ent)

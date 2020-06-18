@@ -56,10 +56,11 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	buffp->db_file = dbf;
 
 	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
+	buffp->page_size = page_size_in_bytes;
 
-	BLOCK_COUNT number_of_blocks_per_page = page_size_in_bytes / get_block_size(buffp->db_file);
+	buffp->number_of_blocks_per_page = buffp->page_size / get_block_size(buffp->db_file);
 	
-	buffp->buffer_memory_size = maximum_pages_in_cache * number_of_blocks_per_page * get_block_size(buffp->db_file);
+	buffp->buffer_memory_size = maximum_pages_in_cache * buffp->page_size;
 	buffp->buffer_memory = mmap(NULL, 
 					buffp->buffer_memory_size, 
 					PROT_READ | PROT_WRITE,
@@ -91,9 +92,9 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	// initialize empty page entries, and place them in clean page entries list
 	for(PAGE_COUNT i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
-		void* page_memory = buffp->buffer_memory + (i * number_of_blocks_per_page * get_block_size(buffp->db_file));
+		void* page_memory = buffp->buffer_memory + (i * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
 		page_entry* page_ent = buffp->page_entries + i;
-		initialize_page_entry(page_ent, buffp->db_file, page_memory, number_of_blocks_per_page);
+		initialize_page_entry(page_ent, buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
 		mark_as_not_yet_used(buffp->lru_p, page_ent);
 	}
 
