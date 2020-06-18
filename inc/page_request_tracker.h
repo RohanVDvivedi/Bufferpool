@@ -15,7 +15,6 @@
 	This structure is responsible to keep a mapping from page_id to page_request
 	It ensures that if a page request is made multiple times, then only one of the request is processed
 	It manages the reference counting while sharing the page request with other threads so the page_request can be deleted when not in use
-	It is also responsible to maintain a heap for page_request-s on their page_request_priority this will help us find the most requested page first to process for io
 */
 
 typedef struct page_request_tracker page_request_tracker;

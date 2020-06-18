@@ -11,6 +11,9 @@
 
 #include<page_request.h>
 
+// It is also responsible to maintain a heap (priority queue) for page_request-s on their page_request_priority
+// this will help us find the most requested page first to process for io
+
 typedef struct page_request_prioritizer page_request_prioritizer;
 struct page_request_prioritizer
 {
@@ -24,8 +27,12 @@ struct page_request_prioritizer
 
 page_request_prioritizer* get_page_request_prioritizer(PAGE_COUNT max_requests);
 
+// creates a new page request
+// increments all the page request priority in the heap by 1
+// inserts the new page request to heap and queue to io_dispatcher that it needs to fulfill a page_request
 page_request* create_and_queue_page_request(page_request_prioritizer* prp_p, PAGE_ID page_id, bufferpool* buffp);
 
+// increments page request priority by 1
 void increment_priority_for_page_request(page_request_prioritizer* prp_p, page_request* pg_req);
 
 // the below function will query the priority queue (max heap) of the page_request tracker, and provide you with a page_request to fullfill

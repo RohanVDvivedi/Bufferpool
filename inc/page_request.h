@@ -18,8 +18,8 @@
 /*
 	Each component of page_request is protected individually by different locks
 
-	the page_request_priority (and index_in_priority_queue), it is to be managed by the external data structure to prioritize
-	the fulfillment of this page request, hence it needs to be protected by the lock of external structure that is managing it
+	the page_request_priority and index_in_priority_queue
+	is to be managed/protected by the page request prioritizer
 
 	the reference count and auto deletion, 
 	this helps us to know when there is noone using this object and hence we can delete that request
@@ -33,10 +33,10 @@ struct page_request
 
 	// this number represents the effective number of times or how long ago was this request created
 	// the page_request with higher priority must be fullfilled first
-	// this variable needs to be protected under the read/write lock of the data structure that manages the page request
+	// this variable needs to be protected under the mutex lock of the page_request prioritizer
 	uint8_t page_request_priority;
 
-	// this is the index of the page_request in the priority queue (max heap), managed and protected by the page_request_tracker
+	// this is the index of the page_request in the priority queue (max heap), managed and protected by the page_request_priotitizer
 	unsigned int index_in_priority_queue;
 
 
