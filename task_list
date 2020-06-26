@@ -1,8 +1,4 @@
 * try to make more sequential io, larger and fewer read/write calls to disk/os
 * selectively made dirty pages become clean and get inserted in clean pages lru queue
-* memory allocator buddy or slab based for the buffer pool
-* int skip_disk_read flag to get a page to write without going to the disk and reading it first, i.e. save disk io if the page requested is the first one being seen by the application, or if the main goal of the application is to overwrite the existing content
-* int okay_to_evict flag while releasing the page, so the buffer pool will pick that page for eviction next
-* lru with victimizable queue, for the pages with all this flaws
 * build sloppy and use sloppy for page_request and page_entry structures
 * build page directory manager, to manage a map of compressed on disk pages
