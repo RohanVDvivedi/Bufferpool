@@ -8,6 +8,7 @@
 #include<executor.h>
 
 #include<dbfile.h>
+#include<page_frame_allocator.h>
 
 #include<page_entry.h>
 #include<page_table.h>
@@ -31,12 +32,8 @@ struct bufferpool
 	// this is the database file, the current implementation allows only 1 file per bufferpool
 	dbfile* db_file;
 
-	// this is the total memory, as managed by the buffer pool, for all the buffers buffer_memory_size bytes
-	// it is mmaped MAP_ANONYMOUS, called with NULL, hence it is os block aligned (4kb) and hence physical block aligned for DMA
-	void* buffer_memory;
-
-	// = (maximum_pages_in_cache * number_of_blocks_per_page * (size_of_block of the hardware))
-	SIZE_IN_BYTES buffer_memory_size;
+	// this is the memory allocator responsible for allocating page frame memory buffers
+	page_frame_allocator* pfa_p;
 
 	// pointer to the array of all the page_entries of the bufferpool
 	// it is malloced memory pointing to (maximum_pages_in_cache * sizeof(page_entry)) bytes of memory
@@ -45,15 +42,6 @@ struct bufferpool
 	// ******** Memories section end
 
 	// ******** bufferpool attributes section start
-
-	PAGE_COUNT maximum_pages_in_cache;
-
-	// this is uncompressed size of each page of the bufferpool
-	// the user will always get to deal with this page size
-	SIZE_IN_BYTES page_size;
-
-	// this is the number of blocks that will be stored on disk, if the pages were not compressed
-	BLOCK_COUNT number_of_blocks_per_page;
 
 	// This is the rate at which the bufferpool will clean up dirty pages
 	// if the clean up rate is 3000 ms, that means at every 3 seconds the buffer pool will queue one dirty page to be written to disk
