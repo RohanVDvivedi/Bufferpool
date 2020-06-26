@@ -309,7 +309,7 @@ void delete_bufferpool(bufferpool* buffp)
 	}
 
 	// free all the memory that the buffer pool acquired, for capturing frames
-	delete_page_frame_memory(buffp->pfa_p);
+	delete_page_frame_allocator(buffp->pfa_p);
 
 	// free all memory occupied by the page entries
 	free(buffp->page_entries);
