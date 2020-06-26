@@ -38,7 +38,7 @@ static void* io_page_replace_task(bufferpool* buffp)
 				// the page_entry is not pinned and that it is either free or that it is not being referenced by anyone to allow discarding/deleting it altogether
 				if(page_ent->pinned_by_count == 0 &&
 					(
-						page_ent->is_free == 1 ||
+						page_ent->page_memory == NULL ||
 				 		discard_page_request_if_not_referenced(buffp->rq_tracker, page_ent->page_id) == 1
 				 	)
 				)
@@ -57,12 +57,12 @@ static void* io_page_replace_task(bufferpool* buffp)
 
 	discard_page_entry(buffp->pg_tbl, page_ent);
 
-	if(page_ent->page_id != page_id || page_ent->is_free)
+	if(page_ent->page_id != page_id || page_ent->page_memory == NULL)
 	{
 		acquire_write_lock(page_ent);
 
-			// if the page_entry is dirty and not free, write it to disk, clearing the dirty bit
-			if(page_ent->is_dirty && !page_ent->is_free)
+			// if the page_entry is dirty, write it to disk and clear the dirty bit
+			if(page_ent->is_dirty)
 			{
 				write_page_to_disk(page_ent);
 				page_ent->is_dirty = 0;
@@ -71,19 +71,21 @@ static void* io_page_replace_task(bufferpool* buffp)
 			// no compression support yet
 			page_ent->is_compressed = 0;
 
+			// release current page frame memory
+			if(page_ent->page_memory != NULL)
+			{
+				free_page_frame(buffp->pfa_p, page_ent->page_memory); page_ent->page_memory = NULL;
+			}
+
 			// update the page_id, start_block_id, number_of_blocks and memory to write to
 			// and read the requested page from disk,
-			// and since the page_entry now contains valid data,  clear the free bit
-			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, page_ent->page_memory);
+			// and since the page_entry now contains valid data
+			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, allocate_page_frame(buffp->pfa_p));
 			read_page_from_disk(page_ent);
-
-			// once the page is replaced, mark the page is not a free page
-			page_ent->is_free = 0;
 
 			// also reinitialize the usage count
 			page_ent->usage_count = 0;
-
-			// update the last_io timestamp, acknowledging when was the io performed
+			// and update the last_io timestamp, acknowledging when was the io performed
 			setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);
 
 		release_write_lock(page_ent);
@@ -102,9 +104,8 @@ static void* io_clean_up_task(page_entry* page_ent)
 	{
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
 
-			// clean up for the page, only if the page_entry, is appropriately found,
-			// and that it is dirty and is not a free page_entry
-			if(page_ent->is_dirty && !page_ent->is_free)
+			// clean up for the page, only if it is dirty
+			if(page_ent->is_dirty)
 			{
 				acquire_read_lock(page_ent);
 
@@ -138,7 +139,7 @@ void queue_job_for_page_request(bufferpool* buffp)
 void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(!page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
+		if(page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
 		{
 			submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, page_ent);
 			page_ent->is_queued_for_cleanup = 1;
@@ -152,7 +153,7 @@ void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_ent
 	job cleanup_job;
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(!page_ent->is_free && page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
+		if(page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
 		{
 			initialize_job(&cleanup_job, (void*(*)(void*))io_clean_up_task, page_ent);
 			submit_job(buffp->io_dispatcher, &cleanup_job);

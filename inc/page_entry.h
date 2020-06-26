@@ -55,9 +55,6 @@ struct page_entry
 	// if a page is dirty, it is yet to be written to disk
 	uint8_t is_dirty;
 
-	// if the page is free, the page has no meaningfull data on it
-	uint8_t is_free;
-
 	// this bit will be set, if this page_entry gets queued for cleanup of the dirty page, in the buffer pool of the io_dispatcher
 	uint8_t is_queued_for_cleanup;
 
@@ -81,7 +78,7 @@ struct page_entry
 	llnode lru_ll_node;
 };
 
-void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p, void* page_memory, BLOCK_COUNT number_of_blocks_in_page);
+void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p);
 
 void acquire_read_lock(page_entry* page_ent);
 

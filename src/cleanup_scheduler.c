@@ -27,7 +27,7 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, PAGE_COUNT ind
 		// a buffer page_entry is inserted back to LRU only after it is used atleast once and only if it is unpinned, (after the first or first few threads access it)
 		// in these cases a buffer page has to be returned back for circulation, i.e. it needs to be manually inserted back to LRU
 		if((!is_page_entry_present_in_lru(buffp->lru_p, page_ent)) && 
-			(!page_ent->is_free) && (page_ent->pinned_by_count == 0) && (page_ent->usage_count == 0) && 
+			(page_ent->pinned_by_count + page_ent->usage_count == 0) && 
 			(currentTimeStamp >= page_ent->unix_timestamp_since_last_disk_io_in_ms + buffp->unused_prefetched_page_return_in_ms))
 		{
 			printf("UNUNSED PREFETCHED PAGE %u at index %u was returned to buferpool\n", page_ent->page_id, index);

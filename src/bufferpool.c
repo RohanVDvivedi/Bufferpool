@@ -55,34 +55,30 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 
 	buffp->db_file = dbf;
 	
-	buffp->pfa_p = get_page_frame_allocator(maximum_pages_in_cache, page_size);
-
-	SIZE_IN_BYTES page_entries_size = maximum_pages_in_cache * sizeof(page_entry);
-	buffp->page_entries = malloc(page_entries_size);
+	// we demand io_thread_count number of extra pages worth frame memory,
+	// so that we can perform io without acquiring locks on the page_entry
+	buffp->pfa_p = get_page_frame_allocator(maximum_pages_in_cache + io_thread_count, page_size);
 
 	buffp->number_of_blocks_per_page = page_size / get_block_size(buffp->db_file);
 	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
-
-	if(mlock(buffp->page_entries, page_entries_size))
-		perror("Page entries memory mlock error : ");
 
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
 
 	buffp->pg_tbl = get_page_table(maximum_pages_in_cache);
-
 	buffp->lru_p = get_lru();
-
 	buffp->rq_tracker = get_page_request_tracker(maximum_pages_in_cache * 3);
-
 	buffp->rq_prioritizer = get_page_request_prioritizer(maximum_pages_in_cache * 3);
 
-	// initialize empty page entries, and place them in clean page entries list
+	// initialize empty page entries, and place them in free page entries list
+	SIZE_IN_BYTES page_entries_size = maximum_pages_in_cache * sizeof(page_entry);
+	buffp->page_entries = malloc(page_entries_size);
+	if(mlock(buffp->page_entries, page_entries_size))
+		perror("Page entries memory mlock error : ");
 	for(PAGE_COUNT i = 0; i < maximum_pages_in_cache; i++)
 	{
-		void* page_memory = allocate_page_frame(buffp->pfa_p);
 		page_entry* page_ent = buffp->page_entries + i;
-		initialize_page_entry(page_ent, buffp->db_file, page_memory, buffp->number_of_blocks_per_page);
+		initialize_page_entry(page_ent, buffp->db_file);
 		mark_as_not_yet_used(buffp->lru_p, page_ent);
 	}
 
@@ -251,8 +247,6 @@ int release_page(bufferpool* buffp, void* page_memory, int okay_to_evict)
 
 void request_page_prefetch(bufferpool* buffp, PAGE_ID start_page_id, PAGE_COUNT page_count, bbqueue* bbq)
 {
-	// ignore page_count atleast for now 
-
 	// you must provide a bbqueue to let us know, where do you want the result, when the page is brought to memory
 	if(bbq != NULL)
 	{
@@ -304,7 +298,9 @@ void delete_bufferpool(bufferpool* buffp)
 	// deinitialize all the page_entries
 	for(PAGE_COUNT i = 0; i < buffp->maximum_pages_in_cache; i++)
 	{
-		free_page_frame(buffp->pfa_p, buffp->page_entries[i].page_memory);
+		// free the acquired page memory
+		if(buffp->page_entries[i].page_memory)
+			free_page_frame(buffp->pfa_p, buffp->page_entries[i].page_memory);
 		deinitialize_page_entry(buffp->page_entries + i);
 	}
 

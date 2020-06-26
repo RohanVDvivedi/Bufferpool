@@ -90,11 +90,11 @@ void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 		{
 			insert_tail(&(lru_p->dirty_page_entries), page_ent);
 		}
-		else if(page_ent->is_free)
+		else if(page_ent->page_memory == NULL)
 		{
 			insert_tail(&(lru_p->free_page_entries), page_ent);
 		}
-		else // else it is clean (i.e. !is_dirty && !is_free)
+		else
 		{
 			insert_tail(&(lru_p->clean_page_entries), page_ent);
 		}
@@ -110,11 +110,11 @@ void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent)
 		{
 			insert_head(&(lru_p->dirty_page_entries), page_ent);
 		}
-		else if(page_ent->is_free)
+		else if(page_ent->page_memory == NULL)
 		{
 			insert_head(&(lru_p->free_page_entries), page_ent);
 		}
-		else // else it is clean (i.e. !is_dirty && !is_free)
+		else
 		{
 			insert_head(&(lru_p->clean_page_entries), page_ent);
 		}
