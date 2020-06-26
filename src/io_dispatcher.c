@@ -13,6 +13,14 @@ static void* io_page_replace_task(bufferpool* buffp)
 
 	uint32_t page_id = page_req_to_fulfill->page_id;
 
+	// initialize a dummy page entry, and perform read from disk io on it, without acquiring any locks
+	// since it is a local variable, we can perform io, without taking any locks
+	// the new_page_memory is the variable that will hold the page memory frame read from the disk file
+	page_entry dummy_page_ent;	initialize_page_entry(&dummy_page_ent, buffp->db_file);
+	void* new_page_memory = allocate_page_frame(buffp->pfa_p);
+	reset_page_to(&dummy_page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, new_page_memory);
+	read_page_from_disk(&dummy_page_ent);
+
 	page_entry* page_ent = NULL;
 
 	while(page_ent == NULL)
@@ -61,7 +69,7 @@ static void* io_page_replace_task(bufferpool* buffp)
 	{
 		acquire_write_lock(page_ent);
 
-			// if the page_entry is dirty, write it to disk and clear the dirty bit
+			// if the page_entry is dirty, then write it to disk and clear the dirty bit
 			if(page_ent->is_dirty)
 			{
 				write_page_to_disk(page_ent);
@@ -73,15 +81,14 @@ static void* io_page_replace_task(bufferpool* buffp)
 
 			// release current page frame memory
 			if(page_ent->page_memory != NULL)
-			{
-				free_page_frame(buffp->pfa_p, page_ent->page_memory); page_ent->page_memory = NULL;
-			}
+				free_page_frame(buffp->pfa_p, page_ent->page_memory);
+			// above you can skip the NULLing of the page memory variable since it is anyway going to be replaced
 
-			// update the page_id, start_block_id, number_of_blocks and memory to write to
-			// and read the requested page from disk,
-			// and since the page_entry now contains valid data
-			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, allocate_page_frame(buffp->pfa_p));
-			read_page_from_disk(page_ent);
+			// update the page_id, start_block_id, number_of_blocks and 
+			// and the page memory that is already read from the disk,
+			// note : remember the read io was performed on the new_page_memory, by the dummy_page_ent
+			// and now by replacing the page_memory the page_entry now contains new valid required data
+			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, new_page_memory);
 
 			// also reinitialize the usage count
 			page_ent->usage_count = 0;
