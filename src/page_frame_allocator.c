@@ -12,7 +12,7 @@ page_frame_allocator* get_page_frame_allocator(PAGE_COUNT pages_count, SIZE_IN_B
 	initialize_linkedlist(&(pfa_p->free_frames), 0);
 
 	pfa_p->memory = mmap(NULL, 
-					pfa_p->page_size * pfa_p->pages_count, 
+					MMAPED_MEMORY_SIZE(pfa_p->page_size * pfa_p->pages_count), 
 					PROT_READ | PROT_WRITE,
 					MAP_ANONYMOUS | MAP_SHARED | MAP_POPULATE,
 					0, 0);
@@ -55,8 +55,7 @@ void delete_page_frame_allocator(page_frame_allocator* pfa_p)
 {
 	pthread_mutex_destroy(&(pfa_p->allocator_lock));
 
-	// free all the memory that the buffer pool acquired, for capturing frames
-	if(munmap(pfa_p->memory, pfa_p->page_size * pfa_p->pages_count))
+	if(munmap(pfa_p->memory, MMAPED_MEMORY_SIZE(pfa_p->page_size * pfa_p->pages_count)))
 		perror("Buffer Memory munmap error : ");
 
 	free(pfa_p);

@@ -29,7 +29,9 @@ struct page_frame_allocator
 	void* memory;
 };
 
-page_frame_allocator* get_page_frame_allocator(PAGE_COUNT pages_count, SIZE_IN_BYTES uncompressed_page_size);
+#define MMAPED_MEMORY_SIZE(actual_size) ((actual_size) + ((actual_size%4096) ? 4096 : 0))
+
+page_frame_allocator* get_page_frame_allocator(PAGE_COUNT pages_count, SIZE_IN_BYTES page_size);
 
 void* allocate_page_frame(page_frame_allocator* pfa_p);
 

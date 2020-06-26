@@ -43,6 +43,12 @@ struct bufferpool
 
 	// ******** bufferpool attributes section start
 
+	// this is the number of physical disk blocks in a single disk page
+	BLOCK_COUNT number_of_blocks_per_page;
+
+	// this is the number of pages that would be in memory at any time, being occupied by page entries
+	PAGE_COUNT maximum_pages_in_cache;
+
 	// This is the rate at which the bufferpool will clean up dirty pages
 	// if the clean up rate is 3000 ms, that means at every 3 seconds the buffer pool will queue one dirty page to be written to disk
 	// this ensures that the buffer pool will not let a page be dirty for very long, even if it is not accessed
