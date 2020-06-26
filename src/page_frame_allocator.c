@@ -36,7 +36,9 @@ page_frame_allocator* get_page_frame_allocator(PAGE_COUNT pages_count, SIZE_IN_B
 void* allocate_page_frame(page_frame_allocator* pfa_p)
 {
 	pthread_mutex_lock(&(pfa_p->allocator_lock));
-	void* frame = NULL;
+		void* frame = (void*) get_head(&(pfa_p->free_frames));
+		if(frame != NULL)
+			remove_from_list(&(pfa_p->free_frames), frame);
 	pthread_mutex_unlock(&(pfa_p->allocator_lock));
 	return frame;
 }
@@ -44,6 +46,8 @@ void* allocate_page_frame(page_frame_allocator* pfa_p)
 void free_page_frame(page_frame_allocator* pfa_p, void* frame)
 {
 	pthread_mutex_lock(&(pfa_p->allocator_lock));
+		initialize_llnode(frame);
+		insert_tail(&(pfa_p->free_frames), frame);
 	pthread_mutex_unlock(&(pfa_p->allocator_lock));
 }
 
