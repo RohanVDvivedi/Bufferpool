@@ -41,42 +41,56 @@ static void* io_page_replace_task(bufferpool* buffp)
 			{
 				pthread_mutex_lock(&(page_ent->page_entry_lock));
 
-				// even though a page_entry may be provided as being fit for replacement, we need to ensure (double check) that 
-				// the page_entry is not pinned and that it is either free or that it is not being referenced by anyone to allow discarding/deleting it altogether
-				if(page_ent->pinned_by_count == 0 &&
-					(
-						page_ent->page_memory == NULL ||
-				 		discard_page_request_if_not_referenced(buffp->rq_tracker, page_ent->page_id) == 1
-				 	)
-				)
+				// even though a page_entry may be provided as being fit for replacement, we need to ensure that 
+				if(page_ent->pinned_by_count == 0)
 				{
-					is_page_valid = 1;
+					if(page_ent->page_memory != NULL)
+					{
+					// clean the page entry here, before you discard it from hashmaps,
+					// this will ensure that the page that is being evicted has reached to disk
+					// before someone comes along and tries to read it again
+						// if the page_entry is dirty, then write it to disk and clear the dirty bit
+						if(page_ent->is_dirty)
+						{
+							acquire_read_lock(page_ent);
+								write_page_to_disk(page_ent);
+							release_read_lock(page_ent);
+
+							// since the cleanup is performed, the page is now not dirty
+							page_ent->is_dirty = 0;
+						}
+
+						if(discard_page_request_if_not_referenced(buffp->rq_tracker, page_ent->page_id) == 1)
+						{
+							discard_page_entry(buffp->pg_tbl, page_ent);
+							break;
+						}
+						else
+						{// if the page request corresponding to the page entry is being used,
+						// so it was anyway going to be discarded from the lru,
+						// this is the reason why we would not worry about inserting it back to lru
+							pthread_mutex_unlock(&(page_ent->page_entry_lock));
+							page_ent = NULL;
+							continue;
+						}
+					}
+					else
+					{
+						break;
+					}
 				}
 				else
 				{
 					pthread_mutex_unlock(&(page_ent->page_entry_lock));
-
+					page_ent = NULL;
 					continue;
 				}
 			}
 		}
 	}
 
-	discard_page_entry(buffp->pg_tbl, page_ent);
-
 	if(page_ent->page_id != page_id || page_ent->page_memory == NULL)
 	{
-		// if the page_entry is dirty, then write it to disk and clear the dirty bit
-		if(page_ent->is_dirty)
-		{
-			acquire_read_lock(page_ent);
-				write_page_to_disk(page_ent);
-			release_read_lock(page_ent);
-
-			// since the cleanup is performed, the page is now not dirty
-			page_ent->is_dirty = 0;
-		}
-
 		acquire_write_lock(page_ent);
 
 			// release current page frame memory
