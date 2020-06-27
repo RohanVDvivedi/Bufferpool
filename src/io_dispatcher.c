@@ -16,9 +16,8 @@ static void* io_page_replace_task(bufferpool* buffp)
 	// initialize a dummy page entry, and perform read from disk io on it, without acquiring any locks
 	// since it is a local variable, we can perform io, without taking any locks
 	// the new_page_memory is the variable that will hold the page memory frame read from the disk file
-	page_entry dummy_page_ent;	initialize_page_entry(&dummy_page_ent, buffp->db_file);
-	void* new_page_memory = allocate_page_frame(buffp->pfa_p);
-	reset_page_to(&dummy_page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, new_page_memory);
+	page_entry dummy_page_ent;	dummy_page_ent.dbfile_p = buffp->db_file;
+	reset_page_to(&dummy_page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, allocate_page_frame(buffp->pfa_p));
 	read_page_from_disk(&dummy_page_ent);
 
 	page_entry* page_ent = NULL;
@@ -76,19 +75,19 @@ static void* io_page_replace_task(bufferpool* buffp)
 				page_ent->is_dirty = 0;
 			}
 
-			// no compression support yet
-			page_ent->is_compressed = 0;
-
 			// release current page frame memory
 			if(page_ent->page_memory != NULL)
 				free_page_frame(buffp->pfa_p, page_ent->page_memory);
 			// above you can skip the NULLing of the page memory variable since it is anyway going to be replaced
 
+			// no compression support yet
+			page_ent->is_compressed = 0;
+
 			// update the page_id, start_block_id, number_of_blocks and 
 			// and the page memory that is already read from the disk,
 			// note : remember the read io was performed on the new_page_memory, by the dummy_page_ent
 			// and now by replacing the page_memory the page_entry now contains new valid required data
-			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, new_page_memory);
+			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, dummy_page_ent.page_memory);
 
 			// also reinitialize the usage count
 			page_ent->usage_count = 0;
@@ -115,9 +114,7 @@ static void* io_clean_up_task(page_entry* page_ent)
 			if(page_ent->is_dirty)
 			{
 				acquire_read_lock(page_ent);
-
-				write_page_to_disk(page_ent);
-
+					write_page_to_disk(page_ent);
 				release_read_lock(page_ent);
 
 				// since the cleanup is performed, the page is now not dirty, 
