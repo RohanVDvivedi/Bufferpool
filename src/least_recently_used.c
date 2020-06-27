@@ -86,7 +86,7 @@ void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
 		remove_from_all_lists(lru_p, page_ent);
-		if(page_ent->is_dirty)
+		if(check(page_ent, IS_DIRTY))
 		{
 			insert_tail(&(lru_p->dirty_page_entries), page_ent);
 		}
@@ -106,7 +106,7 @@ void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
 		remove_from_all_lists(lru_p, page_ent);
-		if(page_ent->is_dirty)
+		if(check(page_ent, IS_DIRTY))
 		{
 			insert_head(&(lru_p->dirty_page_entries), page_ent);
 		}

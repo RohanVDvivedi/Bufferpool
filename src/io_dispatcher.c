@@ -50,14 +50,14 @@ static void* io_page_replace_task(bufferpool* buffp)
 					// this will ensure that the page that is being evicted has reached to disk
 					// before someone comes along and tries to read it again
 						// if the page_entry is dirty, then write it to disk and clear the dirty bit
-						if(page_ent->is_dirty)
+						if(check(page_ent, IS_DIRTY))
 						{
 							acquire_read_lock(page_ent);
 								write_page_to_disk(page_ent, buffp->db_file);
 							release_read_lock(page_ent);
 
 							// since the cleanup is performed, the page is now not dirty
-							page_ent->is_dirty = 0;
+							reset(page_ent, IS_DIRTY);
 						}
 
 						if(discard_page_request_if_not_referenced(buffp->rq_tracker, page_ent->page_id) == 1)
@@ -107,7 +107,7 @@ static void* io_page_replace_task(bufferpool* buffp)
 		release_write_lock(page_ent);
 
 		// no compression support yet
-		page_ent->is_compressed = 0;
+		reset(page_ent, IS_COMPRESSED);
 
 		// also reinitialize the usage count
 		page_ent->usage_count = 0;
@@ -142,14 +142,14 @@ static void* io_clean_up_task(cleanup_params* cp)
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
 
 			// clean up for the page, only if it is dirty
-			if(page_ent->is_dirty)
+			if(check(page_ent, IS_DIRTY))
 			{
 				acquire_read_lock(page_ent);
 					write_page_to_disk(page_ent, buffp->db_file);
 				release_read_lock(page_ent);
 
 				// since the cleanup is performed, the page is now not dirty
-				page_ent->is_dirty = 0;
+				reset(page_ent, IS_DIRTY);
 
 				// update the last_io timestamp, acknowledging when was the io performed
 				setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);
@@ -157,7 +157,7 @@ static void* io_clean_up_task(cleanup_params* cp)
 
 			// whether cleanup was performed or not, the page_entry is now not in queue, because the cleanup task is complete
 			// there is a possibility that for some reason the page_entry was found already clean, and so the clean up action was not performed
-			page_ent->is_queued_for_cleanup = 0;
+			reset(page_ent, IS_QUEUED_FOR_CLEANUP);
 
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
@@ -173,12 +173,12 @@ void queue_job_for_page_request(bufferpool* buffp)
 void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
+		if(check(page_ent, IS_DIRTY) && !check(page_ent, IS_QUEUED_FOR_CLEANUP))
 		{
 			cleanup_params* cp = malloc(sizeof(cleanup_params));
 			(*cp) = (cleanup_params){.is_on_heap_memory = 1, .buffp = buffp, .page_ent = page_ent};
 			submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, cp);
-			page_ent->is_queued_for_cleanup = 1;
+			set(page_ent, IS_QUEUED_FOR_CLEANUP);
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 }
@@ -190,11 +190,11 @@ void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_ent
 	cleanup_params cp = {.is_on_heap_memory = 0, .buffp = buffp, .page_ent = page_ent};
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
+		if(check(page_ent, IS_DIRTY) && !check(page_ent, IS_QUEUED_FOR_CLEANUP))
 		{
 			initialize_job(&cleanup_job, (void*(*)(void*))io_clean_up_task, &cp);
 			submit_job(buffp->io_dispatcher, &cleanup_job);
-			page_ent->is_queued_for_cleanup = 1;
+			set(page_ent, IS_QUEUED_FOR_CLEANUP);
 			cleanup_job_queued = 1;
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));

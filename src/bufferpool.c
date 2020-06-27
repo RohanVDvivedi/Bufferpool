@@ -223,7 +223,7 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int 
 			page_ent->pinned_by_count--;
 			if(was_modified)
 			{
-				page_ent->is_dirty = 1;
+				set(page_ent, IS_DIRTY);
 			}
 			if(page_ent->pinned_by_count == 0)
 			{

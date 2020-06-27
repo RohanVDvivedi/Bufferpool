@@ -12,6 +12,20 @@
 
 #include<linkedlist.h>
 
+typedef enum page_entry_flags page_entry_flags;
+enum page_entry_flags
+{
+	// if the page is dirty, this byte is set to 1, else 0
+	// if a page is dirty, it is yet to be written to disk
+	IS_DIRTY 				= 0b00000001,
+
+	// this bit represents if a corresponding page entry has been queued for cleanup
+	IS_QUEUED_FOR_CLEANUP 	= 0b00000010,
+
+	// this bit is set, if the page stored at page_memory is in a compressed form, currently not used
+	IS_COMPRESSED 			= 0b00000100
+};
+
 typedef struct page_entry page_entry;
 struct page_entry
 {
@@ -45,15 +59,9 @@ struct page_entry
 
 
 
-	// this bit is set, if the page stored at page_memory is in a compressed form
-	uint8_t is_compressed;
-
-	// if the page is dirty, this byte is set to 1, else 0
-	// if a page is dirty, it is yet to be written to disk
-	uint8_t is_dirty;
-
-	// this bit will be set, if this page_entry gets queued for cleanup of the dirty page, in the buffer pool of the io_dispatcher
-	uint8_t is_queued_for_cleanup;
+	// the flags field represents the current state of this page entry
+	// check page_entry_flags above
+	uint8_t FLAGS;
 
 	// if the page is being used/going to be used by any of the thread, then this count has to be incremented by that thread
 	// if the pin count for a page > 0, the buffer pool manager will not replace it, with any other page/data i.e. it is not swappable
@@ -94,8 +102,9 @@ int write_page_to_disk(page_entry* page_ent, dbfile* dbfile_p);
 void deinitialize_page_entry(page_entry* page_ent);
 
 
-
-
+void set(page_entry* page_ent, page_entry_flags flag);
+void reset(page_entry* page_ent, page_entry_flags flag);
+int check(page_entry* page_ent, page_entry_flags flag);
 
 //*** UTILITY FUNCTIONS TO ALLOW PAGE_TABLE CREATE HASHMAPS TO EFFECIENTLY FIND PAGE ENTRIES WHEN NEEDED
 

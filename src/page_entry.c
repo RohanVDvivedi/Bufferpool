@@ -10,10 +10,8 @@ void initialize_page_entry(page_entry* page_ent)
 	page_ent->start_block_id = 0;
 	page_ent->number_of_blocks = 0;
 
-	// set appropriate bits for the page entry, (recognizing that the page_entry is initially clean and free, and no cleanup io has been queued on its creation)
-	page_ent->is_compressed = 0;
-	page_ent->is_dirty = 0;
-	page_ent->is_queued_for_cleanup = 0;
+	// set appropriate bits for the page entry flags, (recognizing that the page_entry is initially clean and free, and no cleanup io has been queued on its creation)
+	page_ent->FLAGS = 0;
 
 	setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);
 	
@@ -73,6 +71,21 @@ void deinitialize_page_entry(page_entry* page_ent)
 {
 	pthread_mutex_destroy(&(page_ent->page_entry_lock));
 	deinitialize_rwlock(&(page_ent->page_memory_lock));
+}
+
+void set(page_entry* page_ent, page_entry_flags flag)
+{
+	page_ent->FLAGS |= flag;
+}
+
+void reset(page_entry* page_ent, page_entry_flags flag)
+{
+	page_ent->FLAGS &= (~flag);
+}
+
+int check(page_entry* page_ent, page_entry_flags flag)
+{
+	return page_ent->FLAGS & flag;
 }
 
 int compare_page_entry_by_page_id(const void* page_ent1, const void* page_ent2)
