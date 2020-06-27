@@ -5,5 +5,3 @@
 * reduce memory foot print 
 	* by inserting the page entry to page table, inside the io_dispatcher itself
 	* by discarding the page request at the earliest after the page entry reaches the page table
-	* use enum based bit fields for represent all flags in just 8 bits
-	* dbfile is an attribute of the buffer pool, remove the duplicate form the page entry, and use dbfile as a parameter only in the page entry to read or write
