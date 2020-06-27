@@ -18,9 +18,6 @@ struct page_entry
 	// this lock ensures only 1 thread attempts to access the page_entry at any given moment
 	pthread_mutex_t page_entry_lock;
 
-	// this is the database file, to which the page_entry belongs to
-	dbfile* dbfile_p;
-
 
 
 
@@ -78,7 +75,7 @@ struct page_entry
 	llnode lru_ll_node;
 };
 
-void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p);
+void initialize_page_entry(page_entry* page_ent);
 
 void acquire_read_lock(page_entry* page_ent);
 
@@ -90,9 +87,9 @@ void release_write_lock(page_entry* page_ent);
 
 void reset_page_to(page_entry* page_ent, PAGE_ID page_id, BLOCK_ID start_block_id, BLOCK_COUNT number_of_blocks, void* page_memory);
 
-int read_page_from_disk(page_entry* page_ent);
+int read_page_from_disk(page_entry* page_ent, dbfile* dbfile_p);
 
-int write_page_to_disk(page_entry* page_ent);
+int write_page_to_disk(page_entry* page_ent, dbfile* dbfile_p);
 
 void deinitialize_page_entry(page_entry* page_ent);
 

@@ -78,7 +78,7 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 	for(PAGE_COUNT i = 0; i < maximum_pages_in_cache; i++)
 	{
 		page_entry* page_ent = buffp->page_entries + i;
-		initialize_page_entry(page_ent, buffp->db_file);
+		initialize_page_entry(page_ent);
 		mark_as_not_yet_used(buffp->lru_p, page_ent);
 	}
 

@@ -1,12 +1,10 @@
 #include<page_entry.h>
 
-void initialize_page_entry(page_entry* page_ent, dbfile* dbfile_p)
+void initialize_page_entry(page_entry* page_ent)
 {
 	pthread_mutex_init(&(page_ent->page_entry_lock), NULL);
 	// This lock is needed to be acquired to access page attributes only,
 	// use page_memory_lock, to gain access to memory of the page
-
-	page_ent->dbfile_p = dbfile_p;
 
 	page_ent->page_id = 0;
 	page_ent->start_block_id = 0;
@@ -61,14 +59,14 @@ void reset_page_to(page_entry* page_ent, PAGE_ID page_id, BLOCK_ID start_block_i
 	page_ent->page_memory = page_memory;
 }
 
-int read_page_from_disk(page_entry* page_ent)
+int read_page_from_disk(page_entry* page_ent, dbfile* dbfile_p)
 {
-	return read_blocks_from_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->start_block_id, page_ent->number_of_blocks);
+	return read_blocks_from_disk(dbfile_p, page_ent->page_memory, page_ent->start_block_id, page_ent->number_of_blocks);
 }
 
-int write_page_to_disk(page_entry* page_ent)
+int write_page_to_disk(page_entry* page_ent, dbfile* dbfile_p)
 {
-	return write_blocks_to_disk(page_ent->dbfile_p, page_ent->page_memory, page_ent->start_block_id, page_ent->number_of_blocks);
+	return write_blocks_to_disk(dbfile_p, page_ent->page_memory, page_ent->start_block_id, page_ent->number_of_blocks);
 }
 
 void deinitialize_page_entry(page_entry* page_ent)

@@ -16,9 +16,9 @@ static void* io_page_replace_task(bufferpool* buffp)
 	// initialize a dummy page entry, and perform read from disk io on it, without acquiring any locks
 	// since it is a local variable, we can perform io, without taking any locks
 	// the new_page_memory is the variable that will hold the page memory frame read from the disk file
-	page_entry dummy_page_ent;	dummy_page_ent.dbfile_p = buffp->db_file;
+	page_entry dummy_page_ent;
 	reset_page_to(&dummy_page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, allocate_page_frame(buffp->pfa_p));
-	read_page_from_disk(&dummy_page_ent);
+	read_page_from_disk(&dummy_page_ent, buffp->db_file);
 
 	page_entry* page_ent = NULL;
 
@@ -53,7 +53,7 @@ static void* io_page_replace_task(bufferpool* buffp)
 						if(page_ent->is_dirty)
 						{
 							acquire_read_lock(page_ent);
-								write_page_to_disk(page_ent);
+								write_page_to_disk(page_ent, buffp->db_file);
 							release_read_lock(page_ent);
 
 							// since the cleanup is performed, the page is now not dirty
@@ -122,8 +122,21 @@ static void* io_page_replace_task(bufferpool* buffp)
 	return NULL;
 }
 
-static void* io_clean_up_task(page_entry* page_ent)
+typedef struct cleanup_params cleanup_params;
+struct cleanup_params
 {
+	int is_on_heap_memory;
+	bufferpool* buffp;
+	page_entry* page_ent;
+};
+
+static void* io_clean_up_task(cleanup_params* cp)
+{
+	page_entry* page_ent = cp->page_ent;
+	bufferpool* buffp = cp->buffp;
+	if(cp->is_on_heap_memory)
+		free(cp);
+
 	if(page_ent != NULL)
 	{
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
@@ -132,7 +145,7 @@ static void* io_clean_up_task(page_entry* page_ent)
 			if(page_ent->is_dirty)
 			{
 				acquire_read_lock(page_ent);
-					write_page_to_disk(page_ent);
+					write_page_to_disk(page_ent, buffp->db_file);
 				release_read_lock(page_ent);
 
 				// since the cleanup is performed, the page is now not dirty
@@ -162,7 +175,9 @@ void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 		if(page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
 		{
-			submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, page_ent);
+			cleanup_params* cp = malloc(sizeof(cleanup_params));
+			(*cp) = (cleanup_params){.is_on_heap_memory = 1, .buffp = buffp, .page_ent = page_ent};
+			submit_function(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, cp);
 			page_ent->is_queued_for_cleanup = 1;
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
@@ -172,11 +187,12 @@ void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_ent
 {
 	int cleanup_job_queued = 0;
 	job cleanup_job;
+	cleanup_params cp = {.is_on_heap_memory = 0, .buffp = buffp, .page_ent = page_ent};
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 		if(page_ent->is_dirty && !page_ent->is_queued_for_cleanup)
 		{
-			initialize_job(&cleanup_job, (void*(*)(void*))io_clean_up_task, page_ent);
+			initialize_job(&cleanup_job, (void*(*)(void*))io_clean_up_task, &cp);
 			submit_job(buffp->io_dispatcher, &cleanup_job);
 			page_ent->is_queued_for_cleanup = 1;
 			cleanup_job_queued = 1;
