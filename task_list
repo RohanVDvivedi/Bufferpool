@@ -2,6 +2,3 @@
 * selectively made dirty pages become clean and get inserted in clean pages lru queue
 * build sloppy and use sloppy for page_request and page_entry structures
 * build page directory manager, to manage a map of compressed on disk pages
-* reduce memory foot print 
-	* by inserting the page entry to page table, inside the io_dispatcher itself
-	* by discarding the page request at the earliest after the page entry reaches the page table
