@@ -60,24 +60,10 @@ static void* io_page_replace_task(bufferpool* buffp)
 							reset(page_ent, IS_DIRTY);
 						}
 
-						if(discard_page_request_if_not_referenced(buffp->rq_tracker, page_ent->page_id) == 1)
-						{
-							discard_page_entry(buffp->pg_tbl, page_ent);
-							break;
-						}
-						else
-						{// if the page request corresponding to the page entry is being used,
-						// so it was anyway going to be discarded from the lru,
-						// this is the reason why we would not worry about inserting it back to lru
-							pthread_mutex_unlock(&(page_ent->page_entry_lock));
-							page_ent = NULL;
-							continue;
-						}
+						discard_page_entry(buffp->pg_tbl, page_ent);
 					}
-					else
-					{
-						break;
-					}
+					
+					break;
 				}
 				else
 				{
@@ -117,7 +103,11 @@ static void* io_page_replace_task(bufferpool* buffp)
 
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
+	insert_page_entry(buffp->pg_tbl, page_ent);
+
 	fulfill_requested_page_entry_for_page_request(page_req_to_fulfill, page_ent);
+
+	discard_page_request(buffp->rq_tracker, page_req_to_fulfill->page_id);
 	
 	return NULL;
 }

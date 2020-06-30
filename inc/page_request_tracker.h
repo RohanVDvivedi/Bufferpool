@@ -38,13 +38,12 @@ page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests);
 // if you have the page_request reference returned by this function (if bbq == NULL),
 // you must to wait on it by calling "get_requested_page_entry_and_discard_page_request" on the page_request
 // if you have provided with valid bbq, the page_id of the page will be pushed into the queue when the request is fulfilled
-page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PAGE_ID page_id, bufferpool* buffp, bbqueue* bbq);
+// if while creating a new page request, if it is found that a page_entry corresponding to the request already exist then NULL will be returned and *existing_page_entry would be returned
+page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PAGE_ID page_id, bufferpool* buffp, bbqueue* bbq, page_entry** existing_page_entry);
 
-// this function will discard a request from its hashmap, and mark the page_request for deletion, 
-// if and only if the page_request is currently not being referenced by any thread or data structure
-// since effectively the page_request is not being referenced by any_one, when it is being marked for deletion it gets deleted internally by the same thread that calls this function
+// this function will discard a request from page_request_tracker, and mark the page_request for deletion, 
 // the function returns 1, if the page_request was successfully discarded and deleted
-int discard_page_request_if_not_referenced(page_request_tracker* prt_p, PAGE_ID page_id);
+int discard_page_request(page_request_tracker* prt_p, PAGE_ID page_id);
 
 void delete_page_request_tracker(page_request_tracker* prt_p);
 

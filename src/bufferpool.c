@@ -126,11 +126,14 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 		{
 			// search the request mapper hashmap, to get an already created page request, if not, create one for this page_id
 			// we do not provide any bbq, since we will immediately wait for getting page_entry from the page_request
-			page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, NULL);
+			page_request* page_req = find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, NULL, &page_ent);
 
-			// we block until the page_request io is fullfilled, by the io dispatcher
-			// also it is not safe to reference the same page_request, once this method is called (check page_request.h)
-			page_ent = get_requested_page_entry_and_discard_page_request(page_req);
+			if(page_req != NULL)
+			{
+				// we block until the page_request io is fullfilled, by the io dispatcher
+				// also it is not safe to reference the same page_request, once this method is called (check page_request.h)
+				page_ent = get_requested_page_entry_and_discard_page_request(page_req);
+			}
 
 			if(page_ent != NULL)
 			{
@@ -139,10 +142,6 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 				// check if correct page_entry has been acquired
 				if(page_ent->page_id == page_id)
 				{
-					// once the page_entry we desire has been found, we insert it in page_entry mapper of the bufferpool, 
-					// so that is it found efficiently by the next user thread
-					insert_page_entry(buffp->pg_tbl, page_ent);
-
 					is_page_entry_found = 1;
 				}
 				else
@@ -255,7 +254,10 @@ void request_page_prefetch(bufferpool* buffp, PAGE_ID start_page_id, PAGE_COUNT 
 		PAGE_ID page_id = start_page_id;
 		for(PAGE_COUNT i = 0; i < page_count; i++)
 		{
-			find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, bbq);
+			if(find_page_entry_by_page_id(buffp->pg_tbl, page_id) != NULL)
+				push_bbqueue(bbq, page_id);
+			else
+				find_or_create_request_for_page_id(buffp->rq_tracker, page_id, buffp, bbq, NULL);
 			page_id++;
 		}
 	}

@@ -9,7 +9,7 @@ page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests)
 	return prt_p;
 }
 
-page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PAGE_ID page_id, bufferpool* buffp, bbqueue* bbq)
+page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PAGE_ID page_id, bufferpool* buffp, bbqueue* bbq, page_entry** existing_page_entry)
 {
 	// dummy page_request with given page_id to call search
 	page_request dummy_page_request = {.page_id = page_id};
@@ -41,6 +41,17 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 	{
 		write_lock(&(prt_p->page_request_tracker_lock));
 
+			page_entry* page_ent = find_page_entry_by_page_id(buffp->pg_tbl, page_id);
+			if(page_ent != NULL)
+			{
+				write_unlock(&(prt_p->page_request_tracker_lock));
+				if(existing_page_entry != NULL)
+					*existing_page_entry = page_ent;
+				if(bbq != NULL)
+					push_bbqueue(bbq, page_id);
+				return NULL;
+			}
+
 			page_req = (page_request*) find_equals_in_hashmap(&(prt_p->page_request_map), &dummy_page_request);
 
 			if(page_req == NULL)
@@ -70,7 +81,7 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 		return NULL;
 }
 
-int discard_page_request_if_not_referenced(page_request_tracker* prt_p, PAGE_ID page_id)
+int discard_page_request(page_request_tracker* prt_p, PAGE_ID page_id)
 {
 	// dummy page_request to call search on
 	page_request dummy_page_request = {.page_id = page_id};
@@ -78,7 +89,7 @@ int discard_page_request_if_not_referenced(page_request_tracker* prt_p, PAGE_ID 
 	int discarded = 0;
 	write_lock(&(prt_p->page_request_tracker_lock));
 		page_request* page_req = (page_request*) find_equals_in_hashmap(&(prt_p->page_request_map), &dummy_page_request);
-		if(page_req != NULL && get_page_request_reference_count(page_req) == 1)
+		if(page_req != NULL)
 		{
 			discarded = remove_from_hashmap(&(prt_p->page_request_map), page_req);
 			if(discarded)
