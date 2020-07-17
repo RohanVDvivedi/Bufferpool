@@ -16,17 +16,14 @@ OBJECTS:=$(patsubst $(SRC_DIR)%.c,$(OBJ_DIR)%.o,${SOURCES})
 TARGET:=${BIN_DIR}/libbufferpoolman.a
 
 # place your include directories -I flag here
-CFLAGS=-Wall -I${INC_DIR} -I${CUTLERY_PATH}/inc -I${RWLOCK_PATH}/inc -I${BOOMPAR_PATH}/inc
-
-# the header files from external libraries
-HEADER_DEPENDENCIES=${CUTLERY_PATH}/inc/*.h ${RWLOCK_PATH}/inc/*.h ${BOOMPAR_PATH}/inc/*.h
+CFLAGS=-Wall -O3 -I${INC_DIR}
 
 # rule to make the object directory
 ${OBJ_DIR} :
 	mkdir -p $@
 
 # generic rule to build any object file
-${OBJ_DIR}/%.o : ${SRC_DIR}/%.c ${INC_DIR}/%.h ${HEADER_DEPENDENCIES} | ${OBJ_DIR}
+${OBJ_DIR}/%.o : ${SRC_DIR}/%.c ${INC_DIR}/%.h | ${OBJ_DIR}
 	${CC} ${CFLAGS} -c $< -o $@
 
 # rule to make the directory for binaries or libraries
@@ -40,10 +37,12 @@ $(TARGET) : ${OBJECTS} | ${BIN_DIR}
 # just build the target
 all : $(TARGET)
 
-# clean all the build
+# clean all the build, in this directory
+# does not remove the existing installation
 clean :
 	$(RM) -r $(BIN_DIR) $(OBJ_DIR)
 
-# path to the library
-path : 
-	@echo "export BUFFER_POOL_MAN_PATH=\`pwd\`"
+# install the library, from this directory to user environment path
+install : all
+	cp ${INC_DIR}/* /usr/local/include
+	cp ${BIN_DIR}/* /usr/local/lib
