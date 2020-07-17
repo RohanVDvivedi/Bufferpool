@@ -1,7 +1,7 @@
 # bufferpoolman
-This project is an implementation of a Buffer Pool Manager used for managing access to a Heap File from a HDD/SSD and caching it as needed using Least Recently Used cache-page eviction policy.
+It is an implementation of a Buffer Pool Manager library in C (like Linux page cache, but in user-space), used for accessing pages of a Heap File from a HDD/SSD and caching it, by using well defined eviction policy for replacement.
 
-The Heap File is a file of unordered pages, where each page is identified using a 32 bit integer but the integer does not reveal anything about the actual location of the page.
+**A Heap File** is a file of unordered fixed sized pages, where each page is identified using a 32 bit integer but the integer itself does not reveal anything about the actual location of the page in the file.
 
  * bufferpoolman is not itself a database storage engine although it can be used to build a database storage engine.
  * A very simple linkedlist based actual LRU Policy is implemented to evict the pages for replacement.
