@@ -15,4 +15,4 @@ setup instructions
  * git clone https://github.com/RohanVDvivedi/bufferpoolman.git
  * cd bufferpoolman
  * sudo make clean install
- * add "-lbufferpoolman" linker flag, while compiling your application
+ * add "-lbufferpoolman -lboompar -lrwlock -lpthread -lcutlery" linker flag, while compiling your application
