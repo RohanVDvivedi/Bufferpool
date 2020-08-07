@@ -14,7 +14,9 @@ struct lru
 	// the calling thread can wait for empty lru on this conditional wait variable
 	pthread_cond_t wait_for_empty;
 
-	// lock, to protect both the lists of page_entries
+	// lock, to protect all the lists of page_entries
+	// it is also responsible to make thread safe access to page_entry attributes, which exist for the sole purpose of lru
+	// those fields are lru_list and lru_ll_node
 	pthread_mutex_t lru_lock;
 
 	// this are the in-memory linkedlist of page_entries of the buffer pool, being used in the lru
@@ -29,6 +31,12 @@ struct lru
 										// example pages used during a sequential scan
 	linkedlist clean_page_entries;
 	linkedlist dirty_page_entries;
+
+	// Note: every page-entry has lru_ll_node, it will be in use by any of the linkedlist of lru
+	// to check if a page entry exists in a particular linkedlist of lru is a great deal of effort O(N)
+	// hence we use the lru_list field to store a pointer to the linkedlist, where the page_entry currently resides
+	// we update lru_list every time, we remove or insert a page_entry
+	// both of the above attributes are also protected by the lru_lock
 };
 
 lru* get_lru();

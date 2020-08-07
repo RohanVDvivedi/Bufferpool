@@ -81,6 +81,11 @@ struct page_entry
 	// linkedlist node for LRU
 	// protected by locks of LRU
 	llnode lru_ll_node;
+	// the below pointer tells us, the linkedlist of lru, in which the current page entry is residing
+	// it is NULL if the page entry does not exist in lru (i.e. it is not existing in any of linkedlist of lru)
+	linkedlist* lru_list;
+	// the above two fields are related to lru, and will be protected under the mutec of lru (lru_lock mutex of lru) only
+	// these above two fields must not be used, checked outside lru, i.e. outside lru_lock
 };
 
 void initialize_page_entry(page_entry* page_ent);
