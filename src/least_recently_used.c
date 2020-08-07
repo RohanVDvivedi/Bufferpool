@@ -2,6 +2,11 @@
 
 #include<stddef.h>
 
+/*
+** Every insert/remove from any of the linkedlist of lru, must follow with a corresponding 
+** page_ent->lru_list = <some pointer to linkedlist of lru or NULL if being removed>;
+*/
+
 lru* get_lru()
 {
 	lru* lru_p = (lru*) malloc(sizeof(lru));
@@ -17,28 +22,27 @@ lru* get_lru()
 page_entry* get_swapable_page(lru* lru_p)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
+
 		page_entry* page_ent = NULL;
+		linkedlist* non_empty_linkedlist = NULL;
+
+		// select a non empty linkedlist, selection order must be this only
 		if(!is_linkedlist_empty(&(lru_p->free_page_entries)))
-		{
-			page_ent = (page_entry*) get_head(&(lru_p->free_page_entries));
-			remove_head(&(lru_p->free_page_entries));
-		}
+			non_empty_linkedlist = &(lru_p->free_page_entries);
 		else if(!is_linkedlist_empty(&(lru_p->evictable_page_entries)))
-		{
-			page_ent = (page_entry*) get_head(&(lru_p->evictable_page_entries));
-			remove_head(&(lru_p->evictable_page_entries));
-		}
+			non_empty_linkedlist = &(lru_p->evictable_page_entries);
 		else if(!is_linkedlist_empty(&(lru_p->clean_page_entries)))
-		{
-			page_ent = (page_entry*) get_head(&(lru_p->clean_page_entries));
-			remove_head(&(lru_p->clean_page_entries));
-		}
+			non_empty_linkedlist = &(lru_p->clean_page_entries);
 		else if(!is_linkedlist_empty(&(lru_p->dirty_page_entries)))
+			non_empty_linkedlist = &(lru_p->dirty_page_entries);
+
+		if(non_empty_linkedlist != NULL)
 		{
-			page_ent = (page_entry*) get_head(&(lru_p->dirty_page_entries));
-			remove_head(&(lru_p->dirty_page_entries));
+			page_ent = (page_entry*) get_head(non_empty_linkedlist);
+			int removed = remove_head(non_empty_linkedlist);
+			if(removed)
+				page_ent->lru_list = NULL;
 		}
-		page_ent->lru_list = NULL;
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 	return page_ent;
 }
@@ -86,56 +90,66 @@ int is_page_entry_present_in_lru(lru* lru_p, page_entry* page_ent)
 void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
+
 		remove_from_all_lists(lru_p, page_ent);
+
+		linkedlist* linkedlist_to_insert = NULL;
 		if(check(page_ent, IS_DIRTY))
-		{
-			insert_tail(&(lru_p->dirty_page_entries), page_ent);
-			page_ent->lru_list = &(lru_p->dirty_page_entries);
-		}
+			linkedlist_to_insert = &(lru_p->dirty_page_entries);
 		else if(page_ent->page_memory == NULL)
-		{
-			insert_tail(&(lru_p->free_page_entries), page_ent);
-			page_ent->lru_list = &(lru_p->free_page_entries);
-		}
+			linkedlist_to_insert = &(lru_p->free_page_entries);
 		else
+			linkedlist_to_insert = &(lru_p->clean_page_entries);
+
+		if(linkedlist_to_insert != NULL)
 		{
-			insert_tail(&(lru_p->clean_page_entries), page_ent);
-			page_ent->lru_list = &(lru_p->clean_page_entries);
+			int inserted = insert_tail(linkedlist_to_insert, page_ent);
+			if(inserted)
+				page_ent->lru_list = linkedlist_to_insert;
 		}
-	pthread_cond_broadcast(&(lru_p->wait_for_empty));
+
+		pthread_cond_broadcast(&(lru_p->wait_for_empty));
+
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 }
 
 void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
+
 		remove_from_all_lists(lru_p, page_ent);
+
+		linkedlist* linkedlist_to_insert = NULL;
 		if(check(page_ent, IS_DIRTY))
-		{
-			insert_head(&(lru_p->dirty_page_entries), page_ent);
-			page_ent->lru_list = &(lru_p->dirty_page_entries);
-		}
+			linkedlist_to_insert = &(lru_p->dirty_page_entries);
 		else if(page_ent->page_memory == NULL)
-		{
-			insert_head(&(lru_p->free_page_entries), page_ent);
-			page_ent->lru_list = &(lru_p->free_page_entries);
-		}
+			linkedlist_to_insert = &(lru_p->free_page_entries);
 		else
+			linkedlist_to_insert = &(lru_p->clean_page_entries);
+
+		if(linkedlist_to_insert != NULL)
 		{
-			insert_head(&(lru_p->clean_page_entries), page_ent);
-			page_ent->lru_list = &(lru_p->clean_page_entries);
+			int inserted = insert_head(linkedlist_to_insert, page_ent);
+			if(inserted)
+				page_ent->lru_list = linkedlist_to_insert;
 		}
-	pthread_cond_broadcast(&(lru_p->wait_for_empty));
+
+		pthread_cond_broadcast(&(lru_p->wait_for_empty));
+
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 }
 
 void mark_as_evictable(lru* lru_p, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
+
 		remove_from_all_lists(lru_p, page_ent);
-		insert_head(&(lru_p->evictable_page_entries), page_ent);
-		page_ent->lru_list = &(lru_p->evictable_page_entries);
-	pthread_cond_broadcast(&(lru_p->wait_for_empty));
+
+		int inserted = insert_head(&(lru_p->evictable_page_entries), page_ent);
+		if(inserted)
+			page_ent->lru_list = &(lru_p->evictable_page_entries);
+
+		pthread_cond_broadcast(&(lru_p->wait_for_empty));
 	pthread_mutex_unlock(&(lru_p->lru_lock));
 }
 
