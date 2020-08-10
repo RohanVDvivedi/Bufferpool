@@ -1,4 +1,5 @@
-* try to make more sequential io, larger and fewer read/write calls to disk/os
-* selectively made dirty pages become clean and get inserted in clean pages lru queue
-* build sloppy and use sloppy for page_request and page_entry structures
-* build page directory manager, to manage a map of compressed on disk pages
+ * selectively made dirty pages become clean and get inserted in clean pages lru queue
+
+ * build sloppy and use sloppy for page_request and page_entry structures (*future feature, when Sloppy is tested enough, we can not take that risk at this satge, also page_entries are allocated only one time, hence this is not needed)
+
+ * build page directory manager, to manage a map of compressed on disk pages (*future feature)
