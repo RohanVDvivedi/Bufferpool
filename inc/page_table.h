@@ -8,8 +8,6 @@
 
 #include<page_entry.h>
 
-#include<stddef.h>
-
 // the task of this structure and functions is to map page entries, 
 // it maps
 // page_memory (pointer value) 		-> 		page_entry  	[using mem_mapping]

@@ -1,7 +1,12 @@
-#include<bufferpool.h>
 #include<cleanup_scheduler.h>
 
-#define MIN(a,b) ((a < b) ? a : b);
+#include<bufferpool_struct_def.h>
+#include<io_dispatcher.h>
+
+static inline TIME_ms MIN_TIME_ms(TIME_ms a, TIME_ms b)
+{
+	return (a<b) ? a : b;
+}
 
 // returns 1, if the clean up was required for the page_entry at a given index
 static int check_and_queue_if_cleanup_required(bufferpool* buffp, PAGE_COUNT index, int clean_up_sync)
@@ -54,7 +59,7 @@ static void* cleanup_scheduler_task_function(void* param)
 {
 	bufferpool* buffp = (bufferpool*) param;
 
-	TIME_ms min_sleep_in_ms = MIN(buffp->cleanup_rate_in_milliseconds, buffp->unused_prefetched_page_return_in_ms);
+	TIME_ms min_sleep_in_ms = MIN_TIME_ms(buffp->cleanup_rate_in_milliseconds, buffp->unused_prefetched_page_return_in_ms);
 
 	while(buffp->SHUTDOWN_CALLED == 0)
 	{

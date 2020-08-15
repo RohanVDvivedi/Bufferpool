@@ -1,6 +1,10 @@
 #include<bufferpool.h>
 
-#include<errno.h>
+#include<bufferpool_struct_def.h>
+
+#include<cleanup_scheduler.h>
+
+#include<sys/mman.h>
 
 bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cache, SIZE_IN_BYTES page_size, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
 {

@@ -3,13 +3,10 @@
 
 #include<rwlock.h>
 #include<hashmap.h>
-#include<queue.h>
 
 #include<page_request.h>
 
 #include<bounded_blocking_queue.h>
-
-#include<stddef.h>
 
 /*
 	This structure is responsible to keep a mapping from page_id to page_request
@@ -28,7 +25,6 @@ struct page_request_tracker
 };
 
 typedef struct bufferpool bufferpool;
-struct bufferpool;
 
 page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests);
 

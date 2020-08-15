@@ -1,5 +1,6 @@
-#include<bufferpool.h>
 #include<io_dispatcher.h>
+
+#include<bufferpool_struct_def.h>
 
 static void* io_page_replace_task(bufferpool* buffp)
 {

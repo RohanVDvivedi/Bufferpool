@@ -4,6 +4,7 @@
 
 /*
 ** Every insert/remove from any of the linkedlist of lru, must follow with a corresponding 
+** update to the pointer in the page_entry, which helps us identify which linkedlist the given page_entry resides in
 ** page_ent->lru_list = <some pointer to linkedlist of lru or NULL if being removed>;
 */
 

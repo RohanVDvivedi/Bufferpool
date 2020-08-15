@@ -1,5 +1,7 @@
 #include<page_table.h>
 
+#include<stddef.h>
+
 page_table* get_page_table(PAGE_COUNT page_entry_count)
 {
 	page_table* pg_tbl = (page_table*) malloc(sizeof(page_table));

@@ -3,8 +3,7 @@
 
 #include<buffer_pool_man_types.h>
 
-#include<page_entry.h>
-#include<io_dispatcher.h>
+typedef struct bufferpool bufferpool;
 
 // returns 1, if the page cleanup scheduler was/could be started
 // page cleanup scheduler would not start if buffer pool does not have any page entries

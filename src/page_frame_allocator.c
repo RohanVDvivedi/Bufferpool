@@ -1,5 +1,8 @@
 #include<page_frame_allocator.h>
 
+#include<sys/mman.h> 	// mmap, munmap etc
+#include<errno.h>		// errno
+
 page_frame_allocator* get_page_frame_allocator(PAGE_COUNT pages_count, SIZE_IN_BYTES page_size)
 {
 	page_frame_allocator* pfa_p = (page_frame_allocator*) malloc(sizeof(page_frame_allocator));

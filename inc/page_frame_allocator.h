@@ -1,8 +1,6 @@
 #ifndef PAGE_FRAME_ALLOCATOR
 #define PAGE_FRAME_ALLOCATOR
 
-#include<sys/mman.h>
-#include<stddef.h>
 #include<pthread.h>
 
 #include<linkedlist.h>

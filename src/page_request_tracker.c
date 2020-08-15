@@ -1,5 +1,8 @@
 #include<page_request_tracker.h>
-#include<bufferpool.h>
+
+#include<bufferpool_struct_def.h>
+
+#include<stddef.h>
 
 page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests)
 {
