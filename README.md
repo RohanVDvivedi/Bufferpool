@@ -11,4 +11,26 @@ It is an implementation of a Buffer Pool Manager library in C (like Linux page c
  * "Bufferpool" does not impose any restriction on the size of the page you wish to use for your heap file but the page size must be a multiple of the physical block size of the disk. It is recommended to keep the page size equal to file system block size to avoid any unsuspected issues.
  * To use this project on raw ext2/ext3/ext4 filesystems, you may need to turn off data journaling on the respective filesystem/partition (because Direct I/O and syncing writes are used by the project).
 
-setup instructions
+## Setup instructions
+
+**Download source code :**
+ * `git clone https://github.com/RohanVDvivedi/Bufferpool.git`
+
+**Build from source :**
+ * `cd Bufferpool`
+ * `make clean all`
+
+**Install from the build :**
+ * `sudo make install`
+ * ***Once you have installed from source, you may discard the build by*** `make clean`
+
+## Using The library
+ * add `-lbufferpool -lboompar -lrwlock -lpthread -lcutlery` linker flag, while compiling your application
+ * do not forget to include appropriate public api headers as and when needed. this includes
+   * `#include<bufferpool.h>`
+
+## Instructions for uninstalling library
+
+**Uninstall :**
+ * `cd Bufferpool`
+ * `sudo make uninstall`
