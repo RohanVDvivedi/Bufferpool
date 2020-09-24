@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 				io_tasks[indx].pop_page_id_from_queue = 1;
 			}
 		}
-		submit_function(exe, (void*(*)(void*))io_task_execute, io_t_p);
+		submit_job(exe, (void*(*)(void*))io_task_execute, io_t_p, NULL);
 	}
 
 	shutdown_executor(exe, 0);
