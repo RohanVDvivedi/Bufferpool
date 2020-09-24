@@ -73,6 +73,7 @@ struct bufferpool
 
 	// single thread that queues dirty pages to io_dispatcher for clean up, at a constant rate
 	job* cleanup_scheduler;
+	promise* cleanup_scheduler_completion_promise;
 
 	// ******** Threads section end
 

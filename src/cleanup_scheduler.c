@@ -84,13 +84,14 @@ static void* cleanup_scheduler_task_function(void* param)
 
 void start_async_cleanup_scheduler(bufferpool* buffp)
 {
-	buffp->cleanup_scheduler = get_job((void*(*)(void*))cleanup_scheduler_task_function, buffp);
+	buffp->cleanup_scheduler_completion_promise = get_promise();
+	buffp->cleanup_scheduler = get_job((void*(*)(void*))cleanup_scheduler_task_function, buffp, buffp->cleanup_scheduler_completion_promise);
 
 	execute_async(buffp->cleanup_scheduler);
 }
 
 void wait_for_shutdown_cleanup_scheduler(bufferpool* buffp)
 {
-	get_result(buffp->cleanup_scheduler);
+	get_promised_result(&(buffp->cleanup_scheduler_completion_promise));
 	delete_job(buffp->cleanup_scheduler);
 }
