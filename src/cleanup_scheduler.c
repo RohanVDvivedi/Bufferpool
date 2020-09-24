@@ -93,5 +93,6 @@ void start_async_cleanup_scheduler(bufferpool* buffp)
 void wait_for_shutdown_cleanup_scheduler(bufferpool* buffp)
 {
 	get_promised_result(buffp->cleanup_scheduler_completion_promise);
+	delete_promise(buffp->cleanup_scheduler_completion_promise);
 	delete_job(buffp->cleanup_scheduler);
 }
