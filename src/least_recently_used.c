@@ -65,7 +65,7 @@ static int remove_from_all_lists(lru* lru_p, page_entry* page_ent)
 {
 	if(page_ent->lru_list == NULL)
 		return 1;
-	int removed = remove_from_list(page_ent->lru_list, page_ent);
+	int removed = remove_from_linkedlist(page_ent->lru_list, page_ent);
 	if(removed)
 		page_ent->lru_list = NULL;
 	return removed;

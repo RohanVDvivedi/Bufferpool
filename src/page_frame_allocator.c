@@ -41,7 +41,7 @@ void* allocate_page_frame(page_frame_allocator* pfa_p)
 	pthread_mutex_lock(&(pfa_p->allocator_lock));
 		void* frame = (void*) get_head(&(pfa_p->free_frames));
 		if(frame != NULL)
-			remove_from_list(&(pfa_p->free_frames), frame);
+			remove_from_linkedlist(&(pfa_p->free_frames), frame);
 	pthread_mutex_unlock(&(pfa_p->allocator_lock));
 	return frame;
 }

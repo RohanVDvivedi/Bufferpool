@@ -10,13 +10,19 @@ page_request_prioritizer* get_page_request_prioritizer(PAGE_COUNT max_requests)
 
 page_request* create_and_queue_page_request(page_request_prioritizer* prp_p, PAGE_ID page_id, bufferpool* buffp)
 {
-	// if not found, create a new page request
+	// create a new page request
 	page_request* page_req = get_page_request(page_id);
 
-	// increment all the existing page_request, so that we ensure that new page_requests do not easily out prioritize old page_requests
 	pthread_mutex_lock(&(prp_p->page_request_priority_queue_lock));
+
+		// increment all the existing page_request, so that we ensure that new page_requests do not easily out prioritize old page_requests
 		for_each_in_heap(&(prp_p->page_request_priority_queue), priority_increment_wrapper_for_priority_queue, NULL);
+		
+		// if the heap is full, you may want to expand it before you push in the new page request
+		if(is_full_heap(&(prp_p->page_request_priority_queue)))
+			expand_heap(&(prp_p->page_request_priority_queue));
 		push_heap(&(prp_p->page_request_priority_queue), page_req);
+
 	pthread_mutex_unlock(&(prp_p->page_request_priority_queue_lock));
 
 	// once the page request is properly setup, create a replacement job
@@ -37,9 +43,15 @@ void increment_priority_for_page_request(page_request_prioritizer* prp_p, page_r
 page_request* get_highest_priority_page_request_to_fulfill(page_request_prioritizer* prp_p)
 {
 	pthread_mutex_lock(&(prp_p->page_request_priority_queue_lock));
+		
+		// pop the highest priority page request from the page prioritizer's heap
 		page_request* page_req = (page_request*)get_top_heap(&(prp_p->page_request_priority_queue));
 		if(page_req != NULL)
 			pop_heap(&(prp_p->page_request_priority_queue));
+
+		// if the heap is considerably large, then shrink it
+		if(get_total_size_heap(&(prp_p->page_request_priority_queue)) > 3 * get_element_count_heap(&(prp_p->page_request_priority_queue)))
+				shrink_heap(&(prp_p->page_request_priority_queue));
 	pthread_mutex_unlock(&(prp_p->page_request_priority_queue_lock));
 	return page_req;
 }

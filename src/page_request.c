@@ -94,6 +94,9 @@ void insert_to_queue_of_waiting_bbqueues(page_request* page_req, bbqueue* bbq)
 		else
 		{
 			// push bbq to the queue_of_waiting_bbqs
+			// expand the queue_of_waiting_bbqs, it is full
+			if(is_full_queue(&(page_req->queue_of_waiting_bbqs)))
+				expand_queue(&(page_req->queue_of_waiting_bbqs));
 			push_queue(&(page_req->queue_of_waiting_bbqs), bbq);
 		}
 		
@@ -105,7 +108,7 @@ void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_
 	pthread_mutex_lock(&(page_req->job_and_queue_bbq_lock));
 
 		// for all the bbqs in queue_of_waiting_bbqs, push the page_id
-		while(!isQueueEmpty(&(page_req->queue_of_waiting_bbqs)))
+		while(!is_empty_queue(&(page_req->queue_of_waiting_bbqs)))
 		{
 			// get top bbq from queue_of_waiting_bbqs
 			bbqueue* bbq = (bbqueue*) get_top_queue(&(page_req->queue_of_waiting_bbqs));
@@ -116,6 +119,10 @@ void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_
 			// push the page_id to the bbq
 			push_bbqueue(bbq, page_req->page_id);
 		}
+
+		// shrink the queue_of_waiting_bbqs since it would be empty now
+		shrink_queue(&(page_req->queue_of_waiting_bbqs));
+
 	pthread_mutex_unlock(&(page_req->job_and_queue_bbq_lock));
 
 	set_promised_result(&(page_req->fulfillment_promise), page_ent);
@@ -130,15 +137,11 @@ page_entry* get_requested_page_entry_and_discard_page_request(page_request* page
 	pthread_mutex_lock(&(page_req->page_request_reference_lock));
 		page_req->page_request_reference_count--;
 		if(page_req->marked_for_deletion == 1 && page_req->page_request_reference_count == 0)
-		{
 			should_delete_page_request = 1;
-		}
 	pthread_mutex_unlock(&(page_req->page_request_reference_lock));
 
 	if(should_delete_page_request)
-	{
 		delete_page_request(page_req);
-	}
 
 	return page_ent;
 }
