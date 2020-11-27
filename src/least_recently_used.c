@@ -28,13 +28,13 @@ page_entry* get_swapable_page(lru* lru_p)
 		linkedlist* non_empty_linkedlist = NULL;
 
 		// select a non empty linkedlist, selection order must be this only
-		if(!is_linkedlist_empty(&(lru_p->free_page_entries)))
+		if(!is_empty_linkedlist(&(lru_p->free_page_entries)))
 			non_empty_linkedlist = &(lru_p->free_page_entries);
-		else if(!is_linkedlist_empty(&(lru_p->evictable_page_entries)))
+		else if(!is_empty_linkedlist(&(lru_p->evictable_page_entries)))
 			non_empty_linkedlist = &(lru_p->evictable_page_entries);
-		else if(!is_linkedlist_empty(&(lru_p->clean_page_entries)))
+		else if(!is_empty_linkedlist(&(lru_p->clean_page_entries)))
 			non_empty_linkedlist = &(lru_p->clean_page_entries);
-		else if(!is_linkedlist_empty(&(lru_p->dirty_page_entries)))
+		else if(!is_empty_linkedlist(&(lru_p->dirty_page_entries)))
 			non_empty_linkedlist = &(lru_p->dirty_page_entries);
 
 		if(non_empty_linkedlist != NULL)
@@ -51,10 +51,10 @@ page_entry* get_swapable_page(lru* lru_p)
 void wait_if_lru_is_empty(lru* lru_p)
 {
 	pthread_mutex_lock(&(lru_p->lru_lock));
-		while(is_linkedlist_empty(&(lru_p->free_page_entries))
-			&& is_linkedlist_empty(&(lru_p->evictable_page_entries))
-			&& is_linkedlist_empty(&(lru_p->clean_page_entries))
-			&& is_linkedlist_empty(&(lru_p->dirty_page_entries)))
+		while(is_empty_linkedlist(&(lru_p->free_page_entries))
+			&& is_empty_linkedlist(&(lru_p->evictable_page_entries))
+			&& is_empty_linkedlist(&(lru_p->clean_page_entries))
+			&& is_empty_linkedlist(&(lru_p->dirty_page_entries)))
 		{
 			pthread_cond_wait(&(lru_p->wait_for_empty), &(lru_p->lru_lock));
 		}
