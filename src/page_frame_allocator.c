@@ -17,8 +17,8 @@ page_frame_allocator* get_page_frame_allocator(PAGE_COUNT pages_count, SIZE_IN_B
 	pfa_p->memory = mmap(NULL, 
 					MMAPED_MEMORY_SIZE(pfa_p->page_size * pfa_p->pages_count), 
 					PROT_READ | PROT_WRITE,
-					MAP_ANONYMOUS | MAP_SHARED | MAP_POPULATE,
-					0, 0);
+					MAP_ANONYMOUS | MAP_PRIVATE | MAP_POPULATE,
+					-1, 0);
 
 	if(errno)
 		perror("Buffer Memory mmap error : ");
