@@ -102,7 +102,8 @@ int discard_page_request(page_request_tracker* prt_p, PAGE_ID page_id)
 			if(discarded)
 			{
 				// if entry was discarded, decrease hashmap size if thrice as large
-				if(get_bucket_count_hashmap(&(prt_p->page_request_map)) > (3.5 * get_element_count_hashmap(&(prt_p->page_request_map))))
+				if(get_bucket_count_hashmap(&(prt_p->page_request_map)) > (3.5 * get_element_count_hashmap(&(prt_p->page_request_map)))
+					&& get_element_count_hashmap(&(prt_p->page_request_map)) > 0) // ==> bucket_count may not reach 0, i.e. when element count is 0
 					resize_hashmap(&(prt_p->page_request_map), 1.5 * get_element_count_hashmap(&(prt_p->page_request_map)));
 
 				mark_page_request_for_deletion(page_req);
