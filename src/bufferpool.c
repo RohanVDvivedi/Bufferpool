@@ -71,8 +71,8 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 
 	buffp->pg_tbl = get_page_table(maximum_pages_in_cache);
 	buffp->lru_p = get_lru();
-	buffp->rq_tracker = get_page_request_tracker(maximum_pages_in_cache * 3);
-	buffp->rq_prioritizer = get_page_request_prioritizer(maximum_pages_in_cache * 3);
+	buffp->rq_tracker = get_page_request_tracker(maximum_pages_in_cache);
+	buffp->rq_prioritizer = get_page_request_prioritizer(maximum_pages_in_cache);
 
 	// initialize empty page entries, and place them in free page entries list
 	SIZE_IN_BYTES page_entries_size = maximum_pages_in_cache * sizeof(page_entry);

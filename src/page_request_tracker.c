@@ -8,7 +8,7 @@ page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests)
 {
 	page_request_tracker* prt_p = (page_request_tracker*) malloc(sizeof(page_request_tracker));
 	initialize_rwlock(&(prt_p->page_request_tracker_lock));
-	initialize_hashmap(&(prt_p->page_request_map), ELEMENTS_AS_RED_BLACK_BST, (max_requests / 3) + 2, hash_page_request_by_page_id, compare_page_request_by_page_id, offsetof(page_request, page_request_tracker_node));
+	initialize_hashmap(&(prt_p->page_request_map), ELEMENTS_AS_RED_BLACK_BST, max_requests + 4, hash_page_request_by_page_id, compare_page_request_by_page_id, offsetof(page_request, page_request_tracker_node));
 	return prt_p;
 }
 
@@ -63,6 +63,10 @@ page_request* find_or_create_request_for_page_id(page_request_tracker* prt_p, PA
 				// and then insert it to the page_request_tracker hashmap so other requesters can easily find it
 				page_req = create_and_queue_page_request(buffp->rq_prioritizer, page_id, buffp);
 
+				// insert page_req to page_request_tracker hashmap
+				// prior to insertion; expand hashmap if necessary
+				if(get_bucket_count_hashmap(&(prt_p->page_request_map)) < (1.5 * get_element_count_hashmap(&(prt_p->page_request_map))))
+					expand_hashmap(&(prt_p->page_request_map), 1.5);
 				insert_in_hashmap(&(prt_p->page_request_map), page_req);
 			}
 			else // if a page_request is found, just increment its priority inorder to prioritize it
@@ -96,7 +100,13 @@ int discard_page_request(page_request_tracker* prt_p, PAGE_ID page_id)
 		{
 			discarded = remove_from_hashmap(&(prt_p->page_request_map), page_req);
 			if(discarded)
+			{
+				// if entry was discarded, decrease hashmap size if thrice as large
+				if(get_bucket_count_hashmap(&(prt_p->page_request_map)) > (3.5 * get_element_count_hashmap(&(prt_p->page_request_map))))
+					resize_hashmap(&(prt_p->page_request_map), 1.5 * get_element_count_hashmap(&(prt_p->page_request_map)));
+
 				mark_page_request_for_deletion(page_req);
+			}
 		}
 	write_unlock(&(prt_p->page_request_tracker_lock));
 	
