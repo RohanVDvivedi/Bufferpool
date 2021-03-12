@@ -178,7 +178,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 	return page_ent;
 }
 
-void* get_page_to_read(bufferpool* buffp, PAGE_ID page_id)
+void* acquire_page_with_reader_lock(bufferpool* buffp, PAGE_ID page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 
@@ -187,7 +187,7 @@ void* get_page_to_read(bufferpool* buffp, PAGE_ID page_id)
 	return page_ent->page_memory;
 }
 
-void* get_page_to_write(bufferpool* buffp, PAGE_ID page_id)
+void* acquire_page_with_writer_lock(bufferpool* buffp, PAGE_ID page_id)
 {
 	page_entry* page_ent = fetch_page_entry(buffp, page_id);
 
@@ -241,7 +241,7 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int 
 	return lock_released;
 }
 
-int release_page(bufferpool* buffp, void* page_memory, int okay_to_evict)
+int release_page_lock(bufferpool* buffp, void* page_memory, int okay_to_evict)
 {
 	page_entry* page_ent = find_page_entry_by_page_memory(buffp->pg_tbl, page_memory);
 

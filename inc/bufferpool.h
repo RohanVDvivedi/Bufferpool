@@ -13,20 +13,20 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 // locks the page for reading
 // multiple threads can read the same page simultaneously,
 // but no other write thread will be allowed
-void* get_page_to_read(bufferpool* buffp, PAGE_ID page_id);
+void* acquire_page_with_reader_lock(bufferpool* buffp, PAGE_ID page_id);
 
 // lock the page for writing
 // multiple threads will not be allowed to write the same page simultaneously
 // this function will give you exclusive access to the page
-void* get_page_to_write(bufferpool* buffp, PAGE_ID page_id);
+void* acquire_page_with_writer_lock(bufferpool* buffp, PAGE_ID page_id);
 
 // this will unlock the page, provide the page_memory for the specific page
-// call this functions only  on the address returned after calling any one of get_page_to_* functions respectively
+// call this functions only  on the address returned after calling any one of acquire_page_with_*_lock functions respectively
 // the release page method can be called, to release a page read/write lock,
 // if okay_to_evict is set, the page_entry is evicted if it is not being used by anyone else
 // this can be used to allow evictions while performing a sequential scan
 // it returns 0, if the lock could not be released
-int release_page(bufferpool* buffp, void* page_memory, int okay_to_evict);
+int release_page_lock(bufferpool* buffp, void* page_memory, int okay_to_evict);
 
 // to request a page_prefetch, you must provide a start_page_id, and page_count
 // this will help us fetch adjacent pages to memory faster by using sequential io
