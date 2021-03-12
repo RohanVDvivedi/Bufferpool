@@ -1,5 +1,2 @@
  * convert functions to 
- acquire_page_with_reader_lock
- acquire_page_with_writer_lock
  upgrade_page_lock_reader_to_writer => need to implement this method
- release_page_lock
