@@ -24,7 +24,7 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, PAGE_COUNT ind
 		// ** and that atleast cleanup rate in millizeconds have elapsed since last io operation on that page_entry
 		// mover over the page_entry must be dirty and must not be already queued for cleanup
 		if((currentTimeStamp >= page_ent->unix_timestamp_since_last_disk_io_in_ms + buffp->cleanup_rate_in_milliseconds)
-			&& (page_ent->pinned_by_count == 0) && check(page_ent, IS_DIRTY) && !check(page_ent, IS_QUEUED_FOR_CLEANUP))
+			 && check(page_ent, IS_DIRTY) && !check(page_ent, IS_QUEUED_FOR_CLEANUP))
 		{
 			clean_up_required = 1;
 		}
@@ -39,6 +39,7 @@ static int check_and_queue_if_cleanup_required(bufferpool* buffp, PAGE_COUNT ind
 			// this results from error prone code or overuse of pre-fetching, so it is completely viable to print such errors 
 			printf("UNUNSED PREFETCHED PAGE %u at index %u was returned to buferpool\n", page_ent->page_id, index);
 			mark_as_not_yet_used(buffp->lru_p, page_ent);
+			clean_up_required = 0;
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
