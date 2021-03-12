@@ -40,6 +40,11 @@ void release_read_lock(page_entry* page_ent)
 	read_unlock(&(page_ent->page_memory_lock));
 }
 
+void downgrade_write_lock_to_read_lock(page_entry* page_ent)
+{
+	downgrade_writer_to_reader_lock(&(page_ent->page_memory_lock));
+}
+
 void acquire_write_lock(page_entry* page_ent)
 {
 	write_lock(&(page_ent->page_memory_lock));

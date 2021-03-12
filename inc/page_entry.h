@@ -94,6 +94,8 @@ void acquire_read_lock(page_entry* page_ent);
 
 void acquire_write_lock(page_entry* page_ent);
 
+void downgrade_write_lock_to_read_lock(page_entry* page_ent);
+
 void release_read_lock(page_entry* page_ent);
 
 void release_write_lock(page_entry* page_ent);

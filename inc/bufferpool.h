@@ -20,6 +20,10 @@ void* acquire_page_with_reader_lock(bufferpool* buffp, PAGE_ID page_id);
 // this function will give you exclusive access to the page
 void* acquire_page_with_writer_lock(bufferpool* buffp, PAGE_ID page_id);
 
+// upgrade an already writer lock on the page to a reader lock 
+// returns 1, if the operation succeeded, else it returns 0
+int downgrade_page_lock_from_writer_to_reader(bufferpool* buffp, void* page_memory);
+
 // this will unlock the page, provide the page_memory for the specific page
 // call this functions only  on the address returned after calling any one of acquire_page_with_*_lock functions respectively
 // the release page method can be called, to release a page read/write lock,

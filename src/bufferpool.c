@@ -196,6 +196,20 @@ void* acquire_page_with_writer_lock(bufferpool* buffp, PAGE_ID page_id)
 	return page_ent->page_memory;
 }
 
+int downgrade_page_lock_from_writer_to_reader(bufferpool* buffp, void* page_memory)
+{
+	page_entry* page_ent = find_page_entry_by_page_memory(buffp->pg_tbl, page_memory);
+
+	// the function fails, if no such page_ent exists OR
+	// if no one is holding the writer lock on the page
+	if(page_ent == NULL || get_writers_count(&(page_ent->page_memory_lock)) == 0)
+		return 0;
+
+	downgrade_write_lock_to_read_lock(page_ent);
+
+	return 1;
+}
+
 static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int okay_to_evict)
 {
 	int lock_released = 0;
