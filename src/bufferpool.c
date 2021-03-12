@@ -205,6 +205,11 @@ int downgrade_page_lock_from_writer_to_reader(bufferpool* buffp, void* page_memo
 	if(page_ent == NULL || get_writers_count(&(page_ent->page_memory_lock)) == 0)
 		return 0;
 
+	pthread_mutex_lock(&(page_ent->page_entry_lock));
+		// as the page was held with a writer lock prior to this call
+		set(page_ent, IS_DIRTY);
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
 	downgrade_write_lock_to_read_lock(page_ent);
 
 	return 1;
