@@ -24,22 +24,21 @@ struct bufferpool
 	// this is the database file, the current implementation allows only 1 file per bufferpool
 	dbfile* db_file;
 
-	// this is the memory allocator responsible for allocating page frame memory buffers
-	page_frame_allocator* pfa_p;
-
 	// pointer to the array of all the page_entries of the bufferpool
-	// it is malloced memory pointing to (maximum_pages_in_cache * sizeof(page_entry)) bytes of memory
 	page_entry* page_entries;
+
+	// this is the memory that will be distributed to each of the page_entries
+	void* page_memories;
 
 	// ******** Memories section end
 
 	// ******** bufferpool attributes section start
 
-	// this is the number of physical disk blocks in a single disk page
+	// this is the number of physical disk blocks in a single page
 	BLOCK_COUNT number_of_blocks_per_page;
 
 	// this is the number of pages that would be in memory at any time, being occupied by page entries
-	PAGE_COUNT maximum_pages_in_cache;
+	PAGE_COUNT pages_in_bufferpool;
 
 	// This is the rate at which the bufferpool will clean up dirty pages
 	// if the clean up rate is 3000 ms, that means at every 3 seconds the buffer pool will queue one dirty page to be written to disk

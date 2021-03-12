@@ -6,7 +6,7 @@
 
 #include<sys/mman.h>
 
-bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cache, SIZE_IN_BYTES page_size, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
+bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_cache, SIZE_IN_BYTES page_size, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
 {
 	if(maximum_pages_in_cache == 0)
 	{
@@ -59,10 +59,6 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cac
 
 	buffp->db_file = dbf;
 	
-	// we demand io_thread_count number of extra pages worth frame memory,
-	// so that we can perform io without acquiring locks on the page_entry
-	buffp->pfa_p = get_page_frame_allocator(maximum_pages_in_cache + io_thread_count, page_size);
-
 	buffp->number_of_blocks_per_page = page_size / get_block_size(buffp->db_file);
 	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
 

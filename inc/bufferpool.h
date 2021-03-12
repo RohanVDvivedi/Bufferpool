@@ -8,7 +8,7 @@
 typedef struct bufferpool bufferpool;
 
 // creates a new buffer pool manager, that will maintain a heap file given by the name heap_file_name
-bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT maximum_pages_in_cache, SIZE_IN_BYTES page_size_in_bytes, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms);
+bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_cache, SIZE_IN_BYTES page_size_in_bytes, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms);
 
 // locks the page for reading
 // multiple threads can read the same page simultaneously,
