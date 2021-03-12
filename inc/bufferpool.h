@@ -41,7 +41,9 @@ int release_page_lock(bufferpool* buffp, void* page_memory, int okay_to_evict);
 void request_page_prefetch(bufferpool* buffp, PAGE_ID start_page_id, PAGE_COUNT page_count, bbqueue* bbq);
 
 // this function is blocking and it will return only when the page write to disk succeeds
-// do not call this function on the page_id, while you have already acquired a read/write lock on that page
+// or if the page is already queued for cleanup by some other user thread
+// do not call this function on the page_id, while you have already acquired a write lock on that page
+// you may call this function while holding a read lock on the given page
 void force_write(bufferpool* buffp, PAGE_ID page_id);
 
 // deletes the buffer pool manager, that will maintain a heap file given by the name heap_file_name
