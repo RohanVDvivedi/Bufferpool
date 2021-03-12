@@ -199,7 +199,7 @@ void* io_task_execute(io_task* io_t_p)
 
 void page_read_and_print(uint32_t page_id)
 {
-	void* page_mem = get_page_to_read(bpm, page_id);
+	void* page_mem = acquire_page_with_reader_lock(bpm, page_id);
 
 	if(page_mem)
 	{
@@ -221,7 +221,7 @@ void page_read_and_print(uint32_t page_id)
 			usleep(IO_TASK_LATENCY_IN_MS * 1000);
 		#endif
 
-		if(release_page(bpm, page_mem, 0))
+		if(release_page_lock(bpm, page_mem, 0))
 		{
 			printf("page %u released from read lock\n\n", page_id);
 		}
@@ -238,7 +238,7 @@ void page_read_and_print(uint32_t page_id)
 
 void page_write_and_print(uint32_t page_id)
 {
-	void* page_mem = get_page_to_write(bpm, page_id);
+	void* page_mem = acquire_page_with_writer_lock(bpm, page_id);
 	if(page_mem)
 	{
 		printf("page %u locked for write\n", page_id);
@@ -274,7 +274,7 @@ void page_write_and_print(uint32_t page_id)
 			usleep(IO_TASK_LATENCY_IN_MS * 1000);
 		#endif
 
-		if(release_page(bpm, page_mem, 0))
+		if(release_page_lock(bpm, page_mem, 0))
 		{
 			printf("page %u released from write lock\n\n", page_id);
 		}
@@ -291,7 +291,7 @@ void page_write_and_print(uint32_t page_id)
 
 void blankify_new_page(uint32_t page_id)
 {
-	void* page_mem = get_page_to_write(bpm, page_id);
+	void* page_mem = acquire_page_with_writer_lock(bpm, page_id);
 	if(page_mem)
 	{
 		printf("page %u locked for write\n", page_id);
@@ -299,7 +299,7 @@ void blankify_new_page(uint32_t page_id)
 		memset(page_mem, ' ', PAGE_SIZE_IN_BYTES);
 		sprintf(page_mem, PAGE_DATA_FORMAT, page_id, 0);
 		printf("new Data written on page %u : \t <%s>\n", page_id, (char*)page_mem);
-		if(release_page(bpm, page_mem, 1))
+		if(release_page_lock(bpm, page_mem, 1))
 		{
 			printf("page %u released from write lock\n\n", page_id);
 		}
