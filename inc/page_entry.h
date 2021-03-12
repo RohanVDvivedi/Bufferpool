@@ -21,9 +21,6 @@ enum page_entry_flags
 
 	// this bit represents if a corresponding page entry has been queued for cleanup
 	IS_QUEUED_FOR_CLEANUP 	= 0b00000010,
-
-	// this bit is set, if the page stored at page_memory is in a compressed form, currently not used
-	IS_COMPRESSED 			= 0b00000100
 };
 
 typedef struct page_entry page_entry;

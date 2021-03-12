@@ -93,9 +93,6 @@ static void* io_page_replace_task(bufferpool* buffp)
 
 		release_write_lock(page_ent);
 
-		// no compression support yet
-		reset(page_ent, IS_COMPRESSED);
-
 		// also reinitialize the usage count
 		page_ent->usage_count = 0;
 		// and update the last_io timestamp, acknowledging when was the io performed
