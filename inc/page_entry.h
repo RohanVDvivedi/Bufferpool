@@ -77,6 +77,10 @@ struct page_entry
 
 
 
+	// reader threads wait on this conditional wait while their force_write call is happenning
+	pthread_cond_t force_write_wait;
+
+
 
 	// linkedlist node for LRU
 	// protected by locks of LRU

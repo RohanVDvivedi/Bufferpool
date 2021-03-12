@@ -116,7 +116,6 @@ static void* io_page_replace_task(bufferpool* buffp)
 typedef struct cleanup_params cleanup_params;
 struct cleanup_params
 {
-	int is_on_heap_memory;
 	bufferpool* buffp;
 	page_entry* page_ent;
 };
@@ -125,8 +124,7 @@ static void* io_clean_up_task(cleanup_params* cp)
 {
 	page_entry* page_ent = cp->page_ent;
 	bufferpool* buffp = cp->buffp;
-	if(cp->is_on_heap_memory)
-		free(cp);
+	free(cp);
 
 	if(page_ent != NULL)
 	{
@@ -149,6 +147,7 @@ static void* io_clean_up_task(cleanup_params* cp)
 			// whether cleanup was performed or not, the page_entry is now not in queue, because the cleanup task is complete
 			// there is a possibility that for some reason the page_entry was found already clean, and so the clean up action was not performed
 			reset(page_ent, IS_QUEUED_FOR_CLEANUP);
+			pthread_cond_broadcast(&(page_ent->force_write_wait));
 
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 	}
@@ -167,7 +166,7 @@ void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 		if(check(page_ent, IS_DIRTY) && !check(page_ent, IS_QUEUED_FOR_CLEANUP))
 		{
 			cleanup_params* cp = malloc(sizeof(cleanup_params));
-			(*cp) = (cleanup_params){.is_on_heap_memory = 1, .buffp = buffp, .page_ent = page_ent};
+			(*cp) = (cleanup_params){.buffp = buffp, .page_ent = page_ent};
 			submit_job(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, cp, NULL);
 			set(page_ent, IS_QUEUED_FOR_CLEANUP);
 		}
@@ -176,26 +175,20 @@ void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 
 void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 {
-	int cleanup_job_queued = 0;
-	promise cleanup_job_promised;
-	cleanup_params cp = {.is_on_heap_memory = 0, .buffp = buffp, .page_ent = page_ent};
-
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(check(page_ent, IS_DIRTY) && !check(page_ent, IS_QUEUED_FOR_CLEANUP))
+		if(check(page_ent, IS_DIRTY))
 		{
-			initialize_promise(&cleanup_job_promised);
-			submit_job(buffp->io_dispatcher, (void*(*)(void*))io_clean_up_task, &cp, &cleanup_job_promised);
-			set(page_ent, IS_QUEUED_FOR_CLEANUP);
-			cleanup_job_queued = 1;
-		}
-	pthread_mutex_unlock(&(page_ent->page_entry_lock));
+			if(!check(page_ent, IS_QUEUED_FOR_CLEANUP))
+			{
+				cleanup_params* cp = malloc(sizeof(cleanup_params));
+				(*cp) = (cleanup_params){.buffp = buffp, .page_ent = page_ent};
+				submit_job(buffp->io_dispatcher, (void*(*)(void*))io_clean_up_task, &cp, NULL);
+				set(page_ent, IS_QUEUED_FOR_CLEANUP);
+			}
 
-	if(cleanup_job_queued)
-	{
-		get_promised_result(&cleanup_job_promised);
+			while(check(page_ent, IS_QUEUED_FOR_CLEANUP))
+				pthread_cond_wait(&(page_ent->force_write_wait), &(page_ent->page_entry_lock));
 
-		// take lock to reposition the page entry in lru, so as to make the lsu know that this dirty page was cleaned
-		pthread_mutex_lock(&(page_ent->page_entry_lock));
 			// if the page is not pinned, i.e. it is not in use by anyone, we simple insert it it lru
 			// and mark that it has not been used since long
 			// only unpinned pages must be inserted to the LRU
@@ -204,6 +197,7 @@ void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_ent
 				// this function handles reinserts on its own, so no need to worry about that
 				mark_as_not_yet_used(buffp->lru_p, page_ent);
 			}
-		pthread_mutex_unlock(&(page_ent->page_entry_lock));
-	}
+		}
+
+	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 }

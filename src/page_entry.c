@@ -18,6 +18,8 @@ void initialize_page_entry(page_entry* page_ent)
 	page_ent->pinned_by_count = 0;
 	page_ent->usage_count = 0;
 
+	pthread_cond_init(&(page_ent->force_write_wait), NULL);
+
 	// this is the actual page memory that is assigned to this page_entry
 	page_ent->page_memory = NULL;
 	// this lock protects the page memory
@@ -76,6 +78,7 @@ int write_page_to_disk(page_entry* page_ent, dbfile* dbfile_p)
 void deinitialize_page_entry(page_entry* page_ent)
 {
 	pthread_mutex_destroy(&(page_ent->page_entry_lock));
+	pthread_cond_destroy(&(page_ent->force_write_wait));
 	deinitialize_rwlock(&(page_ent->page_memory_lock));
 }
 
