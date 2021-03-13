@@ -36,24 +36,21 @@ static void* io_page_replace_task(bufferpool* buffp)
 				// even though a page_entry may be provided as being fit for replacement, we need to ensure that 
 				if(page_ent->pinned_by_count == 0)
 				{
-					if(page_ent->page_memory != NULL)
-					{
 					// clean the page entry here, before you discard it from hashmaps,
 					// this will ensure that the page that is being evicted has reached to disk
 					// before someone comes along and tries to read it again
-						// if the page_entry is dirty and holds valid data, then write it to disk and clear the dirty bit
-						if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
-						{
-							acquire_read_lock(page_ent);
-								write_page_to_disk(page_ent, buffp->db_file);
-							release_read_lock(page_ent);
+					// if the page_entry is dirty and holds valid data, then write it to disk and clear the dirty bit
+					if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
+					{
+						acquire_read_lock(page_ent);
+							write_page_to_disk(page_ent, buffp->db_file);
+						release_read_lock(page_ent);
 
-							// since the cleanup is performed, the page is now not dirty
-							reset(page_ent, IS_DIRTY);
-						}
-
-						discard_page_entry(buffp->pg_tbl, page_ent);
+						// since the cleanup is performed, the page is now not dirty
+						reset(page_ent, IS_DIRTY);
 					}
+
+					discard_page_entry(buffp->pg_tbl, page_ent);
 					
 					break;
 				}
@@ -70,17 +67,17 @@ static void* io_page_replace_task(bufferpool* buffp)
 	if(page_ent->page_id != page_id || page_ent->page_memory == NULL)
 	{
 		acquire_write_lock(page_ent);
-
 			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page);
 			read_page_from_disk(page_ent, buffp->db_file);
-
 		release_write_lock(page_ent);
 
 		// the page now clean (not dirty) and has valid on-disk data
 		reset(page_ent, IS_DIRTY);
 		set(page_ent, IS_VALID);
+
 		// also reinitialize the usage count
 		page_ent->usage_count = 0;
+
 		// and update the last_io timestamp, acknowledging when was the io performed
 		setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);
 	}
