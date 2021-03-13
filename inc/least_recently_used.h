@@ -8,6 +8,9 @@
 #include<page_entry.h>
 #include<linkedlist.h>
 
+// Thumb rule : all the pages in the LRU are not pinned
+// i.e. their page_ent->pinned_by_count == 0
+
 typedef struct lru lru;
 struct lru
 {
