@@ -6,9 +6,9 @@
 
 #include<sys/mman.h>
 
-bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_cache, SIZE_IN_BYTES page_size, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
+bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_bufferpool, SIZE_IN_BYTES page_size, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
 {
-	if(maximum_pages_in_cache == 0)
+	if(pages_in_bufferpool == 0)
 	{
 		printf("A bufferpool can be built only for non zero pages in cache, hence buffer pool can not be built\n");
 		return NULL;
@@ -60,25 +60,25 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_cache, SIZE
 	buffp->db_file = dbf;
 	
 	buffp->number_of_blocks_per_page = page_size / get_block_size(buffp->db_file);
-	buffp->maximum_pages_in_cache = maximum_pages_in_cache;
+	buffp->pages_in_bufferpool = pages_in_bufferpool;
 
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
 
-	buffp->pg_tbl = get_page_table(maximum_pages_in_cache);
+	buffp->pg_tbl = get_page_table(pages_in_bufferpool);
 	buffp->lru_p = get_lru();
-	buffp->rq_tracker = get_page_request_tracker(maximum_pages_in_cache);
-	buffp->rq_prioritizer = get_page_request_prioritizer(maximum_pages_in_cache);
+	buffp->rq_tracker = get_page_request_tracker(pages_in_bufferpool);
+	buffp->rq_prioritizer = get_page_request_prioritizer(pages_in_bufferpool);
 
-	// initialize empty page entries, and place them in free page entries list
-	SIZE_IN_BYTES page_entries_size = maximum_pages_in_cache * sizeof(page_entry);
-	buffp->page_entries = malloc(page_entries_size);
-	if(mlock(buffp->page_entries, page_entries_size))
-		perror("Page entries memory mlock error : ");
-	for(PAGE_COUNT i = 0; i < maximum_pages_in_cache; i++)
+	// initialize empty page entries, and page_memory
+	buffp->page_entries = malloc(pages_in_bufferpool * sizeof(page_entry));
+	buffp->page_memories =  mmap(NULL, pages_in_bufferpool * page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_POPULATE, -1, 0);
+
+	for(PAGE_COUNT i = 0; i < pages_in_bufferpool; i++)
 	{
 		page_entry* page_ent = buffp->page_entries + i;
-		initialize_page_entry(page_ent);
+		void* page_memory = buffp->page_memories + i * page_size;
+		initialize_page_entry(page_ent, page_memory);
 		mark_as_not_yet_used(buffp->lru_p, page_ent);
 	}
 
@@ -313,20 +313,15 @@ void delete_bufferpool(bufferpool* buffp)
 	wait_for_all_threads_to_complete(buffp->io_dispatcher);
 	delete_executor(buffp->io_dispatcher);
 
+	// free all the memory that the buffer pool acquired for all the page_entries to capture frames
+	munmap(buffp->page_memories, buffp->pages_in_bufferpool * buffp->number_of_blocks_per_page * get_block_size(buffp->db_file));
+
 	// since now we are sure that there are no dirty page_entries, close the database file
 	close_dbfile(buffp->db_file);
 
 	// deinitialize all the page_entries
-	for(PAGE_COUNT i = 0; i < buffp->maximum_pages_in_cache; i++)
-	{
-		// free the acquired page memory
-		if(buffp->page_entries[i].page_memory)
-			free_page_frame(buffp->pfa_p, buffp->page_entries[i].page_memory);
+	for(PAGE_COUNT i = 0; i < buffp->pages_in_bufferpool; i++)
 		deinitialize_page_entry(buffp->page_entries + i);
-	}
-
-	// free all the memory that the buffer pool acquired, for capturing frames
-	delete_page_frame_allocator(buffp->pfa_p);
 
 	// free all memory occupied by the page entries
 	free(buffp->page_entries);

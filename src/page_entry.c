@@ -1,6 +1,6 @@
 #include<page_entry.h>
 
-void initialize_page_entry(page_entry* page_ent)
+void initialize_page_entry(page_entry* page_ent, void* page_memory)
 {
 	pthread_mutex_init(&(page_ent->page_entry_lock), NULL);
 	// This lock is needed to be acquired to access page attributes only,
@@ -11,6 +11,7 @@ void initialize_page_entry(page_entry* page_ent)
 	page_ent->number_of_blocks = 0;
 
 	// set appropriate bits for the page entry flags, (recognizing that the page_entry is initially clean and free, and no cleanup io has been queued on its creation)
+	// is not dirty, is not valid and is not queued for cleanup
 	page_ent->FLAGS = 0;
 
 	setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);
@@ -21,7 +22,7 @@ void initialize_page_entry(page_entry* page_ent)
 	pthread_cond_init(&(page_ent->force_write_wait), NULL);
 
 	// this is the actual page memory that is assigned to this page_entry
-	page_ent->page_memory = NULL;
+	page_ent->page_memory = page_memory;
 	// this lock protects the page memory
 	// all other attributes of this struct are protected by the page_entry_lock
 	// if threads want to access page memory for the disk, they only need to have page_memory_lock,

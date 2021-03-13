@@ -19,8 +19,12 @@ enum page_entry_flags
 	// if a page is dirty, it is yet to be written to disk
 	IS_DIRTY 				= 0b00000001,
 
+	// if the page holds valid data, this byte is set to 1, else 0
+	// if a page is in valid, it can not be written to disk, before over writing it with valid data
+	IS_VALID 				= 0b00000010,
+
 	// this bit represents if a corresponding page entry has been queued for cleanup
-	IS_QUEUED_FOR_CLEANUP 	= 0b00000010,
+	IS_QUEUED_FOR_CLEANUP 	= 0b00000100,
 };
 
 typedef struct page_entry page_entry;
@@ -89,7 +93,7 @@ struct page_entry
 	// these above two fields must not be used, checked outside lru, i.e. outside lru_lock
 };
 
-void initialize_page_entry(page_entry* page_ent);
+void initialize_page_entry(page_entry* page_ent, void* page_memory);
 
 void acquire_read_lock(page_entry* page_ent);
 

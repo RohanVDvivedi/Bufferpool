@@ -4,7 +4,6 @@
 #include<buffer_pool_man_types.h>
 
 #include<dbfile.h>
-#include<page_frame_allocator.h>
 
 #include<page_entry.h>
 #include<page_table.h>
@@ -28,6 +27,7 @@ struct bufferpool
 	page_entry* page_entries;
 
 	// this is the memory that will be distributed to each of the page_entries
+	// page_memories + i * page_size =>  is provided to the i th page_entry
 	void* page_memories;
 
 	// ******** Memories section end

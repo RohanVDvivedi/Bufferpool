@@ -60,17 +60,9 @@ static void* cleanup_scheduler_task_function(void* param)
 		// wait for prescribed amount for time, after last page_entry cleanup loop
 		sleepForMilliseconds( min_sleep_in_ms );
 
-		for(PAGE_COUNT index = 0; ((index < buffp->maximum_pages_in_cache) && (buffp->SHUTDOWN_CALLED == 0)); index++)
-		{
+		// loop over all page entries and queue them for clean up if necessary
+		for(PAGE_COUNT index = 0; index < buffp->pages_in_bufferpool; index++)
 			check_and_queue_if_cleanup_required(buffp, index);
-		}
-	}
-
-	for(PAGE_COUNT index = 0; index < buffp->maximum_pages_in_cache; index++)
-	{
-		// the pages that require clean up are only queued, here
-		// so the buffer pool io_dispatcher is required to wait for all threads to complete
-		check_and_queue_if_cleanup_required(buffp, index);
 	}
 
 	return NULL;
