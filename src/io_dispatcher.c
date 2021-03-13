@@ -42,17 +42,9 @@ static void* io_page_replace_task(bufferpool* buffp)
 					// if the page_entry is dirty and holds valid data, then write it to disk and clear the dirty bit
 					if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
 					{
-						// we want this page to be in memory while we clean it
-						page_ent->pinned_by_count++;
-						pthread_mutex_unlock(&(page_ent->page_entry_lock));
-
 						acquire_read_lock(page_ent);
 							write_page_to_disk(page_ent, buffp->db_file);
 						release_read_lock(page_ent);
-
-						pthread_mutex_lock(&(page_ent->page_entry_lock));
-						page_ent->pinned_by_count--;
-						// remove pinned
 
 						// since the cleanup is performed, the page is now not dirty
 						reset(page_ent, IS_DIRTY);
@@ -123,17 +115,9 @@ static void* io_clean_up_task(cleanup_params* cp)
 			// clean up for the page, only if it is dirty and holds valid data
 			if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
 			{
-				// we want this page to be in memory while we clean it
-				page_ent->pinned_by_count++;
-				pthread_mutex_unlock(&(page_ent->page_entry_lock));
-
 				acquire_read_lock(page_ent);
 					write_page_to_disk(page_ent, buffp->db_file);
 				release_read_lock(page_ent);
-
-				pthread_mutex_lock(&(page_ent->page_entry_lock));
-				page_ent->pinned_by_count--;
-				// remove pinned
 
 				// since the cleanup is performed, the page is now not dirty and holds valid data
 				reset(page_ent, IS_DIRTY);

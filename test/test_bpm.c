@@ -9,7 +9,7 @@
 
 #include<executor.h>
 
-#define PAGE_SIZE_IN_BYTES 4096
+#define PAGE_SIZE_IN_BYTES 512
 
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_PAGES_IN_BUFFER_POOL 6
