@@ -64,7 +64,9 @@ static void* io_page_replace_task(bufferpool* buffp)
 		}
 	}
 
-	if(page_ent->page_id != page_id || page_ent->page_memory == NULL)
+	// if the page_id is the old_page_id for the page_entry, or if it holds invalid data
+	// then we need to read valid data from the page_id from the disk
+	if(page_ent->page_id != page_id || !check(page_ent, IS_VALID))
 	{
 		acquire_write_lock(page_ent);
 			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page);
