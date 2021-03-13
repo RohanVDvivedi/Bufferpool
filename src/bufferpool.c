@@ -108,7 +108,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 
 			// once we acquire the lock, we must check that the page_id matches,
 			// since there is slight possibility of contention
-			if(page_ent->page_id == page_id)
+			if(page_ent->page_id == page_id && check(page_ent, IS_VALID))
 			{
 				is_page_entry_found = 1;
 			}
@@ -117,7 +117,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 				// else release lock on it
 				pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
-				// clear the referenc of the wrong page
+				// clear the reference of the wrong page
 				page_ent = NULL;
 			}
 		}
@@ -140,7 +140,7 @@ static page_entry* fetch_page_entry(bufferpool* buffp, PAGE_ID page_id)
 				pthread_mutex_lock(&(page_ent->page_entry_lock));
 
 				// check if correct page_entry has been acquired
-				if(page_ent->page_id == page_id)
+				if(page_ent->page_id == page_id && check(page_ent, IS_VALID))
 				{
 					is_page_entry_found = 1;
 				}
@@ -294,7 +294,7 @@ void force_write(bufferpool* buffp, PAGE_ID page_id)
 		int is_cleanup_required = 0;
 
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
-			if(page_id == page_ent->page_id)
+			if(page_id == page_ent->page_id && check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
 				is_cleanup_required = 1;
 		pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
