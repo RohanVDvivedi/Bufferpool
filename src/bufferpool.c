@@ -203,7 +203,9 @@ int downgrade_page_lock_from_writer_to_reader(bufferpool* buffp, void* page_memo
 
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
 		// as the page was held with a writer lock prior to this call
+		// the page is now dirty as well as holding valid data values
 		set(page_ent, IS_DIRTY);
+		set(page_ent, IS_VALID);
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
 
 	downgrade_write_lock_to_read_lock(page_ent);
@@ -240,8 +242,9 @@ static int release_used_page_entry(bufferpool* buffp, page_entry* page_ent, int 
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
 			page_ent->pinned_by_count--;
 			if(was_modified)
-			{
+			{	// if the page was modified by the user it is now dirty as well as it holds valid data
 				set(page_ent, IS_DIRTY);
+				set(page_ent, IS_VALID);
 			}
 			if(page_ent->pinned_by_count == 0)
 			{
