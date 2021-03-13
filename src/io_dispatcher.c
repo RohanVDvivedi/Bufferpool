@@ -42,15 +42,21 @@ static void* io_page_replace_task(bufferpool* buffp)
 					// if the page_entry is dirty and holds valid data, then write it to disk and clear the dirty bit
 					if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
 					{
+						// we want this page to be in memory while we clean it
+						page_ent->pinned_by_count++;
+						pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
 						acquire_read_lock(page_ent);
 							write_page_to_disk(page_ent, buffp->db_file);
 						release_read_lock(page_ent);
 
+						pthread_mutex_lock(&(page_ent->page_entry_lock));
+						page_ent->pinned_by_count--;
+						// remove pinned
+
 						// since the cleanup is performed, the page is now not dirty
 						reset(page_ent, IS_DIRTY);
 					}
-
-					discard_page_entry(buffp->pg_tbl, page_ent);
 					
 					break;
 				}
@@ -68,6 +74,8 @@ static void* io_page_replace_task(bufferpool* buffp)
 	// then we need to read valid data from the page_id from the disk
 	if(page_ent->page_id != page_id || !check(page_ent, IS_VALID))
 	{
+		discard_page_entry(buffp->pg_tbl, page_ent);
+
 		acquire_write_lock(page_ent);
 			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page);
 			read_page_from_disk(page_ent, buffp->db_file);
@@ -82,11 +90,11 @@ static void* io_page_replace_task(bufferpool* buffp)
 
 		// and update the last_io timestamp, acknowledging when was the io performed
 		setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);
+
+		insert_page_entry(buffp->pg_tbl, page_ent);
 	}
 
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
-
-	insert_page_entry(buffp->pg_tbl, page_ent);
 
 	fulfill_requested_page_entry_for_page_request(page_req_to_fulfill, page_ent);
 
@@ -115,9 +123,17 @@ static void* io_clean_up_task(cleanup_params* cp)
 			// clean up for the page, only if it is dirty and holds valid data
 			if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
 			{
+				// we want this page to be in memory while we clean it
+				page_ent->pinned_by_count++;
+				pthread_mutex_unlock(&(page_ent->page_entry_lock));
+
 				acquire_read_lock(page_ent);
 					write_page_to_disk(page_ent, buffp->db_file);
 				release_read_lock(page_ent);
+
+				pthread_mutex_lock(&(page_ent->page_entry_lock));
+				page_ent->pinned_by_count--;
+				// remove pinned
 
 				// since the cleanup is performed, the page is now not dirty and holds valid data
 				reset(page_ent, IS_DIRTY);
