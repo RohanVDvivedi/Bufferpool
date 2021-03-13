@@ -71,6 +71,13 @@ static void* cleanup_scheduler_task_function(void* param)
 			check_and_queue_if_cleanup_required(buffp, index);
 	}
 
+	// loop over all the page entries before quit to ensure that all the pages have reached the disk
+	for(PAGE_COUNT index = 0; index < buffp->pages_in_bufferpool; index++)
+	{
+		page_entry* page_ent = buffp->page_entries + index;
+		queue_page_entry_clean_up_if_dirty(buffp, page_ent);
+	}
+
 	return NULL;
 }
 
