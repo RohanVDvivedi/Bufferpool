@@ -64,7 +64,7 @@ void wait_if_lru_is_empty(lru* lru_p)
 static int remove_from_all_lists(lru* lru_p, page_entry* page_ent)
 {
 	if(page_ent->lru_list == NULL)
-		return 1;
+		return 0;
 	int removed = remove_from_linkedlist(page_ent->lru_list, page_ent);
 	if(removed)
 		page_ent->lru_list = NULL;
@@ -97,7 +97,7 @@ void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 		linkedlist* linkedlist_to_insert = NULL;
 		if(check(page_ent, IS_DIRTY))
 			linkedlist_to_insert = &(lru_p->dirty_page_entries);
-		else if(page_ent->page_memory == NULL)
+		else if(!check(page_ent, IS_VALID))
 			linkedlist_to_insert = &(lru_p->free_page_entries);
 		else
 			linkedlist_to_insert = &(lru_p->clean_page_entries);
@@ -123,7 +123,7 @@ void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent)
 		linkedlist* linkedlist_to_insert = NULL;
 		if(check(page_ent, IS_DIRTY))
 			linkedlist_to_insert = &(lru_p->dirty_page_entries);
-		else if(page_ent->page_memory == NULL)
+		else if(!check(page_ent, IS_VALID))
 			linkedlist_to_insert = &(lru_p->free_page_entries);
 		else
 			linkedlist_to_insert = &(lru_p->clean_page_entries);

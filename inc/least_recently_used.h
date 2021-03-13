@@ -21,10 +21,10 @@ struct lru
 
 	// this are the in-memory linkedlist of page_entries of the buffer pool, being used in the lru
 	// the page entry is put at the head of these queue, after you have used it
-	// free_page_entries is linkedlist meant for inserting free pages only (i.e. page entries that do not have page_memory allocated for them)
-	// clean_page_entries is linkedlist meant for inserting clean pages only
-	// dirty_page_entries is linkedlist meant for inserting dirty pages only
-	// for replacement, a page_entry is picked first from the tail of the free_page_entries, clean_page_entries and dirty_page_entries in the same order
+	// free_page_entries is linkedlist meant for inserting free pages only (i.e. page entries that do not hold valid data, IS_VALID bit is not set)
+	// clean_page_entries is linkedlist meant for inserting clean pages only (i.e. IS_VALID bit is set, IS_DIRTY bit is not set)
+	// dirty_page_entries is linkedlist meant for inserting dirty pages only (i.e. IS_VALID bit and IS_DIRTY bit is set)
+	// for replacement, a page_entry is picked from the head of the linked list in the floowing order below:
 	linkedlist free_page_entries;
 	linkedlist evictable_page_entries;	// evictable page entries can be clean or dirty pages
 										// they have been used but it has been identified that it may not be used in near future again
