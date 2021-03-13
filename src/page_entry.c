@@ -58,12 +58,11 @@ void release_write_lock(page_entry* page_ent)
 	write_unlock(&(page_ent->page_memory_lock));
 }
 
-void reset_page_to(page_entry* page_ent, PAGE_ID page_id, BLOCK_ID start_block_id, BLOCK_COUNT number_of_blocks, void* page_memory)
+void reset_page_to(page_entry* page_ent, PAGE_ID page_id, BLOCK_ID start_block_id, BLOCK_COUNT number_of_blocks)
 {
 	page_ent->page_id = page_id;
 	page_ent->start_block_id = start_block_id;
 	page_ent->number_of_blocks = number_of_blocks;
-	page_ent->page_memory = page_memory;
 }
 
 int read_page_from_disk(page_entry* page_ent, dbfile* dbfile_p)

@@ -105,7 +105,7 @@ void release_read_lock(page_entry* page_ent);
 
 void release_write_lock(page_entry* page_ent);
 
-void reset_page_to(page_entry* page_ent, PAGE_ID page_id, BLOCK_ID start_block_id, BLOCK_COUNT number_of_blocks, void* page_memory);
+void reset_page_to(page_entry* page_ent, PAGE_ID page_id, BLOCK_ID start_block_id, BLOCK_COUNT number_of_blocks);
 
 int read_page_from_disk(page_entry* page_ent, dbfile* dbfile_p);
 

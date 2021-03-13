@@ -6,21 +6,12 @@ static void* io_page_replace_task(bufferpool* buffp)
 {
 	// get the page reqest that is most crucial to fulfill
 	page_request* page_req_to_fulfill = get_highest_priority_page_request_to_fulfill(buffp->rq_prioritizer);
-
 	if(page_req_to_fulfill == NULL)
-	{
 		return NULL;
-	}
 
 	uint32_t page_id = page_req_to_fulfill->page_id;
 
-	// initialize a dummy page entry, and perform read from disk io on it, without acquiring any locks
-	// since it is a local variable, we can perform io, without taking any locks
-	// the new_page_memory is the variable that will hold the page memory frame read from the disk file
-	page_entry dummy_page_ent;
-	reset_page_to(&dummy_page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, allocate_page_frame(buffp->pfa_p));
-	read_page_from_disk(&dummy_page_ent, buffp->db_file);
-
+	// find page_ent, which will be victimized
 	page_entry* page_ent = NULL;
 
 	while(page_ent == NULL)
@@ -50,8 +41,8 @@ static void* io_page_replace_task(bufferpool* buffp)
 					// clean the page entry here, before you discard it from hashmaps,
 					// this will ensure that the page that is being evicted has reached to disk
 					// before someone comes along and tries to read it again
-						// if the page_entry is dirty, then write it to disk and clear the dirty bit
-						if(check(page_ent, IS_DIRTY))
+						// if the page_entry is dirty and holds valid data, then write it to disk and clear the dirty bit
+						if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
 						{
 							acquire_read_lock(page_ent);
 								write_page_to_disk(page_ent, buffp->db_file);
@@ -80,19 +71,14 @@ static void* io_page_replace_task(bufferpool* buffp)
 	{
 		acquire_write_lock(page_ent);
 
-			// release current page frame memory
-			if(page_ent->page_memory != NULL)
-				free_page_frame(buffp->pfa_p, page_ent->page_memory);
-			// above you can skip the NULLing of the page memory variable since it is anyway going to be replaced
-
-			// update the page_id, start_block_id, number_of_blocks and 
-			// and the page memory that is already read from the disk,
-			// note : remember the read io was performed on the new_page_memory, by the dummy_page_ent
-			// and now by replacing the page_memory the page_entry now contains new valid required data
-			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page, dummy_page_ent.page_memory);
+			reset_page_to(page_ent, page_id, page_id * buffp->number_of_blocks_per_page, buffp->number_of_blocks_per_page);
+			read_page_from_disk(page_ent, buffp->db_file);
 
 		release_write_lock(page_ent);
 
+		// the page now clean (not dirty) and has valid on-disk data
+		reset(page_ent, IS_DIRTY);
+		set(page_ent, IS_VALID);
 		// also reinitialize the usage count
 		page_ent->usage_count = 0;
 		// and update the last_io timestamp, acknowledging when was the io performed
@@ -127,15 +113,16 @@ static void* io_clean_up_task(cleanup_params* cp)
 	{
 		pthread_mutex_lock(&(page_ent->page_entry_lock));
 
-			// clean up for the page, only if it is dirty
-			if(check(page_ent, IS_DIRTY))
+			// clean up for the page, only if it is dirty and holds valid data
+			if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
 			{
 				acquire_read_lock(page_ent);
 					write_page_to_disk(page_ent, buffp->db_file);
 				release_read_lock(page_ent);
 
-				// since the cleanup is performed, the page is now not dirty
+				// since the cleanup is performed, the page is now not dirty and holds valid data
 				reset(page_ent, IS_DIRTY);
+				set(page_ent, IS_VALID);
 
 				// update the last_io timestamp, acknowledging when was the io performed
 				setToCurrentUnixTimestamp(page_ent->unix_timestamp_since_last_disk_io_in_ms);
@@ -160,7 +147,7 @@ void queue_job_for_page_request(bufferpool* buffp)
 void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(check(page_ent, IS_DIRTY) && !check(page_ent, IS_QUEUED_FOR_CLEANUP))
+		if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID) && !check(page_ent, IS_QUEUED_FOR_CLEANUP))
 		{
 			cleanup_params* cp = malloc(sizeof(cleanup_params));
 			(*cp) = (cleanup_params){.buffp = buffp, .page_ent = page_ent};
@@ -173,7 +160,7 @@ void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 {
 	pthread_mutex_lock(&(page_ent->page_entry_lock));
-		if(check(page_ent, IS_DIRTY))
+		if(check(page_ent, IS_DIRTY) && check(page_ent, IS_VALID))
 		{
 			if(!check(page_ent, IS_QUEUED_FOR_CLEANUP))
 			{
