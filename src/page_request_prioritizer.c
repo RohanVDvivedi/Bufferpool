@@ -50,7 +50,7 @@ page_request* get_highest_priority_page_request_to_fulfill(page_request_prioriti
 			pop_heap(&(prp_p->page_request_priority_queue));
 
 		// if the heap is considerably large, then shrink it
-		if(get_total_size_heap(&(prp_p->page_request_priority_queue)) > 3 * get_element_count_heap(&(prp_p->page_request_priority_queue)))
+		if(get_capacity_heap(&(prp_p->page_request_priority_queue)) > 3 * get_element_count_heap(&(prp_p->page_request_priority_queue)))
 				shrink_heap(&(prp_p->page_request_priority_queue));
 	pthread_mutex_unlock(&(prp_p->page_request_priority_queue_lock));
 	return page_req;
