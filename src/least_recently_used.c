@@ -39,8 +39,8 @@ page_entry* get_swapable_page(lru* lru_p)
 
 		if(non_empty_linkedlist != NULL)
 		{
-			page_ent = (page_entry*) get_head(non_empty_linkedlist);
-			int removed = remove_head(non_empty_linkedlist);
+			page_ent = (page_entry*) get_head_of_linkedlist(non_empty_linkedlist);
+			int removed = remove_head_from_linkedlist(non_empty_linkedlist);
 			if(removed)
 				page_ent->lru_list = NULL;
 		}
@@ -104,7 +104,7 @@ void mark_as_recently_used(lru* lru_p, page_entry* page_ent)
 
 		if(linkedlist_to_insert != NULL)
 		{
-			int inserted = insert_tail(linkedlist_to_insert, page_ent);
+			int inserted = insert_tail_in_linkedlist(linkedlist_to_insert, page_ent);
 			if(inserted)
 				page_ent->lru_list = linkedlist_to_insert;
 		}
@@ -130,7 +130,7 @@ void mark_as_not_yet_used(lru* lru_p, page_entry* page_ent)
 
 		if(linkedlist_to_insert != NULL)
 		{
-			int inserted = insert_head(linkedlist_to_insert, page_ent);
+			int inserted = insert_head_in_linkedlist(linkedlist_to_insert, page_ent);
 			if(inserted)
 				page_ent->lru_list = linkedlist_to_insert;
 		}
@@ -146,7 +146,7 @@ void mark_as_evictable(lru* lru_p, page_entry* page_ent)
 
 		remove_from_all_lists(lru_p, page_ent);
 
-		int inserted = insert_head(&(lru_p->evictable_page_entries), page_ent);
+		int inserted = insert_head_in_linkedlist(&(lru_p->evictable_page_entries), page_ent);
 		if(inserted)
 			page_ent->lru_list = &(lru_p->evictable_page_entries);
 

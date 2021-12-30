@@ -21,7 +21,7 @@ page_request* create_and_queue_page_request(page_request_prioritizer* prp_p, PAG
 		// if the heap is full, you may want to expand it before you push in the new page request
 		if(is_full_heap(&(prp_p->page_request_priority_queue)))
 			expand_heap(&(prp_p->page_request_priority_queue));
-		push_heap(&(prp_p->page_request_priority_queue), page_req);
+		push_to_heap(&(prp_p->page_request_priority_queue), page_req);
 
 	pthread_mutex_unlock(&(prp_p->page_request_priority_queue_lock));
 
@@ -45,9 +45,9 @@ page_request* get_highest_priority_page_request_to_fulfill(page_request_prioriti
 	pthread_mutex_lock(&(prp_p->page_request_priority_queue_lock));
 		
 		// pop the highest priority page request from the page prioritizer's heap
-		page_request* page_req = (page_request*)get_top_heap(&(prp_p->page_request_priority_queue));
+		page_request* page_req = (page_request*)get_top_of_heap(&(prp_p->page_request_priority_queue));
 		if(page_req != NULL)
-			pop_heap(&(prp_p->page_request_priority_queue));
+			pop_from_heap(&(prp_p->page_request_priority_queue));
 
 		// if the heap is considerably large, then shrink it
 		if(get_capacity_heap(&(prp_p->page_request_priority_queue)) > 3 * get_element_count_heap(&(prp_p->page_request_priority_queue)))

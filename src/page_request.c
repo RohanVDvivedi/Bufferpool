@@ -97,7 +97,7 @@ void insert_to_queue_of_waiting_bbqueues(page_request* page_req, bbqueue* bbq)
 			// expand the queue_of_waiting_bbqs, it is full
 			if(is_full_queue(&(page_req->queue_of_waiting_bbqs)))
 				expand_queue(&(page_req->queue_of_waiting_bbqs));
-			push_queue(&(page_req->queue_of_waiting_bbqs), bbq);
+			push_to_queue(&(page_req->queue_of_waiting_bbqs), bbq);
 		}
 		
 	pthread_mutex_unlock(&(page_req->job_and_queue_bbq_lock));
@@ -111,10 +111,10 @@ void fulfill_requested_page_entry_for_page_request(page_request* page_req, page_
 		while(!is_empty_queue(&(page_req->queue_of_waiting_bbqs)))
 		{
 			// get top bbq from queue_of_waiting_bbqs
-			bbqueue* bbq = (bbqueue*) get_top_queue(&(page_req->queue_of_waiting_bbqs));
+			bbqueue* bbq = (bbqueue*) get_top_of_queue(&(page_req->queue_of_waiting_bbqs));
 
 			// pop the top bbq from the queue_of_waiting_bbqs
-			pop_queue(&(page_req->queue_of_waiting_bbqs));
+			pop_from_queue(&(page_req->queue_of_waiting_bbqs));
 
 			// push the page_id to the bbq
 			push_bbqueue(bbq, page_req->page_id);
