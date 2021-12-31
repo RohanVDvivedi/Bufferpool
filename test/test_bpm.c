@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 		strcpy(file_name, argv[1]);
 	}
 
-	bpm = get_bufferpool(file_name, MAX_PAGES_IN_BUFFER_POOL, PAGE_SIZE_IN_BYTES, MAX_IO_THREADS_IN_BUFFER_POOL, DIRTY_PAGES_CLEANUP_EVERY_X_ms, UNUSED_PREFETCHED_PAGES_RETURN_X_ms);
+	bpm = new_bufferpool(file_name, MAX_PAGES_IN_BUFFER_POOL, PAGE_SIZE_IN_BYTES, MAX_IO_THREADS_IN_BUFFER_POOL, DIRTY_PAGES_CLEANUP_EVERY_X_ms, UNUSED_PREFETCHED_PAGES_RETURN_X_ms);
 	if(bpm != NULL)
 	{
 		printf("Bufferpool built for file %s\n\n", file_name);
@@ -85,10 +85,10 @@ int main(int argc, char **argv)
 		}
 	}
 
-	bbq = get_bbqueue(((COUNT_OF_IO_TASKS % PREFETCH_EVERY_x_PAGES) + 1) * PREFETCH_PAGE_COUNT);
+	bbq = new_bbqueue(((COUNT_OF_IO_TASKS % PREFETCH_EVERY_x_PAGES) + 1) * PREFETCH_PAGE_COUNT);
 	printf("common Bounded Blocking Queue is being used for prefetched execution\n");
 
-	exe = get_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0, NULL, NULL, NULL);
+	exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
 	printf("Initializing IO tasks\n\n");
