@@ -1,6 +1,6 @@
 #include<page_request_prioritizer.h>
 
-page_request_prioritizer* get_page_request_prioritizer(PAGE_COUNT max_requests)
+page_request_prioritizer* new_page_request_prioritizer(PAGE_COUNT max_requests)
 {
 	page_request_prioritizer* prp_p = (page_request_prioritizer*) malloc(sizeof(page_request_prioritizer));
 	pthread_mutex_init(&(prp_p->page_request_priority_queue_lock), NULL);
@@ -11,7 +11,7 @@ page_request_prioritizer* get_page_request_prioritizer(PAGE_COUNT max_requests)
 page_request* create_and_queue_page_request(page_request_prioritizer* prp_p, PAGE_ID page_id, bufferpool* buffp)
 {
 	// create a new page request
-	page_request* page_req = get_page_request(page_id);
+	page_request* page_req = new_page_request(page_id);
 
 	pthread_mutex_lock(&(prp_p->page_request_priority_queue_lock));
 

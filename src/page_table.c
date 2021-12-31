@@ -2,7 +2,7 @@
 
 #include<stddef.h>
 
-page_table* get_page_table(PAGE_COUNT page_entry_count)
+page_table* new_page_table(PAGE_COUNT page_entry_count)
 {
 	page_table* pg_tbl = (page_table*) malloc(sizeof(page_table));
 	initialize_hashmap(&(pg_tbl->mem_mapping), ROBINHOOD_HASHING, (page_entry_count * 2) + 3, hash_page_entry_by_page_memory, compare_page_entry_by_page_memory, 0);

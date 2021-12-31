@@ -1,6 +1,6 @@
 #include<page_request.h>
 
-page_request* get_page_request(PAGE_ID page_id)
+page_request* new_page_request(PAGE_ID page_id)
 {
 	page_request* page_req = (page_request*) malloc(sizeof(page_request));
 

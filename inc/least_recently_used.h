@@ -42,7 +42,7 @@ struct lru
 	// both of the above attributes are also protected by the lru_lock
 };
 
-lru* get_lru();
+lru* new_lru();
 
 // you can be assured that the returned replacable page_entry will not exist in the lru,
 // if this function retuns NULL, it means the lru does not have a page_entry to spare to you

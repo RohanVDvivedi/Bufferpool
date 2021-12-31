@@ -25,7 +25,7 @@ struct page_request_prioritizer
 	heap page_request_priority_queue;
 };
 
-page_request_prioritizer* get_page_request_prioritizer(PAGE_COUNT max_requests);
+page_request_prioritizer* new_page_request_prioritizer(PAGE_COUNT max_requests);
 
 // creates a new page request
 // increments all the page request priority in the heap by 1

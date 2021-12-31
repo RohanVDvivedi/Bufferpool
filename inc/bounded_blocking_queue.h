@@ -5,7 +5,7 @@
 
 typedef struct bbqueue bbqueue;
 
-bbqueue* get_bbqueue(uint16_t size);
+bbqueue* new_bbqueue(uint16_t size);
 
 int is_bbqueue_empty(bbqueue* bbq);
 

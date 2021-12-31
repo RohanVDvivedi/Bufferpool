@@ -27,7 +27,7 @@ struct page_table
 	rwlock page_entry_map_lock;
 };
 
-page_table* get_page_table(PAGE_COUNT page_entry_count);
+page_table* new_page_table(PAGE_COUNT page_entry_count);
 
 // returns NULL, if a page_entry was not found
 page_entry* find_page_entry_by_page_id(page_table* pg_tbl, PAGE_ID page_id);

@@ -8,7 +8,7 @@
 ** page_ent->lru_list = <some pointer to linkedlist of lru or NULL if being removed>;
 */
 
-lru* get_lru()
+lru* new_lru()
 {
 	lru* lru_p = (lru*) malloc(sizeof(lru));
 	pthread_cond_init(&(lru_p->wait_for_empty), NULL);

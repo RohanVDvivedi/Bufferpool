@@ -71,7 +71,7 @@ struct page_request
 
 // this function returns a new page_request, whose reference count is already 1
 // we assume that you are going to reference this page_request if you are creating it
-page_request* get_page_request(PAGE_ID page_id);
+page_request* new_page_request(PAGE_ID page_id);
 
 // no mentioned earlier, no locks are being used here, it will only increment the page_request_priority
 // it will return 0, and not increment the page_request_priority, if the priority value was 0xff, 

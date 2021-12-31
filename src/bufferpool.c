@@ -6,7 +6,7 @@
 
 #include<sys/mman.h>
 
-bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_bufferpool, SIZE_IN_BYTES page_size, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
+bufferpool* new_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_bufferpool, SIZE_IN_BYTES page_size, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
 {
 	if(pages_in_bufferpool == 0)
 	{
@@ -65,10 +65,10 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_bufferpool,
 	buffp->cleanup_rate_in_milliseconds = cleanup_rate_in_milliseconds;
 	buffp->unused_prefetched_page_return_in_ms = unused_prefetched_page_return_in_ms;
 
-	buffp->pg_tbl = get_page_table(pages_in_bufferpool);
-	buffp->lru_p = get_lru();
-	buffp->rq_tracker = get_page_request_tracker(pages_in_bufferpool);
-	buffp->rq_prioritizer = get_page_request_prioritizer(pages_in_bufferpool);
+	buffp->pg_tbl = new_page_table(pages_in_bufferpool);
+	buffp->lru_p = new_lru();
+	buffp->rq_tracker = new_page_request_tracker(pages_in_bufferpool);
+	buffp->rq_prioritizer = new_page_request_prioritizer(pages_in_bufferpool);
 
 	// initialize empty page entries, and page_memory
 	buffp->page_entries = malloc(pages_in_bufferpool * sizeof(page_entry));
@@ -86,7 +86,7 @@ bufferpool* get_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_bufferpool,
 	buffp->SHUTDOWN_CALLED = 0;
 
 	// start necessary threads/jobs
-	buffp->io_dispatcher = get_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, 0, NULL, NULL, NULL);
+	buffp->io_dispatcher = new_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, 0, NULL, NULL, NULL);
 	start_async_cleanup_scheduler(buffp);
 
 	return buffp;

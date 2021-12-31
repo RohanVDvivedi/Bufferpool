@@ -26,7 +26,7 @@ struct page_request_tracker
 
 typedef struct bufferpool bufferpool;
 
-page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests);
+page_request_tracker* new_page_request_tracker(PAGE_COUNT max_requests);
 
 // finds a page_request that was submitted and it will increment its priority for faster fulfillment,
 // or if there was no page_request made then a new page request is created

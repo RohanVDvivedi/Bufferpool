@@ -4,7 +4,7 @@
 
 #include<stddef.h>
 
-page_request_tracker* get_page_request_tracker(PAGE_COUNT max_requests)
+page_request_tracker* new_page_request_tracker(PAGE_COUNT max_requests)
 {
 	page_request_tracker* prt_p = (page_request_tracker*) malloc(sizeof(page_request_tracker));
 	initialize_rwlock(&(prt_p->page_request_tracker_lock));
