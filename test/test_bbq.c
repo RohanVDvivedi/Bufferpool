@@ -33,21 +33,27 @@ void* consumer_function(void* q)
 int main()
 {
 	uint32_t element_count = 10;
-	bbqueue* bbq = get_bbqueue(10);
+	bbqueue* bbq = new_bbqueue(10);
 
-	job* producer_job = get_job(producer_function, bbq);
-	job* consumer_job = get_job(consumer_function, bbq);
+	promise* producer_promise = new_promise();
+	job* producer_job = new_job(producer_function, bbq, producer_promise);
+
+	promise* consumer_promise = new_promise();
+	job* consumer_job = new_job(consumer_function, bbq, consumer_promise);
 
 	execute_async(producer_job);
 	execute_async(consumer_job);
 
-	get_result(producer_job);
-	get_result(consumer_job);
+	get_promised_result(producer_promise);
+	get_promised_result(consumer_promise);
 
 	delete_job(producer_job);
-	delete_job(consumer_job);
+	delete_promise(producer_promise);
 
-	free(bbq);
+	delete_job(consumer_job);
+	delete_promise(consumer_promise);
+
+	delete_bbqueue(bbq);
 
 	return 0;
 }
