@@ -15,7 +15,10 @@ page_request* new_page_request(PAGE_ID page_id)
 	page_req->page_request_reference_count = 1;
 	page_req->marked_for_deletion = 0;
 
-	// initialize bstnode, this node will form the binary search tree inside the requaet tracker
+	// initialize hpnode, this will store the index of the page_request in the page_request_prioritizer
+	initialize_hpnode(&(page_req->page_request_prioritizer_node));
+
+	// initialize bstnode, this node will form the binary search tree inside the request tracker
 	initialize_bstnode((&(page_req->page_request_tracker_node)));
 
 	return page_req;

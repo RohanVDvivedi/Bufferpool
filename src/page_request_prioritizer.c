@@ -1,10 +1,12 @@
 #include<page_request_prioritizer.h>
 
+#include<stddef.h>
+
 page_request_prioritizer* new_page_request_prioritizer(PAGE_COUNT max_requests)
 {
 	page_request_prioritizer* prp_p = (page_request_prioritizer*) malloc(sizeof(page_request_prioritizer));
 	pthread_mutex_init(&(prp_p->page_request_priority_queue_lock), NULL);
-	initialize_heap(&(prp_p->page_request_priority_queue), max_requests, MAX_HEAP, compare_page_request_by_page_priority, priority_queue_index_change_callback, NULL);
+	initialize_heap(&(prp_p->page_request_priority_queue), max_requests, MAX_HEAP, compare_page_request_by_page_priority, offsetof(page_request, page_request_prioritizer_node));
 	return prp_p;
 }
 
@@ -36,7 +38,7 @@ void increment_priority_for_page_request(page_request_prioritizer* prp_p, page_r
 {
 	pthread_mutex_lock(&(prp_p->page_request_priority_queue_lock));
 		if(increment_page_request_priority(page_req))
-			heapify_at(&(prp_p->page_request_priority_queue), page_req->index_in_priority_queue);
+			heapify_for(&(prp_p->page_request_priority_queue), page_req);
 	pthread_mutex_unlock(&(prp_p->page_request_priority_queue_lock));
 }
 

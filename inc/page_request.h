@@ -10,6 +10,7 @@
 #include<bounded_blocking_queue.h>
 #include<queue.h>
 
+#include<heap.h>
 #include<bst.h>
 
 #include<page_id_helper_functions.h>
@@ -36,9 +37,6 @@ struct page_request
 	// this variable needs to be protected under the mutex lock of the page_request prioritizer
 	uint8_t page_request_priority;
 
-	// this is the index of the page_request in the priority queue (max heap), managed and protected by the page_request_priotitizer
-	unsigned int index_in_priority_queue;
-
 
 	// MAIN LOGIC FOR PAGE REQUEST JOB FULFILLMENT AND QUEUING PAGE_ID TO ALL THE WAITING USER THREADS
 
@@ -64,6 +62,8 @@ struct page_request
 
 	uint8_t marked_for_deletion;
 
+	// this stores the index of the page_request in the priority queue (max heap), managed and protected by the page_request_priotitizer
+	hpnode page_request_prioritizer_node;
 
 	// *** bst node for binary search tree inside hashmap of page request tracker
 	bstnode page_request_tracker_node;
