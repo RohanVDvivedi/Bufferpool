@@ -5,6 +5,7 @@
 #include<cleanup_scheduler.h>
 
 #include<sys/mman.h>
+#include<limits.h>
 
 bufferpool* new_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_bufferpool, SIZE_IN_BYTES page_size, uint8_t io_thread_count, TIME_ms cleanup_rate_in_milliseconds, TIME_ms unused_prefetched_page_return_in_ms)
 {
@@ -86,7 +87,7 @@ bufferpool* new_bufferpool(char* heap_file_name, PAGE_COUNT pages_in_bufferpool,
 	buffp->SHUTDOWN_CALLED = 0;
 
 	// start necessary threads/jobs
-	buffp->io_dispatcher = new_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, 0, NULL, NULL, NULL);
+	buffp->io_dispatcher = new_executor(FIXED_THREAD_COUNT_EXECUTOR, io_thread_count, UINT_MAX, 0, NULL, NULL, NULL);
 	start_async_cleanup_scheduler(buffp);
 
 	return buffp;

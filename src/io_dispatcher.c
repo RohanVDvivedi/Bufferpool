@@ -140,7 +140,7 @@ static void* io_clean_up_task(cleanup_params* cp)
 
 void queue_job_for_page_request(bufferpool* buffp)
 {
-	submit_job(buffp->io_dispatcher, (void*(*)(void*))io_page_replace_task, buffp, NULL);
+	submit_job(buffp->io_dispatcher, (void*(*)(void*))io_page_replace_task, buffp, NULL, 0);
 }
 
 void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
@@ -150,7 +150,7 @@ void queue_page_entry_clean_up_if_dirty(bufferpool* buffp, page_entry* page_ent)
 		{
 			cleanup_params* cp = malloc(sizeof(cleanup_params));
 			(*cp) = (cleanup_params){.buffp = buffp, .page_ent = page_ent};
-			submit_job(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, cp, NULL);
+			submit_job(buffp->io_dispatcher, (void* (*)(void*))io_clean_up_task, cp, NULL, 0);
 			set(page_ent, IS_QUEUED_FOR_CLEANUP);
 		}
 	pthread_mutex_unlock(&(page_ent->page_entry_lock));
@@ -165,7 +165,7 @@ void queue_and_wait_for_page_entry_clean_up_if_dirty(bufferpool* buffp, page_ent
 			{
 				cleanup_params* cp = malloc(sizeof(cleanup_params));
 				(*cp) = (cleanup_params){.buffp = buffp, .page_ent = page_ent};
-				submit_job(buffp->io_dispatcher, (void*(*)(void*))io_clean_up_task, &cp, NULL);
+				submit_job(buffp->io_dispatcher, (void*(*)(void*))io_clean_up_task, &cp, NULL, 0);
 				set(page_ent, IS_QUEUED_FOR_CLEANUP);
 			}
 
