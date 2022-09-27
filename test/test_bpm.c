@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<stdint.h>
 #include<unistd.h>
+#include<limits.h>
 
 #include<string.h>
 
@@ -88,7 +89,7 @@ int main(int argc, char **argv)
 	bbq = new_bbqueue(((COUNT_OF_IO_TASKS % PREFETCH_EVERY_x_PAGES) + 1) * PREFETCH_PAGE_COUNT);
 	printf("common Bounded Blocking Queue is being used for prefetched execution\n");
 
-	exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, 0, NULL, NULL, NULL);
+	exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, UINT_MAX, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
 	printf("Initializing IO tasks\n\n");
@@ -133,7 +134,7 @@ int main(int argc, char **argv)
 				io_tasks[indx].pop_page_id_from_queue = 1;
 			}
 		}
-		submit_job(exe, (void*(*)(void*))io_task_execute, io_t_p, NULL);
+		submit_job(exe, (void*(*)(void*))io_task_execute, io_t_p, NULL, 0);
 	}
 
 	shutdown_executor(exe, 0);
