@@ -11,6 +11,7 @@
 #include<dbfile.h>
 
 #include<linkedlist.h>
+#include<hashmap.h>
 
 typedef enum page_entry_flags page_entry_flags;
 enum page_entry_flags
@@ -80,6 +81,13 @@ struct page_entry
 
 	// reader threads wait on this conditional wait while their force_write call is happenning
 	pthread_cond_t force_write_wait;
+
+
+
+	// rbhnodes used in page_table hashmap
+	// one for mem_mapping and another for page_entry_map
+	rbhnode page_table1_node;
+	rbhnode page_table2_node;
 
 
 

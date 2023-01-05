@@ -29,6 +29,10 @@ void initialize_page_entry(page_entry* page_ent, void* page_memory)
 	// they need not have page_entry_lock for the corresponding page
 	initialize_rwlock(&(page_ent->page_memory_lock));
 
+
+	initialize_rbhnode(&(page_ent->page_table1_node));
+	initialize_rbhnode(&(page_ent->page_table2_node));
+
 	initialize_llnode(&(page_ent->lru_ll_node));
 	page_ent->lru_list = NULL;
 }

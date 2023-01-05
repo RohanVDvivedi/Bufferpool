@@ -5,8 +5,8 @@
 page_table* new_page_table(PAGE_COUNT page_entry_count)
 {
 	page_table* pg_tbl = (page_table*) malloc(sizeof(page_table));
-	initialize_hashmap(&(pg_tbl->mem_mapping), ROBINHOOD_HASHING, (page_entry_count * 2) + 3, hash_page_entry_by_page_memory, compare_page_entry_by_page_memory, 0);
-	initialize_hashmap(&(pg_tbl->page_entry_map), ROBINHOOD_HASHING, (page_entry_count * 2) + 3, hash_page_entry_by_page_id, compare_page_entry_by_page_id, 0);
+	initialize_hashmap(&(pg_tbl->mem_mapping), ROBINHOOD_HASHING, (page_entry_count * 2) + 3, hash_page_entry_by_page_memory, compare_page_entry_by_page_memory, offsetof(page_entry, page_table1_node));
+	initialize_hashmap(&(pg_tbl->page_entry_map), ROBINHOOD_HASHING, (page_entry_count * 2) + 3, hash_page_entry_by_page_id, compare_page_entry_by_page_id, offsetof(page_entry, page_table2_node));
 	initialize_rwlock(&(pg_tbl->page_entry_map_lock));
 	return pg_tbl;
 }
