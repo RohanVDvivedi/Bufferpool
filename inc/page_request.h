@@ -126,7 +126,7 @@ page_entry* get_requested_page_entry_and_discard_page_request(page_request* page
 
 int compare_page_request_by_page_id(const void* page_req1, const void* page_req2);
 
-unsigned int hash_page_request_by_page_id(const void* page_req);
+cy_uint hash_page_request_by_page_id(const void* page_req);
 
 int compare_page_request_by_page_priority(const void* page_req1, const void* page_req2);
 

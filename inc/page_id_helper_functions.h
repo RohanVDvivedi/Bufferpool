@@ -3,7 +3,9 @@
 
 #include<buffer_pool_man_types.h>
 
-unsigned int hash_page_id(PAGE_ID page_id);
+#include<cutlery_stds.h>
+
+cy_uint hash_page_id(PAGE_ID page_id);
 
 int compare_page_id(PAGE_ID page_id1, PAGE_ID page_id2);
 

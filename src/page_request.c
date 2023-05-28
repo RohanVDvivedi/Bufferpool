@@ -154,7 +154,7 @@ int compare_page_request_by_page_id(const void* page_req1, const void* page_req2
 	return compare_page_id(((page_request*)page_req1)->page_id, ((page_request*)page_req2)->page_id);
 }
 
-unsigned int hash_page_request_by_page_id(const void* page_req)
+cy_uint hash_page_request_by_page_id(const void* page_req)
 {
 	return hash_page_id(((page_request*)page_req)->page_id);
 }
