@@ -6,7 +6,7 @@ page_request_prioritizer* new_page_request_prioritizer(PAGE_COUNT max_requests)
 {
 	page_request_prioritizer* prp_p = (page_request_prioritizer*) malloc(sizeof(page_request_prioritizer));
 	pthread_mutex_init(&(prp_p->page_request_priority_queue_lock), NULL);
-	initialize_heap(&(prp_p->page_request_priority_queue), max_requests, MAX_HEAP, compare_page_request_by_page_priority, offsetof(page_request, page_request_prioritizer_node));
+	initialize_heap(&(prp_p->page_request_priority_queue), max_requests, MAX_HEAP, BINARY_HEAP_DEGREE, compare_page_request_by_page_priority, offsetof(page_request, page_request_prioritizer_node));
 	return prp_p;
 }
 
