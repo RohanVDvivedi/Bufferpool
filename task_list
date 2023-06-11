@@ -5,7 +5,7 @@
 
  * Actual simple buffer pool
   * api to get page with read/write lock, release page with read/write lock
-  * no page request struct all threads perform their own IO
+  * no page request struct all ->  threads perform their own IO
   * segregate file block io into a separate project name is BlockIO, this project can be used for both logger and buffer pool
   * page_descriptor will have following fields
     * page_id
@@ -26,7 +26,7 @@
   * buffer pool is intialized with following parameters
     * frame_count
     * mutex* external_mutex (if provided all operation must be called with only external mutex locked, else if NULL, bufferpool uses its own internal global mutex for all operations)
-    * read/write blockIO function call
+    * read/write blockIO (taking frame*, page_id, context) function calls or wrappers to them -> this function can also be used to track recLSN's of dirty pages, by storing a hashmap of frame pointers to page_id, recLSNs
     * a function to check if the page can be flushed to disk, probably to evit it
   * get functions return NULL if the page is not present in bufferpool and no other page can be evicted
   * get functions return a flag that suggest if the current request brought the page into memory
