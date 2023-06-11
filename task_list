@@ -26,9 +26,31 @@
   * buffer pool is intialized with following parameters
     * frame_count
     * mutex* external_mutex (if provided all operation must be called with only external mutex locked, else if NULL, bufferpool uses its own internal global mutex for all operations)
-    * read/write blockIO (taking frame*, page_id, page_size, context) function calls or wrappers to them -> this function can also be used to track recLSN's of dirty pages, by storing a hashmap of frame pointers to page_id, recLSNs
+    * read/write page functions (taking frame*, page_id, page_size, context) function calls or wrappers to them -> this function can also be used to track recLSN's of dirty pages, by storing a hashmap of frame pointers to page_id, recLSNs
+    read_page_to_persistent_memory(void* dest_frame, uint64_t page_id, uint64_t page_size, const void* context);
+    write_page_to_persistent_memory(const void* src_frame, uint64_t page_id, uint64_t page_size, const void* context);
     * a function to check if the page can be flushed to disk, probably to evit it
   * get functions return NULL if the page is not present in bufferpool and no other page can be evicted
   * get functions return a flag that suggest if the current request brought the page into memory
   * get new page with write lock can also done
   * set up a multi-threaded job that check if a page is flushable and flush it, a valid page is flushable if is_dirty && can_be_flushed && writers_count == 0
+
+ * BlockIO project alows you to read/write data from block device, with a predefined block size
+  * suggested api
+   open_block_file, close_block_file
+   get_block_size();
+   read_blocks (const block_io_handle* handle,      void* dest, uint64_t block_id, uint64_t block_count);
+   write_blocks(const block_io_handle* handle, const void* src, uint64_t block_id, uint64_t block_count);
+
+ * WAL logger takes in following parameters
+   read_blocks(void* dest, uint64_t block_id, uint64_t block_count, const void* context);
+   write_blocks(const void* src, uint64_t block_id, uint64_t block_count, const void* context);
+ * suggested api
+   uint64_t write_log_record(const logger_handle* handle, const void* log_record, uint32_t log_record_size); // returns log sequence number
+   uint64_t get_flushed_log_sequence_number(const logger_handle* handle); // latest log sequence number that has been flushed to disk
+   uint64_t get_last_log_sequence_number(const logger_handle* handle);  // last log sequence number that been written, but it may not flushed to disk
+   uint64_t flush_all_log_records(const logger_handle* handle); // returns flushed log sequence number, after flushing all the log records
+ * now the log sequence number is the offset of the log record in context
+ * each log record stores the log sequence number of the previous log record, and size of the current log record (including the prefix mentioned here, hence it will always be non-zero) -> this allows going aforward and backward in the log record
+ * each log file has a master record at offset 0, and size equal to the block size
+ * each master record stores last_flushed_log_sequence_number
