@@ -51,6 +51,6 @@
    uint64_t get_last_log_sequence_number(const logger_handle* handle);  // last log sequence number that been written, but it may not flushed to disk
    uint64_t flush_all_log_records(const logger_handle* handle); // returns flushed log sequence number, after flushing all the log records
  * now the log sequence number is the offset of the log record in context
- * each log record stores the log sequence number of the previous log record, and size of the current log record (including the prefix mentioned here, hence it will always be non-zero) -> this allows going aforward and backward in the log record
+ * each log record stores the size of the current log record (including the prefix mentioned here, hence it will always be non-zero) -> this allows going forward
  * each log file has a master record at offset 0, and size equal to the block size
  * each master record stores last_flushed_log_sequence_number
