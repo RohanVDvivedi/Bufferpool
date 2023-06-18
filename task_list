@@ -35,13 +35,6 @@
   * get new page with write lock can also done
   * set up a multi-threaded job that check if a page is flushable and flush it, a valid page is flushable if is_dirty && can_be_flushed && writers_count == 0
 
- * BlockIO project alows you to read/write data from block device, with a predefined block size
-  * suggested api
-   open_block_file, close_block_file
-   get_block_size();
-   read_blocks (const block_io_handle* handle,      void* dest, uint64_t block_id, uint64_t block_count);
-   write_blocks(const block_io_handle* handle, const void* src, uint64_t block_id, uint64_t block_count);
-
  * WAL logger takes in following parameters
    read_blocks(void* dest, uint64_t block_id, uint64_t block_count, const void* context);
    write_blocks(const void* src, uint64_t block_id, uint64_t block_count, const void* context);
