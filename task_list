@@ -26,9 +26,11 @@
   * buffer pool is intialized with following parameters
     * frame_count
     * mutex* external_mutex (if provided all operation must be called with only external mutex locked, else if NULL, bufferpool uses its own internal global mutex for all operations)
-    * read/write page functions (taking frame*, page_id, page_size, context) function calls or wrappers to them -> this function can also be used to track recLSN's of dirty pages, by storing a hashmap of frame pointers to page_id, recLSNs
-    read_page_to_persistent_memory(void* dest_frame, uint64_t page_id, uint64_t page_size, const void* context);
-    write_page_to_persistent_memory(const void* src_frame, uint64_t page_id, uint64_t page_size, const void* context);
+    * read/write/flush_all page functions (taking frame*, uint64_t page_id, uint32_t page_size, context) function calls or wrappers to them -> this function can also be used to track recLSN's of dirty pages, by storing a hashmap of frame pointers to page_id, recLSNs
+    int read_page_to_persistent_memory(void* dest_frame, uint64_t page_id, uint64_t page_size, const void* context);
+    int write_page_to_persistent_memory(const void* src_frame, uint64_t page_id, uint64_t page_size, const void* context);
+    int flush_all_writes_to_persistent_memory(const void* context)
+    * api to allocate page frames and page frame desc
     * a function to check if the page can be flushed to disk, probably to evit it
   * get functions return NULL if the page is not present in bufferpool and no other page can be evicted
   * get functions return a flag that suggest if the current request brought the page into memory
