@@ -39,7 +39,8 @@
   * asynchornously bring a page with a page_id to bufferpool, and put it at the end of the buffer pool's lru, if it is already in the buffer pool then only bump it to the end of lru
   * asynchronously flush a page from the buffer pool
   * evict on non-dirty pages from the bufferpool, if there are no clean pages, then run a page flush mechanism, where all the dirty pages are check if they can be flushed to disk, if yes, these pages are given to threadpool to be written to disk, while we wait on a condition variable to become true. Once all pages are written, we call fsync and then clear dirty bits of all the pages, and wake up any thread that is waiting for the flush to be completed.
-
+ * use a flag to suggest if flush is in progress, and a condition variable so other threads can wait on it.
+ 
  * WAL logger takes in following parameters
    read_blocks(void* dest, uint64_t block_id, uint64_t block_count, const void* context);
    write_blocks(const void* src, uint64_t block_id, uint64_t block_count, const void* context);
