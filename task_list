@@ -36,6 +36,8 @@
   * get functions return a flag that suggest if the current request brought the page into memory
   * get new page with write lock can also done
   * set up a multi-threaded job that check if a page is flushable and flush it, a valid page is flushable if is_dirty && can_be_flushed && writers_count == 0
+  * asynchornously bring a page with a page_id to bufferpool, and put it at the end of the buffer pool's lru, if it is already in the buffer pool then only bump it to the end of lru
+  * asynchronously flush a page to the buffer pool
 
  * WAL logger takes in following parameters
    read_blocks(void* dest, uint64_t block_id, uint64_t block_count, const void* context);
