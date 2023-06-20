@@ -57,4 +57,11 @@ struct page_desc
 	pthread_cond_t waiting_for_upgrading_lock;
 }
 
+// get_new_page_desc -> returns an empty page_desc with all its attributes initialized and frame allocated
+// call this function without holding the global bufferpool lock
+page_desc* get_new_page_desc();
+
+// delete page_desc, freeing all its memory
+void delete_page_desc(page_desc* pd_p);
+
 #endif
