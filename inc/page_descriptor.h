@@ -41,6 +41,12 @@ struct page_desc
 	// number of readers waiting to get a read lock on this page
 	uint64_t readers_waiting;
 
+	// threads waiting for read IO completion will wait here
+	pthread_cond_t waiting_for_read_IO_completion;
+
+	// threads waiting for write IO completion will wait here
+	pthread_cond_t waiting_for_write_IO_completion;
+
 	// threads will wait on this condition variable to get a read lock
 	pthread_cond_t waiting_for_read_lock;
 
