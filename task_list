@@ -1,15 +1,38 @@
- * revamp to support actual bufferpool and not just some beefed up systems project
- i.e.
-   * perform file io on the user's thread
-   * write page to disk, i.e. evict only if its log sequence number is greater than flushed log sequence number
+ * in acquire_lock functions
+   * check if the page is in buffer pool, if yes, either lock it, or wait to acquire a lock on it
+   * else check lru front for a clean page, if not get a dirty page, anything that is not locked or waited on by others, and not under io
+   * check if there is an invalid page and if so, read your page on it and take lock on it and exit
+   * check if bufferpool has lesser then max_frame_count pages, if so create a page_desc, read your page on it take lock on it and exit
+   * evict the page on it, write dirty page to disk (if dirty and valid) flush it, read the new your page from disk take lock on it and exit
+   * else return NULL
+
+ * in release lock functions
+  * release lock on the page
+  * dirty_bit ||= was_modified
+  * if was a writer and force_flush is on, then we know, writers = 0, readers = 0, there may be waiters (both reader and writer), upgraders = 0 => if force flush is on, we wake up all readers and flush the page to disk in the same thread.  
+  * read locked -> if 1 reader and 1 upgrader_waiting, then wake up upgrader
+  * read locked -> if 0 reader and 0 upgrader_waiting, then wake up writers
+  * write locked -> wake up all readers and 1 writer
+  * if the page is not locked, is not under any IO and is not being waited on and is not dirty then, then
+    * if the total_frame_count > max_frame_count -> delete the frame
+    * else add it to lru's tail
+
+  * downgrade from writer to reader
+   * decrement writer count, and add 1 to reader count, wake up all readers
+   * force flush as above if required
+   * dirty_bit ||= was_modified
+
+  * upgrade from reader to writer
+   * here we know writers = 0, waiting writers = 0
+     * if readers == 1, take writers_count = 1
+     * if readers >= 1, and upgraders_waiting == 1, return failure
+     * if readers >= 1, and upgraders_waiting == 0, increemnt upgraders waiting, and wait on readers to become 1
+   * wait for any write IO to finish
+
+
 
  * Actual simple buffer pool
-  * no page request struct all ->  threads perform their own IO
-  * a valid page frame is unevictable if is_IO_op || readers_count || writers_count || readers_waiting || writers_waiting || upgraders_waiting
-  * every get/release lock request check and operate on max frame count and the current frame count
-  * wakeup respective threads readers or writers, after IO or after releasing a lock
-  * set up a multi-threaded job that check if a page is flushable and flush it, a valid page is flushable if is_dirty && can_be_flushed && writers_count == 0
+  * set up a multi-threaded job that check if a page is flushable and flush it, a valid page is flushable if is_dirty && can_be_flushed && writers_count == 0, asynchronously flush a page from the buffer pool
   * asynchornously bring a page with a page_id to bufferpool, and put it at the end of the buffer pool's lru, if it is already in the buffer pool then only bump it to the end of lru
-  * asynchronously flush a page from the buffer pool
   * evict on non-dirty pages from the bufferpool, if there are no clean pages, then run a page flush mechanism, where all the dirty pages are check if they can be flushed to disk, if yes, these pages are given to threadpool to be written to disk, while we wait on a condition variable to become true. Once all pages are written, we call fsync and then clear dirty bits of all the pages, and wake up any thread that is waiting for the flush to be completed.
  * use a flag to suggest if flush is in progress, and a condition variable so other threads can wait on it.
