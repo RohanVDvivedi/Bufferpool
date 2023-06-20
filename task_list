@@ -4,16 +4,10 @@
    * write page to disk, i.e. evict only if its log sequence number is greater than flushed log sequence number
 
  * Actual simple buffer pool
-  * api to get page with read/write lock, release page with read/write lock
   * no page request struct all ->  threads perform their own IO
-  * page_descriptor will have following fields
   * a valid page frame is unevictable if is_IO_op || readers_count || writers_count || readers_waiting || writers_waiting || upgraders_waiting
-  * there must me a provision to change frame count for the bufferpool, every get/release lock request check and operate on max frame count and the current frame count
+  * every get/release lock request check and operate on max frame count and the current frame count
   * wakeup respective threads readers or writers, after IO or after releasing a lock
-  * a page descriptor must be searchable using both page_id and page_frame, using 2 hashtables
-  * get functions return NULL if the page is not present in bufferpool and no other page can be evicted
-  * get functions return a flag that suggest if the current request brought the page into memory
-  * get new page with write lock can also done
   * set up a multi-threaded job that check if a page is flushable and flush it, a valid page is flushable if is_dirty && can_be_flushed && writers_count == 0
   * asynchornously bring a page with a page_id to bufferpool, and put it at the end of the buffer pool's lru, if it is already in the buffer pool then only bump it to the end of lru
   * asynchronously flush a page from the buffer pool

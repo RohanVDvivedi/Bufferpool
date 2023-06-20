@@ -56,11 +56,15 @@ void deinitialize_bufferpool(bufferpool* bf);
 const void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id);
 int release_reader_lock_on_page(bufferpool* bf, const void* frame);
 
-void* get_page_with_writer_lock(bufferpool* bf, uint64_t page_id);
+void* get_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int without_read_IO);
 int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, int force_flush);
 
 int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame);
 int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
+
+// change max fram count for the bufferpool
+uint64_t get_max_frame_desc_count(bufferpool* bf);
+int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
 // TODO think about mechanism to do this
 int flush_all_possible_dirty_pages(bufferpool* bf);
