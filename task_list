@@ -6,19 +6,7 @@
  * Actual simple buffer pool
   * api to get page with read/write lock, release page with read/write lock
   * no page request struct all ->  threads perform their own IO
-  * segregate file block io into a separate project name is BlockIO, this project can be used for both logger and buffer pool
   * page_descriptor will have following fields
-    * page_id
-    * frame -> actual memory
-    * bits for
-      * is_valid (has valid data for the corresponding page id on the frame)
-      * is_being_written_to_disk (set if the page is only being flushed to disk)
-      * is_being_read_from_disk (set if the page is under IO operation, read or write)
-      * is_dirty (if new data has been written to it after its last read from disk)
-    * readers/writers_count (no of threads/transaction currently reading/writing it)
-    * readers waiting and conditional variable for readers to wait
-    * writers waiting and conditional variable for writers to wait
-    * upgraders waiting and conditional variable for upgraders to wait
   * a valid page frame is unevictable if is_IO_op || readers_count || writers_count || readers_waiting || writers_waiting || upgraders_waiting
   * there must me a provision to change frame count for the bufferpool, every get/release lock request check and operate on max frame count and the current frame count
   * wakeup respective threads readers or writers, after IO or after releasing a lock
