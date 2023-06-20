@@ -28,6 +28,9 @@ struct page_desc
 	// number of writer threads that have write lock on this page
 	unsigned int writers_count : 1;
 
+	// number of readers that are waiting upgrading their current read lock to a write lock
+	unsigned int upgraders_waiting : 1;
+
 	// number of readers currently reading this page frame OR
 	// number of reader threads that have read lock on this page
 	uint64_t readers_count;
