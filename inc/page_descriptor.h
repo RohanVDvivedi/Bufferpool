@@ -42,18 +42,23 @@ struct page_desc
 	uint64_t readers_waiting;
 
 	// threads waiting for read IO completion will wait here
+	// broadcast condition => when is_under_read_IO gets set to 0 from 1
 	pthread_cond_t waiting_for_read_IO_completion;
 
 	// threads waiting for write IO completion will wait here
+	// broadcast condition => when is_under_write_IO gets set to 0 from 1
 	pthread_cond_t waiting_for_write_IO_completion;
 
 	// threads will wait on this condition variable to get a read lock
+	// broadcast condition => when new readers can take the lock
 	pthread_cond_t waiting_for_read_lock;
 
 	// threads will wait on this condition variable to get a write lock
+	// signal condition => when one of new writer can take the lock
 	pthread_cond_t waiting_for_write_lock;
 
 	// only 1 thread will be allowed to wait for upgrading their read lock to write lock
+	// signal condition => when one waiting for upgrade can take the lock
 	pthread_cond_t waiting_for_upgrading_lock;
 }
 
