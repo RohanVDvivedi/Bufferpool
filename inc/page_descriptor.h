@@ -3,6 +3,12 @@
 
 #include<stdint.h>
 
+#include<pthread.h>
+
+#include<hashmap.h>
+#include<linkedlist.h>
+#include<bst.h>
+
 typedef struct page_desc page_desc;
 struct page_desc
 {
@@ -60,7 +66,17 @@ struct page_desc
 	// only 1 thread will be allowed to wait for upgrading their read lock to write lock
 	// signal condition => when one waiting for upgrade can take the lock
 	pthread_cond_t waiting_for_upgrading_lock;
-}
+
+	// -------------------------------------
+	// --------- embedded nodes ------------
+	// -------------------------------------
+
+	bstnode embed_node_page_id_to_frame_desc;
+
+	bstnode embed_node_frame_to_frame_desc;
+
+	llnode embed_node_flushable_frame_descs;
+};
 
 // get_new_page_desc -> returns an empty page_desc with all its attributes initialized and frame allocated
 // call this function without holding the global bufferpool lock
