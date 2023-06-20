@@ -25,10 +25,10 @@ struct page_desc
 	int is_dirty : 1;
 
 	// page_desc with final page_id already set is being read from disk
-	int is_under_read_IO : 1;
+	unsigned int is_under_read_IO : 1;
 
 	// page_desc with final page_id is being written to disk
-	int is_under_write_IO : 1;
+	unsigned int is_under_write_IO : 1;
 
 	// number of writers writing to this page, OR
 	// number of writer threads that have write lock on this page
@@ -84,5 +84,11 @@ page_desc* new_page_desc();
 
 // delete page_desc, freeing all its memory
 void delete_page_desc(page_desc* pd_p);
+
+// = readers_count + is_under_write_IO
+uint64_t get_total_readers_count_on_page_desc(page_desc* pd_p);
+
+// = writers_count + is_under_read_IO
+uint64_t get_total_writers_count_on_page_desc(page_desc* pd_p);
 
 #endif
