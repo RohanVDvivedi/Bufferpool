@@ -27,6 +27,9 @@ struct bufferpool
 	// total number of frame descriptor count
 	uint64_t total_frame_desc_count;
 
+	// this is a fixed sized bufferpool
+	uint32_t page_size;
+
 	// hashtable => page_id (uint64_t) -> frame descriptor
 	hashmap page_id_to_frame_desc;
 
