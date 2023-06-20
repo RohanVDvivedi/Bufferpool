@@ -1,6 +1,8 @@
 #ifndef PAGE_DESCRIPTOR_H
 #define PAGE_DESCRIPTOR_H
 
+#include<stdint.h>
+
 typedef struct page_desc page_desc;
 struct page_desc
 {

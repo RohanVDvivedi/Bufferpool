@@ -6,11 +6,15 @@
 
 #include<pthread.h>
 
+#include<stdint.h>
+
+#include<page_io_ops.h>
+
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
 	// if set to true, use internal global lock, else use external lock
-	int internal_lock;
+	int has_internal_lock : 1;
 	union
 	{
 		pthread_mutex_t* external_lock;
