@@ -48,4 +48,8 @@ struct bufferpool
 	int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame);
 };
 
+void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame));
+
+void deinitialize_bufferpool(bufferpool* bf);
+
 #endif
