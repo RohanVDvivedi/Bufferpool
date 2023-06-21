@@ -1,16 +1,4 @@
- ** new logical concept
- * is_under_read_IO -> will also increment the writer's count, since it is equivalent to taking a write lock on the frame
- * similarly in_under_write_IO -> will also increment the reader's count, since it is equivalent to taking a read lock on the frame
- * while evicting a frame take write lock (increment the writer's count along with the corresponding IO bit) on it, even while flushing it.
- * this allows us to count readers and writers for the frame, without additional attributes and book keeping, we even do not need eviction bit now.
-
- * in acquire_lock functions
-   * check if the page is in buffer pool, if yes, either lock it, or wait to acquire a lock on it
-   * else check lru front for a clean page, if not get a dirty page, anything that is not locked or waited on by others, and not under io
-   * check if there is an invalid page and if so, read your page on it and take lock on it and exit
-   * check if bufferpool has lesser then max_frame_count pages, if so create a page_desc, read your page on it take lock on it and exit
-   * evict the page on it, write dirty page to disk (if dirty and valid) flush it, read the new your page from disk take lock on it and exit
-   * else return NULL
+ * implement acquire lock function
 
  * in release lock functions
   * release lock on the page
