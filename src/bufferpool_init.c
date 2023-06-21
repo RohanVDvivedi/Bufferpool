@@ -17,15 +17,15 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 
 	bf->page_size = page_size;
 
-	initialize_hashmap(&(bf->page_id_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, bf->max_frame_desc_count, hash_frame_desc_by_page_id, compare_frame_desc_by_page_id, offsetof(page_desc, embed_node_page_id_to_frame_desc));
+	initialize_hashmap(&(bf->page_id_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, bf->max_frame_desc_count, hash_frame_desc_by_page_id, compare_frame_desc_by_page_id, offsetof(frame_desc, embed_node_page_id_to_frame_desc));
 
-	initialize_hashmap(&(bf->frame_ptr_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, bf->max_frame_desc_count, hash_frame_desc_by_frame_ptr, compare_frame_desc_by_frame_ptr, offsetof(page_desc, embed_node_frame_ptr_to_frame_desc));
+	initialize_hashmap(&(bf->frame_ptr_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, bf->max_frame_desc_count, hash_frame_desc_by_frame_ptr, compare_frame_desc_by_frame_ptr, offsetof(frame_desc, embed_node_frame_ptr_to_frame_desc));
 
-	initialize_linkedlist(&(bf->invalid_frame_descs_list), offsetof(page_desc, embed_node_lru_lists));
+	initialize_linkedlist(&(bf->invalid_frame_descs_list), offsetof(frame_desc, embed_node_lru_lists));
 
-	initialize_linkedlist(&(bf->clean_frame_descs_lru_list), offsetof(page_desc, embed_node_lru_lists));
+	initialize_linkedlist(&(bf->clean_frame_descs_lru_list), offsetof(frame_desc, embed_node_lru_lists));
 
-	initialize_linkedlist(&(bf->dirty_frame_descs_lru_list), offsetof(page_desc, embed_node_lru_lists));
+	initialize_linkedlist(&(bf->dirty_frame_descs_lru_list), offsetof(frame_desc, embed_node_lru_lists));
 
 	bf->page_io_functions = page_io_functions;
 
