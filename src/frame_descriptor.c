@@ -52,6 +52,17 @@ frame_desc* new_frame_desc(uint32_t page_size)
 
 void delete_frame_desc(frame_desc* fd);
 
+int is_frame_desc_under_IO(frame_desc* fd)
+{
+	return fd->is_under_read_IO || fd->is_under_write_IO;
+}
+
+int is_frame_desc_locked_or_waiting_to_be_locked(frame_desc* fd)
+{
+	return	fd->readers_count || fd->writers_count ||
+			fd->readers_waiting || fd->writers_waiting || fd->upgraders_waiting;
+}
+
 uint64_t get_total_readers_count_on_frame_desc(frame_desc* fd)
 {
 	return fd->readers_count + (((unsigned int)fd->is_under_write_IO) & 1U);

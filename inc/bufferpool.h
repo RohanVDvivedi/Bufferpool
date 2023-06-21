@@ -40,6 +40,7 @@ struct bufferpool
 
 	// all the below linkedlists only contain frames descriptors
 	// that have is_under_*_IO = 0, readers/writers_count = 0 and *_waiters = 0
+	// i.e. (is_frame_desc_under_IO(fd) || is_frame_desc_locked_or_waiting_to_be_locked(fd)) == 0
 	// Additionally, any page_desc must exist in atmost 1 of these three lists
 
 	// is_valid == 0
