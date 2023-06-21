@@ -1,5 +1,5 @@
-#ifndef PAGE_DESCRIPTOR_UTIL_H
-#define PAGE_DESCRIPTOR_UTIL_H
+#ifndef FRAME_DESCRIPTOR_UTIL_H
+#define FRAME_DESCRIPTOR_UTIL_H
 
 cy_uint hash_frame_desc_by_page_id(const void* fd);
 

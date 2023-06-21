@@ -1,61 +1,61 @@
-#include<page_descriptor.h>
+#include<frame_descriptor.h>
 
 #include<stdlib.h>
 #include<sys/mman.h>
 
-page_desc* new_page_desc(uint32_t page_size)
+frame_desc* new_frame_desc(uint32_t page_size)
 {
-	page_desc* pd_p = malloc(sizeof(page_desc));
+	frame_desc* fd = malloc(sizeof(frame_desc));
 
-	if(pd_p == NULL)
+	if(fd == NULL)
 		return NULL;
 
 	// since we are setting is_valid to 0, below 2 attributes are meaning less
-	pd_p->page_id = 0;
-	pd_p->frame = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_POPULATE, -1, -1);
-	if(pd_p->frame == NULL)
+	fd->page_id = 0;
+	fd->frame = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_POPULATE, -1, -1);
+	if(fd->frame == NULL)
 	{
-		free(pd_p);
+		free(fd);
 		return NULL;
 	}
 
-	pd_p->is_valid = 0;
+	fd->is_valid = 0;
 
-	// if this bit is set only if the page_desc is valid, but the page frame has been modified, but it has not yet reached disk
-	pd_p->is_dirty = 0;
+	// if this bit is set only if the frame_desc is valid, but the page frame has been modified, but it has not yet reached disk
+	fd->is_dirty = 0;
 
-	pd_p->is_under_read_IO = 0;
-	pd_p->is_under_write_IO = 0;
+	fd->is_under_read_IO = 0;
+	fd->is_under_write_IO = 0;
 
-	pd_p->writers_count = 0;
-	pd_p->readers_count = 0;
+	fd->writers_count = 0;
+	fd->readers_count = 0;
 
-	pd_p->upgraders_waiting = 0;
-	pd_p->writers_waiting = 0;
-	pd_p->readers_waiting = 0;
+	fd->upgraders_waiting = 0;
+	fd->writers_waiting = 0;
+	fd->readers_waiting = 0;
 
-	pthread_cond_init(&(pd_p->waiting_for_read_IO_completion), NULL);
-	pthread_cond_init(&(pd_p->waiting_for_write_IO_completion), NULL);
+	pthread_cond_init(&(fd->waiting_for_read_IO_completion), NULL);
+	pthread_cond_init(&(fd->waiting_for_write_IO_completion), NULL);
 
-	pthread_cond_init(&(pd_p->waiting_for_read_lock), NULL);
-	pthread_cond_init(&(pd_p->waiting_for_write_lock), NULL);
-	pthread_cond_init(&(pd_p->waiting_for_upgrading_lock), NULL);
+	pthread_cond_init(&(fd->waiting_for_read_lock), NULL);
+	pthread_cond_init(&(fd->waiting_for_write_lock), NULL);
+	pthread_cond_init(&(fd->waiting_for_upgrading_lock), NULL);
 
-	initialize_bstnode(&(pd_p->embed_node_page_id_to_frame_desc));
-	initialize_bstnode(&(pd_p->embed_node_frame_to_frame_desc));
-	initialize_llnode(&(pd_p->embed_node_lru_lists));
+	initialize_bstnode(&(fd->embed_node_page_id_to_frame_desc));
+	initialize_bstnode(&(fd->embed_node_frame_to_frame_desc));
+	initialize_llnode(&(fd->embed_node_lru_lists));
 
-	return pd_p;
+	return fd;
 }
 
-void delete_page_desc(page_desc* pd_p);
+void delete_frame_desc(frame_desc* fd);
 
-uint64_t get_total_readers_count_on_page_desc(page_desc* pd_p)
+uint64_t get_total_readers_count_on_frame_desc(frame_desc* fd)
 {
-	return pd_p->readers_count + pd_p->is_under_write_IO;
+	return fd->readers_count + fd->is_under_write_IO;
 }
 
-uint64_t get_total_writers_count_on_page_desc(page_desc* pd_p)
+uint64_t get_total_writers_count_on_frame_desc(frame_desc* fd)
 {
-	return pd_p->writers_count + pd_p->is_under_read_IO;
+	return fd->writers_count + fd->is_under_read_IO;
 }

@@ -1,5 +1,5 @@
-#ifndef PAGE_DESCRIPTOR_H
-#define PAGE_DESCRIPTOR_H
+#ifndef FRAME_DESCRIPTOR_H
+#define FRAME_DESCRIPTOR_H
 
 #include<stdint.h>
 
@@ -9,8 +9,8 @@
 #include<linkedlist.h>
 #include<bst.h>
 
-typedef struct page_desc page_desc;
-struct page_desc
+typedef struct frame_desc frame_desc;
+struct frame_desc
 {
 	// page id of a valid frame
 	uint64_t page_id;
@@ -79,17 +79,17 @@ struct page_desc
 	llnode embed_node_lru_lists;
 };
 
-// get_new_page_desc -> returns an empty page_desc with all its attributes initialized and frame allocated
+// get_new_frame_desc -> returns an empty frame_desc with all its attributes initialized and frame allocated
 // call this function without holding the global bufferpool lock
-page_desc* new_page_desc();
+frame_desc* new_frame_desc();
 
-// delete page_desc, freeing all its memory
-void delete_page_desc(page_desc* pd_p);
+// delete frame_desc, freeing frame and all its memory
+void delete_frame_desc(frame_desc* fd);
 
 // = readers_count + is_under_write_IO
-uint64_t get_total_readers_count_on_page_desc(page_desc* pd_p);
+uint64_t get_total_readers_count_on_frame_desc(frame_desc* fd);
 
 // = writers_count + is_under_read_IO
-uint64_t get_total_writers_count_on_page_desc(page_desc* pd_p);
+uint64_t get_total_writers_count_on_frame_desc(frame_desc* fd);
 
 #endif
