@@ -35,3 +35,27 @@ frame_desc* find_frame_desc_by_frame_ptr(bufferpool* bf, void* frame)
 {
 	return (frame_desc*) find_equals_in_hashmap(&(bf->frame_ptr_to_frame_desc), &((const frame_desc){.frame = frame}));
 }
+
+int insert_frame_desc_in_lru_lists(bufferpool* bf, frame_desc* fd)
+{
+	if(!fd->is_valid)
+		return insert_tail_in_linkedlist(&(bf->invalid_frame_descs_list), fd);
+	else if(!fd->is_dirty)
+		return insert_tail_in_linkedlist(&(bf->clean_frame_descs_lru_list), fd);
+	else if(fd->is_dirty)
+		return insert_tail_in_linkedlist(&(bf->dirty_frame_descs_lru_list), fd);
+	else
+		return 0;
+}
+
+int remove_frame_desc_from_lru_lists(bufferpool* bf, frame_desc* fd)
+{
+	if(!fd->is_valid)
+		return remove_from_linkedlist(&(bf->invalid_frame_descs_list), fd);
+	else if(!fd->is_dirty)
+		return remove_from_linkedlist(&(bf->clean_frame_descs_lru_list), fd);
+	else if(fd->is_dirty)
+		return remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd);
+	else
+		return 0;
+}

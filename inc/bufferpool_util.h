@@ -25,4 +25,10 @@ frame_desc* find_frame_desc_by_page_id(bufferpool* bf, uint64_t page_id);
 // find frame_desc using frame ptr from frame_ptr_to_frame_desc
 frame_desc* find_frame_desc_by_frame_ptr(bufferpool* bf, void* frame);
 
+// insert the given frame_desc in one of the three frame_descs
+int insert_frame_desc_in_lru_lists(bufferpool* bf, frame_desc* fd);
+
+// remove frame_desc from all the three lru lists
+int remove_frame_desc_from_lru_lists(bufferpool* bf, frame_desc* fd);
+
 #endif
