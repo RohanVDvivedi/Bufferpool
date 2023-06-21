@@ -25,41 +25,33 @@ struct frame_desc
 	int is_dirty : 1;
 
 	// page_desc with final page_id already set is being read from disk
+	// this thread doing the IO is also a writer, because it is writing to the frame
 	int is_under_read_IO : 1;
 
 	// page_desc with final page_id is being written to disk
+	// this thread doing the IO is also a reader, because it is reading the frame, to write it to the disk
 	int is_under_write_IO : 1;
 
-	// this bit will be set if the is_dirty = 1, is_under_write_IO = 1 and this page_id is being written to disk,
-	// and after that something else will be read over it
-	// if so, and if you find this page by page_id then wait for write_IO to complete before taking lock or goinf wait to take the lock
-	int is_selected_for_eviction : 1;
-
-	// number of writers writing to this page (this does not include the thread that is perfroming read IO ion this page) OR
-	// number of writer threads that have write lock on this page
+	// number of writers writing to this page frame
+	// this will include the thread that is perfroming read IO on this page (if is_under_read_IO is set) and the other user writers
 	unsigned int writers_count : 1;
 
 	// number of readers that are waiting to upgrade their current read lock to a write lock
-	// it still will keep its readers_count incremented, the waiting thread will only decrement readers_count and increment writers_count after all readers have exitied
+	// it still will keep its readers_count incremented
+	// the thread waiting for upgrade will only decrement readers_count and increment writers_count after all readers have exitied and the waiting thread is resumed
 	unsigned int upgraders_waiting : 1;
 
-	// number of readers currently reading this page frame (this will not include the thread performing write IO) OR
-	// number of reader threads that have read lock on this page
+	// number of readers currently reading this page frame
+	// this will include the thread that is performing write IO (if is_under_write_IO is set) and other user readers
 	uint64_t readers_count;
 
 	// number of writers waiting to get a write lock on this page
+	// conceptually, this may include any thread that want's to perform read IO
 	uint64_t writers_waiting;
 
 	// number of readers waiting to get a read lock on this page
+	// conceptually, this may include any thread that want's to perform write IO
 	uint64_t readers_waiting;
-
-	// threads waiting for read IO completion will wait here
-	// broadcast condition => when is_under_read_IO gets set to 0 from 1
-	pthread_cond_t waiting_for_read_IO_completion;
-
-	// threads waiting for write IO completion will wait here
-	// broadcast condition => when is_under_write_IO gets set to 0 from 1
-	pthread_cond_t waiting_for_write_IO_completion;
 
 	// threads will wait on this condition variable to get a read lock
 	// broadcast condition => when new readers can take the lock

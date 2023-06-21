@@ -27,17 +27,12 @@ frame_desc* new_frame_desc(uint32_t page_size)
 	fd->is_under_read_IO = 0;
 	fd->is_under_write_IO = 0;
 
-	fd->is_selected_for_eviction = 0;
-
 	fd->writers_count = 0;
 	fd->readers_count = 0;
 
 	fd->upgraders_waiting = 0;
 	fd->writers_waiting = 0;
 	fd->readers_waiting = 0;
-
-	pthread_cond_init(&(fd->waiting_for_read_IO_completion), NULL);
-	pthread_cond_init(&(fd->waiting_for_write_IO_completion), NULL);
 
 	pthread_cond_init(&(fd->waiting_for_read_lock), NULL);
 	pthread_cond_init(&(fd->waiting_for_write_lock), NULL);
