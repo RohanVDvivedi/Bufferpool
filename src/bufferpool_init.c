@@ -1,5 +1,6 @@
 #include<bufferpool.h>
 
+#include<bufferpool_util.h>
 #include<frame_descriptor.h>
 #include<frame_descriptor_util.h>
 
@@ -33,3 +34,30 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 }
 
 void deinitialize_bufferpool(bufferpool* bf);
+
+uint64_t get_max_frame_desc_count(bufferpool* bf)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	uint64_t result = bf->max_frame_desc_count;
+
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
+}
+
+void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	bf->max_frame_desc_count = max_frame_desc_count;
+
+	resize_hashmap(&(bf->page_id_to_frame_desc), bf->max_frame_desc_count);
+	resize_hashmap(&(bf->frame_ptr_to_frame_desc), bf->max_frame_desc_count);
+
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+}
