@@ -85,7 +85,7 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 		force_flush  -> the call returns only after writing and flushing the page to disk
 */
 
-// change max fram count for the bufferpool
+// change max frame count for the bufferpool
 uint64_t get_max_frame_desc_count(bufferpool* bf);
 int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
