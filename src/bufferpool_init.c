@@ -4,6 +4,10 @@
 #include<frame_descriptor.h>
 #include<frame_descriptor_util.h>
 
+#include<cutlery_math.h>
+
+#define HASHTABLE_BUCKET_CAPACITY(max_frame_desc_count) (max((((max_frame_desc_count)/4)+32),(CY_UINT_MAX/32)))
+
 void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame))
 {
 	bf->has_internal_lock = (external_lock == NULL);
@@ -18,9 +22,9 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 
 	bf->page_size = page_size;
 
-	initialize_hashmap(&(bf->page_id_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, bf->max_frame_desc_count, hash_frame_desc_by_page_id, compare_frame_desc_by_page_id, offsetof(frame_desc, embed_node_page_id_to_frame_desc));
+	initialize_hashmap(&(bf->page_id_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count), hash_frame_desc_by_page_id, compare_frame_desc_by_page_id, offsetof(frame_desc, embed_node_page_id_to_frame_desc));
 
-	initialize_hashmap(&(bf->frame_ptr_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, bf->max_frame_desc_count, hash_frame_desc_by_frame_ptr, compare_frame_desc_by_frame_ptr, offsetof(frame_desc, embed_node_frame_ptr_to_frame_desc));
+	initialize_hashmap(&(bf->frame_ptr_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count), hash_frame_desc_by_frame_ptr, compare_frame_desc_by_frame_ptr, offsetof(frame_desc, embed_node_frame_ptr_to_frame_desc));
 
 	initialize_linkedlist(&(bf->invalid_frame_descs_list), offsetof(frame_desc, embed_node_lru_lists));
 
@@ -55,8 +59,8 @@ void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 
 	bf->max_frame_desc_count = max_frame_desc_count;
 
-	resize_hashmap(&(bf->page_id_to_frame_desc), bf->max_frame_desc_count);
-	resize_hashmap(&(bf->frame_ptr_to_frame_desc), bf->max_frame_desc_count);
+	resize_hashmap(&(bf->page_id_to_frame_desc), HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count));
+	resize_hashmap(&(bf->frame_ptr_to_frame_desc), HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count));
 
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
