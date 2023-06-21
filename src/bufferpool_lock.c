@@ -1,5 +1,7 @@
 #include<bufferpool.h>
 
+#include<bufferpool_util.h>
+
 void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
 {
 	if(bf->has_internal_lock)
