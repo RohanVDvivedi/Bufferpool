@@ -3,12 +3,16 @@
 #include<bufferpool_util.h>
 
 // this function must be called with bufferpool lock held
-// this function also removed the frame_desc from any list that was previously holding it
+// this function also removes the frame_desc from any list that was previously holding it, 
+// thus a frame_desc selected for eviction will not be selected again
 static frame_desc* get_frame_desc_to_acquire_lock_on(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
 {
 	frame_desc* fd = find_frame_desc_by_page_id(bf, page_id);
 	if(fd != NULL)
+	{
+		remove_frame_desc_from_lru_lists(bf, fd);
 		return fd;
+	}
 
 	// if there is any frame_desc in invalid_frame_descs_list, then take 1 from it's head
 	if(fd == NULL && !is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
@@ -33,6 +37,11 @@ static frame_desc* get_frame_desc_to_acquire_lock_on(bufferpool* bf, uint64_t pa
 		// attempt to find one from the buffer pool again
 		// someone might have done the IO and brought our page in the bufferpool, while we were creating the new frame_desc
 		fd = find_frame_desc_by_page_id(bf, page_id);
+		if(fd != NULL)
+		{
+			remove_frame_desc_from_lru_lists(bf, fd);
+			return fd;
+		}
 
 		if(_new_frame_desc == NULL)	// if the new call failed, then reverse the incremented counter
 			bf->total_frame_desc_count--;
