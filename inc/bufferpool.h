@@ -36,14 +36,17 @@ struct bufferpool
 	// hashtable => frame (void*) -> frame descriptor
 	hashmap frame_to_frame_desc;
 
+	// every valid page_desc, must exist in both of these above hashtables
+
 	// all the below linkedlists only contain frames descriptors
 	// that have is_under_*_IO = 0, readers/writers_count = 0 and *_waiters = 0
+	// Additionally, any page_desc must exist in atmost 1 of these three lists
 
-	// is_valid = 0
+	// is_valid == 0
 	linkedlist invalid_frame_descs_list;
-	// is_dirty = 0
+	// is_valid == 1 && is_dirty == 0
 	linkedlist clean_frame_descs_lru_list;
-	// is_dirty = 1
+	// is_valid == 1 && is_dirty == 1
 	linkedlist dirty_frame_descs_lru_list;
 
 	// methods that allow you to read/writes pages to-from secondsa
