@@ -8,19 +8,19 @@ pthread_mutex_t* get_bufferpool_lock(bufferpool* bf);
 
 // for the below 5 methods, NULL or 0 implies a failure
 
-// insert page_desc in both page_id_to_frame_desc and frame_ptr_to_frame_desc
-int insert_page_desc(bufferpool* bf, page_desc* pd_p);
+// insert frame_desc in both page_id_to_frame_desc and frame_ptr_to_frame_desc
+int insert_frame_desc(bufferpool* bf, frame_desc* fd);
 
-// update the page_desc's page_id and reinsert it in the bufferpool to fix the mapping of page_id_to_frame_desc
-int update_page_id_for_page_desc(bufferpool* bf, page_desc* pd_p, uint64_t new_page_id);
+// update the frame_desc's page_id and reinsert it in the bufferpool to fix the mapping of page_id_to_frame_desc
+int update_page_id_for_frame_desc(bufferpool* bf, frame_desc* fd, uint64_t new_page_id);
 
-// remove page_desc from both page_id_to_frame_desc and frame_ptr_to_frame_desc
-int remove_page_desc(bufferpool* bf, page_desc* pd_p);
+// remove frame_desc from both page_id_to_frame_desc and frame_ptr_to_frame_desc
+int remove_frame_desc(bufferpool* bf, frame_desc* fd);
 
-// find page_desc using page_id from frame_ptr_to_frame_desc
-page_desc* find_page_desc_by_page_id(bufferpool* bf, uint64_t page_id);
+// find frame_desc using page_id from frame_ptr_to_frame_desc
+frame_desc* find_frame_desc_by_page_id(bufferpool* bf, uint64_t page_id);
 
-// find page_desc using frame from frame_ptr_to_frame_desc
-page_desc* find_page_desc_by_frame_ptr(bufferpool* bf, void* frame);
+// find frame_desc using frame ptr from frame_ptr_to_frame_desc
+frame_desc* find_frame_desc_by_frame_ptr(bufferpool* bf, void* frame);
 
 #endif

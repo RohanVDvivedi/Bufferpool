@@ -74,7 +74,7 @@ struct page_desc
 
 	bstnode embed_node_page_id_to_frame_desc;
 
-	bstnode embed_node_frame_to_frame_desc;
+	bstnode embed_node_frame_ptr_to_frame_desc;
 
 	llnode embed_node_lru_lists;
 };
