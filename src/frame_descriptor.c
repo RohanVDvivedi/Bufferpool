@@ -42,7 +42,7 @@ frame_desc* new_frame_desc(uint32_t page_size)
 	pthread_cond_init(&(fd->waiting_for_upgrading_lock), NULL);
 
 	initialize_bstnode(&(fd->embed_node_page_id_to_frame_desc));
-	initialize_bstnode(&(fd->embed_node_frame_to_frame_desc));
+	initialize_bstnode(&(fd->embed_node_frame_ptr_to_frame_desc));
 	initialize_llnode(&(fd->embed_node_lru_lists));
 
 	return fd;
