@@ -62,10 +62,10 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 void deinitialize_bufferpool(bufferpool* bf);
 
 // for the below 6 functions a NULL or 0 implies a failure
-const void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id);
+const void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary);
 int release_reader_lock_on_page(bufferpool* bf, const void* frame);
 
-void* get_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int to_be_overwritten);
+void* get_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int to_be_overwritten);
 int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, int force_flush);
 
 int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_modified, int force_flush);
@@ -73,11 +73,15 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 
 /*
 	flags information :
+		evict_dirty_if_necessary -> This flags allows you to evict a dirty page if need arises, so that you can get your page
+		                         -> by default dirty page will not be evicted
+
 		to_be_overwritten -> If the page frame at page_id is not in bufferpool, even then the page is not read from disk
 		                  -> This can be used, if you are sure that the page had not been used or allocated prior to this call
 		                  -> this flag is a NO-OP if the page is already in bufferpool
 
 		was_modified -> this bit suggests if the page was dirtied by the user, dirty_bit = dirty_bit || was_modified
+
 		floce_flush  -> the call returns only after writing and flushing the page to disk
 */
 
