@@ -3,11 +3,11 @@
 
 #include<bufferpool.h>
 
-#include<frame_descriptor.h>
-
 // returns pointer to the bufferpool lock, either internal or external, depending on the attribute bf->has_internal_lock
 pthread_mutex_t* get_bufferpool_lock(bufferpool* bf);
 
+
+#include<frame_descriptor.h>
 // for the below 5 methods, NULL or 0 implies a failure
 
 // insert frame_desc in both page_id_to_frame_desc and frame_ptr_to_frame_desc
