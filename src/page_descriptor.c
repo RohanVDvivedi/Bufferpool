@@ -1,14 +1,23 @@
 #include<page_descriptor.h>
 
 #include<stdlib.h>
+#include<sys/mman.h>
 
-page_desc* new_page_desc()
+page_desc* new_page_desc(uint32_t page_size)
 {
 	page_desc* pd_p = malloc(sizeof(page_desc));
 
+	if(pd_p == NULL)
+		return NULL;
+
 	// since we are setting is_valid to 0, below 2 attributes are meaning less
 	pd_p->page_id = 0;
-	pd_p->frame = NULL;
+	pd_p->frame = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_POPULATE, -1, -1);
+	if(frame == NULL)
+	{
+		free(pd_p);
+		return NULL;
+	}
 
 	pd_p->is_valid = 0;
 
