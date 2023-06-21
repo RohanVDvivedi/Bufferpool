@@ -34,7 +34,7 @@ struct bufferpool
 	hashmap page_id_to_frame_desc;
 
 	// hashtable => frame (void*) -> frame descriptor
-	hashmap frame_to_frame_desc;
+	hashmap frame_ptr_to_frame_desc;
 
 	// every valid page_desc, must exist in both of these above hashtables
 
