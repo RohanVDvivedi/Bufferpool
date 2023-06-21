@@ -30,7 +30,7 @@ struct page_desc
 	// page_desc with final page_id is being written to disk
 	unsigned int is_under_write_IO : 1;
 
-	// number of writers writing to this page, OR
+	// number of writers writing to this page (this does not include the thread that is perfroming read IO ion this page) OR
 	// number of writer threads that have write lock on this page
 	unsigned int writers_count : 1;
 
@@ -38,7 +38,7 @@ struct page_desc
 	// it still will keep its readers_count incremented, the waiting thread will only decrement readers_count and increment writers_count after all readers have exitied
 	unsigned int upgraders_waiting : 1;
 
-	// number of readers currently reading this page frame OR
+	// number of readers currently reading this page frame (this will not include the thread performing write IO) OR
 	// number of reader threads that have read lock on this page
 	uint64_t readers_count;
 
