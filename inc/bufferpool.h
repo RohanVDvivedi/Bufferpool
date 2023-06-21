@@ -62,8 +62,8 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 void deinitialize_bufferpool(bufferpool* bf);
 
 // for the below 6 functions a NULL or 0 implies a failure
-const void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary);
-int release_reader_lock_on_page(bufferpool* bf, const void* frame);
+void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary);
+int release_reader_lock_on_page(bufferpool* bf, void* frame);
 
 void* get_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int to_be_overwritten);
 int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, int force_flush);
