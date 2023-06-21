@@ -3,6 +3,8 @@
 
 #include<bufferpool.h>
 
+#include<frame_descriptor.h>
+
 // returns pointer to the bufferpool lock, either internal or external, depending on the attribute bf->has_internal_lock
 pthread_mutex_t* get_bufferpool_lock(bufferpool* bf);
 
