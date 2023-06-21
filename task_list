@@ -1,3 +1,9 @@
+ ** new logical concept
+ * is_under_read_IO -> will also increment the writer's count, since it is equivalent to taking a write lock on the frame
+ * similarly in_under_write_IO -> will also increment the reader's count, since it is equivalent to taking a read lock on the frame
+ * while evicting a frame take write lock (increment the writer's count along with the corresponding IO bit) on it, even while flushing it.
+ * this allows us to count readers and writers for the frame, without additional attributes and book keeping, we even do not need eviction bit now.
+
  * in acquire_lock functions
    * check if the page is in buffer pool, if yes, either lock it, or wait to acquire a lock on it
    * else check lru front for a clean page, if not get a dirty page, anything that is not locked or waited on by others, and not under io
