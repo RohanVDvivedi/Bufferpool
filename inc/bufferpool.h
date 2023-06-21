@@ -36,10 +36,15 @@ struct bufferpool
 	// hashtable => frame (void*) -> frame descriptor
 	hashmap frame_to_frame_desc;
 
-	// linkedlist of the all frame descriptors that can be written to disk
-	// all locked frames, all frames under IO, all pages that are being waited on by other threads (for read or write lock) are excluded from this list
-	// even if a page is in this list, it is not evicted if the can_be_flushed_to_disk function returns false
-	linkedlist flushable_frame_descs;
+	// all the below linkedlists only contain frames descriptors
+	// that have is_under_*_IO = 0, readers/writers_count = 0 and *_waiters = 0
+
+	// is_valid = 0
+	linkedlist invalid_frame_descs_list;
+	// is_dirty = 0
+	linkedlist clean_frame_descs_lru_list;
+	// is_dirty = 1
+	linkedlist dirty_frame_descs_lru_list;
 
 	// methods that allow you to read/writes pages to-from secondsa
 	page_io_ops page_io_functions;

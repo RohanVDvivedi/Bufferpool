@@ -75,7 +75,7 @@ struct page_desc
 
 	bstnode embed_node_frame_to_frame_desc;
 
-	llnode embed_node_flushable_frame_descs;
+	llnode embed_node_lru_lists;
 };
 
 // get_new_page_desc -> returns an empty page_desc with all its attributes initialized and frame allocated
