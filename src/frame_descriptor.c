@@ -27,6 +27,8 @@ frame_desc* new_frame_desc(uint32_t page_size)
 	fd->is_under_read_IO = 0;
 	fd->is_under_write_IO = 0;
 
+	fd->is_selected_for_eviction = 0;
+
 	fd->writers_count = 0;
 	fd->readers_count = 0;
 
@@ -52,10 +54,10 @@ void delete_frame_desc(frame_desc* fd);
 
 uint64_t get_total_readers_count_on_frame_desc(frame_desc* fd)
 {
-	return fd->readers_count + fd->is_under_write_IO;
+	return fd->readers_count + (((unsigned int)fd->is_under_write_IO) & 1U);
 }
 
 uint64_t get_total_writers_count_on_frame_desc(frame_desc* fd)
 {
-	return fd->writers_count + fd->is_under_read_IO;
+	return fd->writers_count + (((unsigned int)fd->is_under_read_IO) & 1U);
 }

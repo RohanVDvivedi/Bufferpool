@@ -25,10 +25,15 @@ struct frame_desc
 	int is_dirty : 1;
 
 	// page_desc with final page_id already set is being read from disk
-	unsigned int is_under_read_IO : 1;
+	int is_under_read_IO : 1;
 
 	// page_desc with final page_id is being written to disk
-	unsigned int is_under_write_IO : 1;
+	int is_under_write_IO : 1;
+
+	// this bit will be set if the is_dirty = 1, is_under_write_IO = 1 and this page_id is being written to disk,
+	// and after that something else will be read over it
+	// if so, and if you find this page by page_id then wait for write_IO to complete before taking lock or goinf wait to take the lock
+	int is_selected_for_eviction : 1;
 
 	// number of writers writing to this page (this does not include the thread that is perfroming read IO ion this page) OR
 	// number of writer threads that have write lock on this page
