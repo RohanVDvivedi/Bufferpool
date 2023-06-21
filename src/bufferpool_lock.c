@@ -3,6 +3,7 @@
 #include<bufferpool_util.h>
 
 // this function must be called with bufferpool lock held
+// this function also removed the frame_desc from any list that was previously holding it
 static frame_desc* get_frame_desc_to_acquire_lock_on(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
 {
 	frame_desc* fd = find_frame_desc_by_page_id(bf, page_id);
@@ -63,20 +64,67 @@ static frame_desc* get_frame_desc_to_acquire_lock_on(bufferpool* bf, uint64_t pa
 	return fd;
 }
 
+static frame_desc* check_OR_get_page_using_IO_on_frame(bufferpool* bf, frame_desc* fd, uint64_t page_id)
+{
+	if(fd->is_valid && fd->page_id == page_id) // return the same frame_desc, contents valid and lockable
+		return fd;
+
+	if((!fd->is_valid) || (fd->is_valid && fd->page_id != page_id && !fd->is_dirty)) // contents can be directly over written without writing anything to disk
+	{
+		fd->page_id = page_id;
+		fd->is_under_read_IO = 1;
+		fd->writers_count = 1;
+
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+		bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, page_id, bf->page_size);
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+		fd->writers_count = 0;
+		fd->is_under_read_IO = 0;
+		fd->is_valid = 1;
+		fd->is_dirty = 0;
+	}
+	else if(fd->is_valid && fd->page_id != page_id && fd->is_dirty)
+	{
+
+	}
+}
+
 void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	// get a frame desc
 	frame_desc* fd = NULL;
-	while(fd == NULL)
+
+	while(1)
 	{
+		// get a frame desc
+		fd = get_frame_desc_to_acquire_lock_on(bf, page_id, evict_dirty_if_necessary);
+		if(fd == NULL)
+			goto EXIT;
+
+		// check that the page has valid data for page_id, if not perform necessary IO to get data
+		fd = check_OR_get_page_using_IO_on_frame(bf, fd, page_id);
+		if(fd == NULL)
+			goto EXIT;
+
+		// wait while there are any writers for this page
+		while(fd->writers_count && fd->page_id == page_id)
+		{
+			fd->readers_waiting++;
+			pthread_cond_wait(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
+			fd->readers_waiting--;
+		}
+
+		if(fd->page_id == page_id)
+			break;
+
 
 	}
 
-	if(fd == NULL)
-		goto EXIT;
+	// take read lock
+	fd->readers_count++;
 
 	EXIT:;
 	if(bf->has_internal_lock)
