@@ -2,15 +2,87 @@
 
 #include<bufferpool_util.h>
 
+// this function must be called with bufferpool lock held
+static frame_desc* get_frame_desc_to_acquire_lock_on(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
+{
+	frame_desc* fd = find_frame_desc_by_page_id(bf, page_id);
+	if(fd != NULL)
+		return fd;
+
+	// if there is any frame_desc in invalid_frame_descs_list, then take 1 from it's head
+	if(fd == NULL && !is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
+	{
+		fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list));
+		remove_from_linkedlist(&(bf->invalid_frame_descs_list), fd);
+		return fd;
+	}
+
+	// check if a new frame_desc can be added to the bufferpool, if yes, then do it and add the new frame_desc to invalid_frame_descs_list
+	if(fd == NULL && bf->total_frame_desc_count < bf->max_frame_desc_count)
+	{
+		// increment the total_frame_desc_count
+		bf->total_frame_desc_count++;
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+		// create a new frame_desc
+		frame_desc* _new_frame_desc = new_frame_desc(bf->page_size);
+		
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+		// attempt to find one from the buffer pool again
+		// someone might have done the IO and brought our page in the bufferpool, while we were creating the new frame_desc
+		fd = find_frame_desc_by_page_id(bf, page_id);
+
+		if(_new_frame_desc == NULL)	// if the new call failed, then reverse the incremented counter
+			bf->total_frame_desc_count--;
+		else if(fd == NULL) // take fd as the frame we will use and quit
+			fd = _new_frame_desc;
+		else // fd for given page_id is already found, so insert the new frame_desc to the invalid_frame_descs_list
+			insert_head_in_linkedlist(&(bf->invalid_frame_descs_list), _new_frame_desc);
+
+		if(fd != NULL)
+			return fd;
+	}
+
+	// if there is any frame_desc in clean_frame_descs_lru_list, then take 1 from it's head
+	if(fd == NULL && !is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)))
+	{
+		fd = (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list));
+		remove_from_linkedlist(&(bf->clean_frame_descs_lru_list), fd);
+		return fd;
+	}
+
+	// if there is any frame_desc in dirty_frame_descs_lru_list, then take 1 from it's head
+	if(fd == NULL && evict_dirty_if_necessary && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
+	{
+		fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+		remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd);
+		return fd;
+	}
+
+	return fd;
+}
+
 void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	// TODO
+	// get a frame desc
+	frame_desc* fd = NULL;
+	while(fd == NULL)
+	{
 
+	}
+
+	if(fd == NULL)
+		goto EXIT;
+
+	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return (fd != NULL) ? fd->frame : NULL;
 }
 
 void* get_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int to_be_overwritten)
