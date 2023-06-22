@@ -71,20 +71,17 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	// if is_dirty, write it back to disk
 	if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty)
 	{
-		fd->readers_count = 1;
+		fd->readers_count++;
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		int io_error = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		fd->readers_count = 0;
 		fd->is_under_write_IO = 0;
-
-		if(fd->writers_waiting > 0)
+		fd->readers_count--;
+		if(fd->readers_count == 0 && fd->writers_waiting > 0)
 			pthread_cond_signal(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
-		else if(fd->readers_waiting > 0)
-			pthread_cond_braodcast(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
 
 		if(io_error)
 			(*call_again) = 0;
@@ -108,11 +105,9 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		insert_frame_desc(bf, fd);
 	}
 	else
-	{
 		update_page_id_for_frame_desc(bf, fd, page_id);
-	}
 
-	fd->writers_count = 1;
+	fd->writers_count++;
 	fd->is_under_read_IO = 1;
 
 	// it will become valid after the read IO
@@ -122,8 +117,12 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	int io_error = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	fd->writers_count = 0;
 	fd->is_under_read_IO = 0;
+	fd->writers_count--;
+	if(fd->writers_waiting > 0)
+		pthread_cond_broadcast(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
+	if(fd->readers_waiting > 0)
+		pthread_cond_broadcast(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
 
 	if(io_error)
 	{
