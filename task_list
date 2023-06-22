@@ -1,27 +1,6 @@
- * implement acquire lock function
-
- * in release lock functions
-  * release lock on the page
-  * dirty_bit ||= was_modified
-  * if was a writer and force_flush is on, then we know, writers = 0, readers = 0, there may be waiters (both reader and writer), upgraders = 0 => if force flush is on, we wake up all readers and flush the page to disk in the same thread.  
-  * read locked -> if 1 reader and 1 upgrader_waiting, then wake up upgrader
-  * read locked -> if 0 reader and 0 upgrader_waiting, then wake up writers
-  * write locked -> wake up all readers and 1 writer
-  * if the page is not locked, is not under any IO and is not being waited on and is not dirty then, then
-    * if the total_frame_count > max_frame_count -> delete the frame
-    * else add it to lru's tail
-
-  * downgrade from writer to reader
-   * decrement writer count, and add 1 to reader count, wake up all readers
-   * force flush as above if required
-   * dirty_bit ||= was_modified
-
-  * upgrade from reader to writer
-   * here we know writers = 0, waiting writers = 0
-     * if readers == 1, take writers_count = 1
-     * if readers >= 1, and upgraders_waiting == 1, return failure
-     * if readers >= 1, and upgraders_waiting == 0, increemnt upgraders waiting, and wait on readers to become 1
-   * wait for any write IO to finish
+ * dry runs for locking functions
+ * discard frame_descs while modifying the max_frame_desc count, from the invalid and clean lru lists
+   * call delete on them without the lock
 
 
 
