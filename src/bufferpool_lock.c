@@ -290,7 +290,7 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	fd->writers_count--;
 	fd->readers_count++;
 	if(fd->readers_waiting > 0)
-		pthread_mutex_broadcast(&(fd->waiting_for_read_lock));\
+		pthread_cond_broadcast(&(fd->waiting_for_read_lock));\
 
 	// success
 	result = 1;
@@ -332,24 +332,24 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame)
 	if(fd == NULL || fd->readers_count == 0)
 		goto EXIT;
 
-	if(bf->readers_count == 1) // if the only reader here is me, then tke the write lock and exit
+	if(fd->readers_count == 1) // if the only reader here is me, then tke the write lock and exit
 	{
-		bf->readers_count--;
-		bf->writers_count++;
+		fd->readers_count--;
+		fd->writers_count++;
 		result = 1;
 		goto EXIT;
 	}
 	else // more than 1 readers reading the page
 	{
 		// if there already is an upgrader waiting, then fail upgrading the lock
-		if(bf->upgraders_waiting)
+		if(fd->upgraders_waiting)
 			goto EXIT;
 
 		// wait while there are more than 1 readers, i.e. there are readers other than me
 		while(fd->readers_count > 1)
 		{
 			fd->upgraders_waiting++;
-			pthread_mutex_wait(&(fd->waiting_for_upgrading_lock), get_bufferpool_lock(bf));
+			pthread_cond_wait(&(fd->waiting_for_upgrading_lock), get_bufferpool_lock(bf));
 			fd->upgraders_waiting--;
 		}
 	}
