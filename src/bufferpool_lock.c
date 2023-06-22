@@ -83,9 +83,9 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		fd->is_under_write_IO = 0;
 		fd->readers_count--;
 		if(fd->readers_count == 1 && fd->upgraders_waiting)
-			pthread_cond_signal(&(fd->waiting_for_upgrading_lock), get_bufferpool_lock(bf));
+			pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
 		else if(fd->readers_count == 0 && fd->writers_waiting > 0)
-			pthread_cond_signal(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
+			pthread_cond_signal(&(fd->waiting_for_write_lock));
 
 		if(io_error)
 			(*call_again) = 0;
@@ -124,7 +124,7 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	fd->is_under_read_IO = 0;
 	fd->writers_count--;
 	if(wake_up_other_readers_after_IO && fd->readers_waiting > 0)
-		pthread_cond_broadcast(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
+		pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 
 	if(io_error)
 	{
@@ -281,13 +281,15 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
 	if(fd == NULL)
-		goto EXIT
+		goto EXIT;
 
 	// TODO
 
 	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
 }
 
 int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame)
@@ -300,13 +302,15 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame)
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
 	if(fd == NULL)
-		goto EXIT
+		goto EXIT;
 
 	// TODO
 
 	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
 }
 
 int release_reader_lock_on_page(bufferpool* bf, void* frame)
@@ -319,13 +323,15 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
 	if(fd == NULL)
-		goto EXIT
+		goto EXIT;
 
 	// TODO
 
 	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
 }
 
 int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, int force_flush)
@@ -338,11 +344,13 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
 	if(fd == NULL)
-		goto EXIT
+		goto EXIT;
 
 	// TODO
 
 	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
 }
