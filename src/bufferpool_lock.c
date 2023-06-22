@@ -71,17 +71,24 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	// if is_dirty, write it back to disk
 	if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty)
 	{
-		fd->writers_count = 1;
+		fd->readers_count = 1;
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		int io_error = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		fd->writers_count = 0;
+		fd->readers_count = 0;
 		fd->is_under_write_IO = 0;
 
-		if(!io_error)
+		if(fd->writers_waiting > 0)
+			pthread_cond_signal(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
+		else if(fd->readers_waiting > 0)
+			pthread_cond_braodcast(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
+
+		if(io_error)
+			(*call_again) = 0;
+		else
 		{
 			(*call_again) = 1;
 			fd->is_dirty = 0;
@@ -93,7 +100,40 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		return NULL;
 	}
 
-	// make has_valid_page_id
+	// make has_valid_page_id = 1, and put page_id on the frame_desc
+	if(!fd->has_valid_page_id)
+	{
+		fd->has_valid_page_id = 1;
+		fd->page_id = page_id;
+		insert_frame_desc(bf, fd);
+	}
+	else
+	{
+		update_page_id_for_frame_desc(bf, fd, page_id);
+	}
+
+	fd->writers_count = 1;
+	fd->is_under_read_IO = 1;
+
+	// it will become valid after the read IO
+	fd->has_valid_frame_contents = 1;
+
+	pthread_mutex_unlock(get_bufferpool_lock(bf));
+	int io_error = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+	pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	fd->writers_count = 0;
+	fd->is_under_read_IO = 0;
+
+	if(io_error)
+	{
+		fd->has_valid_frame_contents = 0;
+		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+			insert_frame_desc_in_lru_lists(bf, fd);
+		return NULL;
+	}
+	
+	return fd;
 }
 
 void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
@@ -118,8 +158,11 @@ void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 			}
 
 			if(fd->page_id != page_id)
+			{
 				if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
 					insert_frame_desc_in_lru_lists(bf, fd);
+				continue;
+			}
 			else
 				goto TAKE_LOCK_AND_EXIT;
 		}
@@ -148,8 +191,9 @@ void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 		call_again = 0;
 	}
 
-	// take read lock
 	TAKE_LOCK_AND_EXIT:;
+	if(!fd->has_valid_frame_contents)
+		goto EXIT;
 	fd->readers_count++;
 
 	EXIT:;
