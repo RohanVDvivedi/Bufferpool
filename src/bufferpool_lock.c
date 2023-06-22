@@ -158,14 +158,14 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 				fd->readers_waiting--;
 			}
 
-			if(fd->page_id != page_id)
+			if(fd->has_valid_frame_contents)
+				goto TAKE_LOCK_AND_EXIT;
+			else
 			{
 				if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
 					insert_frame_desc_in_lru_lists(bf, fd);
 				continue;
 			}
-			else
-				goto TAKE_LOCK_AND_EXIT;
 		}
 
 		int call_again = 0;
@@ -193,8 +193,6 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 	}
 
 	TAKE_LOCK_AND_EXIT:;
-	if(!fd->has_valid_frame_contents)
-		goto EXIT;
 	fd->readers_count++;
 
 	EXIT:;
@@ -225,14 +223,14 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 				fd->writers_waiting--;
 			}
 
-			if(fd->page_id != page_id)
+			if(fd->has_valid_frame_contents)
+				goto TAKE_LOCK_AND_EXIT;
+			else
 			{
 				if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
 					insert_frame_desc_in_lru_lists(bf, fd);
 				continue;
 			}
-			else
-				goto TAKE_LOCK_AND_EXIT;
 		}
 
 		int call_again = 0;
@@ -260,8 +258,6 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 	}
 
 	TAKE_LOCK_AND_EXIT:;
-	if(!fd->has_valid_frame_contents)
-		goto EXIT;
 	fd->writers_count++;
 
 	EXIT:;
