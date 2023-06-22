@@ -151,7 +151,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 		{
 			remove_frame_desc_from_lru_lists(bf, fd);
 
-			while(fd->writers_count && fd->page_id == page_id) // page_id of a page may change, if it gets evicted, after we go to wait on it
+			while(fd->writers_count) // page_id of a page may change, if it gets evicted, after we go to wait on it
 			{
 				fd->readers_waiting++;
 				pthread_cond_wait(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
@@ -218,7 +218,7 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 		{
 			remove_frame_desc_from_lru_lists(bf, fd);
 
-			while((fd->readers_count || fd->writers_count) && fd->page_id == page_id) // page_id of a page may change, if it gets evicted, after we go to wait on it
+			while(fd->readers_count || fd->writers_count) // page_id of a page may change, if it gets evicted, after we go to wait on it
 			{
 				fd->writers_waiting++;
 				pthread_cond_wait(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
