@@ -82,7 +82,9 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 
 		fd->is_under_write_IO = 0;
 		fd->readers_count--;
-		if(fd->readers_count == 0 && fd->writers_waiting > 0)
+		if(fd->readers_count == 1 && fd->upgraders_waiting)
+			pthread_cond_signal(&(fd->waiting_for_upgrading_lock), get_bufferpool_lock(bf));
+		else if(fd->readers_count == 0 && fd->writers_waiting > 0)
 			pthread_cond_signal(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
 
 		if(io_error)
