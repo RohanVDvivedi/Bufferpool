@@ -207,10 +207,66 @@ void* get_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	// TODO
+	frame_desc* fd = NULL;
 
+	while(1)
+	{
+		fd = find_frame_desc_by_page_id(bf, page_id); // fd we get from here will always have has_valid_page_id set, page_id equal to page_id
+		if(fd != NULL)
+		{
+			remove_frame_desc_from_lru_lists(bf, fd);
+
+			while((fd->readers_count || fd->writers_count) && fd->page_id == page_id) // page_id of a page may change, if it gets evicted, after we go to wait on it
+			{
+				fd->writers_waiting++;
+				pthread_cond_wait(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
+				fd->writers_waiting--;
+			}
+
+			if(fd->page_id != page_id)
+			{
+				if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+					insert_frame_desc_in_lru_lists(bf, fd);
+				continue;
+			}
+			else
+				goto TAKE_LOCK_AND_EXIT;
+		}
+
+		int call_again = 0;
+		fd = get_frame_desc_to_evict(bf, evict_dirty_if_necessary, &call_again);
+		if(fd == NULL)
+		{
+			if(call_again)
+				continue;
+			else
+				goto EXIT;
+		}
+
+		call_again = 0;
+		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, &call_again);
+		if(fd == NULL)
+		{
+			if(call_again)
+				continue;
+			else
+				goto EXIT;
+		}
+
+		// perform necessary IO
+		call_again = 0;
+	}
+
+	TAKE_LOCK_AND_EXIT:;
+	if(!fd->has_valid_frame_contents)
+		goto EXIT;
+	fd->writers_count++;
+
+	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return (fd != NULL) ? fd->frame : NULL;
 }
 
 int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_modified, int force_flush)
