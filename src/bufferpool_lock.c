@@ -432,10 +432,10 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 
 			remove_frame_desc(bf, fd);
 
-			pthread_mutex_lock(get_bufferpool_lock(bf));
+			pthread_mutex_unlock(get_bufferpool_lock(bf));
 			delete_frame_desc(fd);
 			fd = NULL;
-			pthread_mutex_unlock(get_bufferpool_lock(bf));
+			pthread_mutex_lock(get_bufferpool_lock(bf));
 
 			goto EXIT;
 		}
@@ -518,10 +518,10 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 
 			remove_frame_desc(bf, fd);
 
-			pthread_mutex_lock(get_bufferpool_lock(bf));
+			pthread_mutex_unlock(get_bufferpool_lock(bf));
 			delete_frame_desc(fd);
 			fd = NULL;
-			pthread_mutex_unlock(get_bufferpool_lock(bf));
+			pthread_mutex_lock(get_bufferpool_lock(bf));
 
 			goto EXIT;
 		}
