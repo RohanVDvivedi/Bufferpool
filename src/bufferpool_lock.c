@@ -62,34 +62,38 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	return fd;
 }
 
+// fd must have no readers/writers or waiters, while this function is called
+// and fd must not have the correct contents on its frame
 static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int* call_again)
 {
+	(*call_again) = 0;
+
 	// if is_dirty, write it back to disk
 	if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty)
 	{
-
-	}
-
-
-	if((!fd->is_valid) || (fd->is_valid && fd->page_id != page_id && !fd->is_dirty)) // contents can be directly over written without writing anything to disk
-	{
-		fd->page_id = page_id;
-		fd->is_under_read_IO = 1;
 		fd->writers_count = 1;
+		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, page_id, bf->page_size);
+		int io_error = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		fd->writers_count = 0;
-		fd->is_under_read_IO = 0;
-		fd->is_valid = 1;
-		fd->is_dirty = 0;
-	}
-	else if(fd->is_valid && fd->page_id != page_id && fd->is_dirty)
-	{
+		fd->is_under_write_IO = 0;
 
+		if(!io_error)
+		{
+			(*call_again) = 1;
+			fd->is_dirty = 0;
+		}
+		
+		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+			insert_frame_desc_in_lru_lists(bf, fd);
+
+		return NULL;
 	}
+
+	// make has_valid_page_id
 }
 
 void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
@@ -133,6 +137,12 @@ void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 		call_again = 0;
 		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, &call_again);
 		if(fd == NULL)
+		{
+			if(call_again)
+				continue;
+			else
+				goto EXIT;
+		}
 
 		// perform necessary IO
 		call_again = 0;
