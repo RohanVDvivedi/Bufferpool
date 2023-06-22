@@ -52,6 +52,19 @@ uint64_t get_max_frame_desc_count(bufferpool* bf)
 	return result;
 }
 
+uint64_t get_total_frame_desc_count(bufferpool* bf)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	uint64_t result = bf->total_frame_desc_count;
+
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
+}
+
 void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 {
 	if(bf->has_internal_lock)

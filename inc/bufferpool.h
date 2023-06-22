@@ -87,6 +87,7 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 
 // change max frame count for the bufferpool
 uint64_t get_max_frame_desc_count(bufferpool* bf);
+uint64_t get_total_frame_desc_count(bufferpool* bf);
 void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
 // TODO think about mechanism to do this
