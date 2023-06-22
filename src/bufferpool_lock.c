@@ -375,27 +375,24 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame)
 	if(fd == NULL || fd->readers_count == 0)
 		goto EXIT;
 
-	if(fd->readers_count == 1) // if the only reader here is me, then tke the write lock and exit
+	// if there already is an upgrader waiting, then fail upgrading the lock
+	if(fd->upgraders_waiting)
 	{
-		fd->readers_count--;
-		fd->writers_count++;
-		result = 1;
+		result = 0;
 		goto EXIT;
 	}
-	else // more than 1 readers reading the page
-	{
-		// if there already is an upgrader waiting, then fail upgrading the lock
-		if(fd->upgraders_waiting)
-			goto EXIT;
 
-		// wait while there are more than 1 readers, i.e. there are readers other than me
-		while(fd->readers_count > 1)
-		{
-			fd->upgraders_waiting++;
-			pthread_cond_wait(&(fd->waiting_for_upgrading_lock), get_bufferpool_lock(bf));
-			fd->upgraders_waiting--;
-		}
+	// wait while there are more than 1 readers, i.e. there are readers other than me
+	while(fd->readers_count > 1)
+	{
+		fd->upgraders_waiting++;
+		pthread_cond_wait(&(fd->waiting_for_upgrading_lock), get_bufferpool_lock(bf));
+		fd->upgraders_waiting--;
 	}
+
+	fd->readers_count--;
+	fd->writers_count++;
+	result = 1;
 
 	EXIT:;
 	if(bf->has_internal_lock)
