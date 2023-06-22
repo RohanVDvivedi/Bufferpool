@@ -7,6 +7,7 @@
 static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_necessary, int* call_again)
 {
 	(*call_again) = 0;
+	frame_desc* fd = NULL;
 
 	// if there is any frame_desc in invalid_frame_descs_list, then take 1 from it's head
 	if(fd == NULL && !is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
@@ -36,8 +37,9 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 		}
 		else // fd for given page_id is already found, so insert the new frame_desc to the invalid_frame_descs_list
 		{
-			(*call_again) = 0;
+			(*call_again) = 1;
 			insert_head_in_linkedlist(&(bf->invalid_frame_descs_list), _new_frame_desc);
+			return NULL;
 		}
 	}
 
@@ -60,11 +62,8 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	return fd;
 }
 
-static frame_desc* check_OR_get_page_using_IO_on_frame(bufferpool* bf, frame_desc* fd, uint64_t page_id)
+static frame_desc* get_valid_frame_contents_on_frame(bufferpool* bf, frame_desc* fd, uint64_t page_id, int* call_again)
 {
-	if(fd->is_valid && fd->page_id == page_id) // return the same frame_desc, contents valid and lockable
-		return fd;
-
 	if((!fd->is_valid) || (fd->is_valid && fd->page_id != page_id && !fd->is_dirty)) // contents can be directly over written without writing anything to disk
 	{
 		fd->page_id = page_id;
@@ -124,12 +123,16 @@ void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 				goto EXIT;
 		}
 
+		call_again = 0;
+		fd = get_valid_frame_contents_on_frame(bf, fd, page_id, &call_again);
+		if(fd == NULL)
+
 		// perform necessary IO
 		call_again = 0;
 	}
 
-	TAKE_LOCK_AND_EXIT:;
 	// take read lock
+	TAKE_LOCK_AND_EXIT:;
 	fd->readers_count++;
 
 	EXIT:;
