@@ -462,6 +462,23 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 	}
 
+	// after releasing the locks, check if the frame_desc needs to be inserted in to any of the lru lists
+	if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+	{
+		if(bf->total_frame_desc_count > bf->max_frame_desc_count && !fd->is_dirty) // delete frame desc, if we are running in excess
+		{
+			bf->total_frame_desc_count--;
+
+			pthread_mutex_lock(get_bufferpool_lock(bf));
+			delete_frame_desc(fd);
+			pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+			goto EXIT;
+		}
+		else
+			insert_frame_desc_in_lru_lists(bf, fd);
+	}
+
 	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
