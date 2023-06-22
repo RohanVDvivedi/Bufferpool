@@ -280,10 +280,38 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
-	if(fd == NULL)
+	if(fd == NULL || fd->writers_count == 0)
 		goto EXIT;
 
-	// TODO
+	// set dirty bit
+	fd->is_dirty = fd->is_dirty || was_modified;
+
+	// change from writer to reader, and wake up all readers
+	fd->writers_count--;
+	fd->readers_count++;
+	if(fd->readers_waiting > 0)
+		pthread_mutex_broadcast(&(fd->waiting_for_read_lock));\
+
+	// success
+	result = 1;
+
+	// if force flush is set then, flush the page to disk with its read lock held
+	if(force_flush)
+	{
+		fd->is_under_write_IO = 1;
+
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+		int io_error = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		if(!io_error)
+			io_error = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+		fd->is_under_write_IO = 0;
+
+		// after a force flush the page is nolonger dirty
+		if(!io_error)
+			fd->is_dirty = 0;
+	}
 
 	EXIT:;
 	if(bf->has_internal_lock)
