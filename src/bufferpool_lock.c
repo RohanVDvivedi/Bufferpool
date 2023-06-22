@@ -112,11 +112,11 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	else
 		update_page_id_for_frame_desc(bf, fd, page_id);
 
+	// it will become valid after the read IO
+	fd->has_valid_frame_contents = 0;
+
 	fd->writers_count++;
 	fd->is_under_read_IO = 1;
-
-	// it will become valid after the read IO
-	fd->has_valid_frame_contents = 1;
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 	int io_error = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
@@ -130,10 +130,15 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	if(io_error)
 	{
 		fd->has_valid_frame_contents = 0;
+		fd->has_valid_page_id = 0;
+		remove_frame_desc(bf, fd);
 		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
 			insert_frame_desc_in_lru_lists(bf, fd);
+		(*call_again) = 0;
 		return NULL;
 	}
+	else
+		fd->has_valid_frame_contents = 1;
 	
 	return fd;
 }
