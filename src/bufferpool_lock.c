@@ -64,7 +64,7 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 
 // fd must have no readers/writers or waiters, while this function is called
 // and fd must not have the correct contents on its frame
-static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int* call_again)
+static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int wake_up_other_readers_after_IO, int* call_again)
 {
 	(*call_again) = 0;
 
@@ -121,9 +121,7 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 
 	fd->is_under_read_IO = 0;
 	fd->writers_count--;
-	if(fd->writers_waiting > 0)
-		pthread_cond_broadcast(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
-	if(fd->readers_waiting > 0)
+	if(wake_up_other_readers_after_IO && fd->readers_waiting > 0)
 		pthread_cond_broadcast(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
 
 	if(io_error)
@@ -179,7 +177,7 @@ void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 		}
 
 		call_again = 0;
-		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, &call_again);
+		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 1, &call_again);
 		if(fd == NULL)
 		{
 			if(call_again)
@@ -246,7 +244,7 @@ void* get_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 		}
 
 		call_again = 0;
-		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, &call_again);
+		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0, &call_again);
 		if(fd == NULL)
 		{
 			if(call_again)
