@@ -140,21 +140,36 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 
 	fd->is_under_read_IO = 0;
 	fd->writers_count--;
-	if(wake_up_other_readers_after_IO && fd->readers_waiting > 0)
-		pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 
 	if(io_error)
 	{
+		// mark this as an invalid frame
 		fd->has_valid_frame_contents = 0;
 		fd->has_valid_page_id = 0;
+
+		// wake up any thread waiting to get lock on this frame, that might have contents of page_id, but IO failed so now, they must quit
+		if(fd->readers_waiting > 0)
+			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
+		if(fd->writers_waiting > 0)
+			pthread_cond_broadcast(&(fd->waiting_for_write_lock));
+
+		// remove page from hashtables, so that no one finds it by the page_id
 		remove_frame_desc(bf, fd);
+
+		// if the frame is not being waited on or locked by anyone, then insert it in lru lists
 		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
 			insert_frame_desc_in_lru_lists(bf, fd);
+
+		// do not call again, and fail the page from being locked
 		(*call_again) = 0;
 		return NULL;
 	}
 	else
+	{
+		if(wake_up_other_readers_after_IO && fd->readers_waiting > 0)
+			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 		fd->has_valid_frame_contents = 1;
+	}
 	
 	return fd;
 }
