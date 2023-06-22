@@ -38,7 +38,7 @@ frame_desc* find_frame_desc_by_frame_ptr(bufferpool* bf, void* frame)
 
 int insert_frame_desc_in_lru_lists(bufferpool* bf, frame_desc* fd)
 {
-	if(!fd->is_valid)
+	if(!fd->has_valid_frame_contents)
 		return insert_tail_in_linkedlist(&(bf->invalid_frame_descs_list), fd);
 	else if(!fd->is_dirty)
 		return insert_tail_in_linkedlist(&(bf->clean_frame_descs_lru_list), fd);
@@ -50,7 +50,7 @@ int insert_frame_desc_in_lru_lists(bufferpool* bf, frame_desc* fd)
 
 int remove_frame_desc_from_lru_lists(bufferpool* bf, frame_desc* fd)
 {
-	if(!fd->is_valid)
+	if(!fd->has_valid_frame_contents)
 		return remove_from_linkedlist(&(bf->invalid_frame_descs_list), fd);
 	else if(!fd->is_dirty)
 		return remove_from_linkedlist(&(bf->clean_frame_descs_lru_list), fd);

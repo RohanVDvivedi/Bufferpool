@@ -18,8 +18,9 @@ struct frame_desc
 	// memory contents of a valid frame pointed to by page_id
 	void* frame;
 
-	// the page_id and frame hold valid values only if the is_valid bit is set
-	int is_valid : 1;
+	// the page_id and frame hold valid values only if the is_valid_* bit is set
+	int has_valid_page_id : 1;
+	int has_valid_frame_contents : 1;
 
 	// if this bit is set only if the page_desc is valid, but the page frame has been modified, but it has not yet reached disk
 	int is_dirty : 1;
@@ -88,11 +89,5 @@ int is_frame_desc_under_IO(frame_desc* fd);
 
 // fd->readers_count || fd->writers_count || fd->readers_waiting || fd->writers_waiting || fd->upgraders_waiting
 int is_frame_desc_locked_or_waiting_to_be_locked(frame_desc* fd);
-
-// = readers_count + is_under_write_IO
-uint64_t get_total_readers_count_on_frame_desc(frame_desc* fd);
-
-// = writers_count + is_under_read_IO
-uint64_t get_total_writers_count_on_frame_desc(frame_desc* fd);
 
 #endif

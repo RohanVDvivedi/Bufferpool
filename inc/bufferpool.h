@@ -43,7 +43,7 @@ struct bufferpool
 	// i.e. (is_frame_desc_under_IO(fd) || is_frame_desc_locked_or_waiting_to_be_locked(fd)) == 0
 	// Additionally, any page_desc must exist in atmost 1 of these three lists
 
-	// is_valid == 0
+	// has_valid_frame_contents == 0
 	linkedlist invalid_frame_descs_list;
 	// is_valid == 1 && is_dirty == 0
 	linkedlist clean_frame_descs_lru_list;

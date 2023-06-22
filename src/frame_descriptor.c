@@ -19,7 +19,8 @@ frame_desc* new_frame_desc(uint32_t page_size)
 		return NULL;
 	}
 
-	fd->is_valid = 0;
+	fd->has_valid_page_id = 0;
+	fd->has_valid_frame_contents = 0;
 
 	// if this bit is set only if the frame_desc is valid, but the page frame has been modified, but it has not yet reached disk
 	fd->is_dirty = 0;
@@ -56,14 +57,4 @@ int is_frame_desc_locked_or_waiting_to_be_locked(frame_desc* fd)
 {
 	return	fd->readers_count || fd->writers_count ||
 			fd->readers_waiting || fd->writers_waiting || fd->upgraders_waiting;
-}
-
-uint64_t get_total_readers_count_on_frame_desc(frame_desc* fd)
-{
-	return fd->readers_count + (((unsigned int)fd->is_under_write_IO) & 1U);
-}
-
-uint64_t get_total_writers_count_on_frame_desc(frame_desc* fd)
-{
-	return fd->writers_count + (((unsigned int)fd->is_under_read_IO) & 1U);
 }
