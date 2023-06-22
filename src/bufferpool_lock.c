@@ -274,8 +274,16 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
+	int result = 0;
+
+	// first, fetch frame_desc by frame ptr
+	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
+	if(fd == NULL)
+		goto EXIT
+
 	// TODO
 
+	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 }
@@ -285,8 +293,16 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame)
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
+	int result = 0;
+
+	// first, fetch frame_desc by frame ptr
+	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
+	if(fd == NULL)
+		goto EXIT
+
 	// TODO
 
+	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 }
@@ -296,8 +312,16 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
+	int result = 0;
+
+	// first, fetch frame_desc by frame ptr
+	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
+	if(fd == NULL)
+		goto EXIT
+
 	// TODO
 
+	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 }
@@ -307,8 +331,16 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
+	int result = 0;
+
+	// first, fetch frame_desc by frame ptr
+	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
+	if(fd == NULL)
+		goto EXIT
+
 	// TODO
 
+	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 }
