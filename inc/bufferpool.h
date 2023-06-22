@@ -45,9 +45,10 @@ struct bufferpool
 
 	// has_valid_frame_contents == 0
 	linkedlist invalid_frame_descs_list;
-	// is_valid == 1 && is_dirty == 0
+	// has_valid_frame_contents == 1 && is_dirty == 0
 	linkedlist clean_frame_descs_lru_list;
-	// is_valid == 1 && is_dirty == 1
+	// has_valid_frame_contents == 1 && is_dirty == 1
+	// these frame descriptors need to be flushed before evicted, hence mjst pass can_be_flushed_to_disk(fd->page_id, fd->frame) check
 	linkedlist dirty_frame_descs_lru_list;
 
 	// methods that allow you to read/writes pages to-from secondsa
