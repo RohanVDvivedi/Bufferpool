@@ -156,17 +156,16 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		// remove page from hashtables, so that no one finds it by the page_id
 		remove_frame_desc(bf, fd);
 
-		if(bf->total_frame_desc_count > bf->max_frame_desc_count && (fd->readers_waiting || fd->writers_waiting) == 0)
+		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
 		{
-			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			delete_frame_desc(fd);
-			fd = NULL;
-			pthread_mutex_lock(get_bufferpool_lock(bf));
-		}
-		else
-		{
-			// if the frame is not being waited on or locked by anyone, then insert it in lru lists
-			if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+			if(bf->total_frame_desc_count > bf->max_frame_desc_count)
+			{
+				pthread_mutex_unlock(get_bufferpool_lock(bf));
+				delete_frame_desc(fd);
+				fd = NULL;
+				pthread_mutex_lock(get_bufferpool_lock(bf));
+			}
+			else // if the frame is not being waited on or locked by anyone, then insert it in lru lists
 				insert_frame_desc_in_lru_lists(bf, fd);
 		}
 
@@ -436,8 +435,6 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 			delete_frame_desc(fd);
 			fd = NULL;
 			pthread_mutex_lock(get_bufferpool_lock(bf));
-
-			goto EXIT;
 		}
 		else
 			insert_frame_desc_in_lru_lists(bf, fd);
@@ -522,8 +519,6 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 			delete_frame_desc(fd);
 			fd = NULL;
 			pthread_mutex_lock(get_bufferpool_lock(bf));
-
-			goto EXIT;
 		}
 		else
 			insert_frame_desc_in_lru_lists(bf, fd);
