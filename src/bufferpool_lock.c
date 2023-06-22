@@ -63,7 +63,7 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 			frame_desc* _fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
 			remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), _fd);
 
-			if(bf.can_be_flushed_to_disk(_fd->page_id, _fd->frame))
+			if(bf->can_be_flushed_to_disk(_fd->page_id, _fd->frame))
 			{
 				fd = _fd;
 				break;
@@ -314,7 +314,7 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	result = 1;
 
 	// if force flush is set then, flush the page to disk with its read lock held
-	if(force_flush && fd->is_dirty && bf.can_be_flushed_to_disk(fd->page_id, fd->frame))
+	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(fd->page_id, fd->frame))
 	{
 		fd->is_under_write_IO = 1;
 
@@ -447,7 +447,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 	// release writer lock
 	fd->writers_count--;
 
-	if(force_flush && fd->is_dirty && bf.can_be_flushed_to_disk(fd->page_id, fd->frame))
+	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(fd->page_id, fd->frame))
 	{
 		// we will effectively downgrade the lock just to flush the page
 
