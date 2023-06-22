@@ -76,6 +76,8 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		int io_error = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		if(!io_error)
+			io_error = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		fd->is_under_write_IO = 0;
