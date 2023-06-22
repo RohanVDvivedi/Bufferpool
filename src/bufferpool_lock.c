@@ -84,7 +84,7 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		fd->readers_count--;
 		if(fd->readers_count == 1 && fd->upgraders_waiting)
 			pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
-		else if(fd->readers_count == 0 && fd->writers_waiting > 0)
+		else if(fd->readers_count == 0 && fd->writers_waiting)
 			pthread_cond_signal(&(fd->waiting_for_write_lock));
 
 		if(io_error)
@@ -370,10 +370,31 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
-	if(fd == NULL)
+	if(fd == NULL || fd->readers_count == 0)
 		goto EXIT;
 
-	// TODO
+	result = 1;
+	fd->readers_count--;
+	if(fd->readers_count == 1 && fd->upgraders_waiting)
+		pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
+	else if(fd->readers_count == 0 && fd->writers_waiting)
+		pthread_cond_signal(&(fd->waiting_for_write_lock));
+
+	if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+	{
+		if(bf->total_frame_desc_count > bf->max_frame_desc_count && !fd->is_dirty)
+		{
+			bf->total_frame_desc_count--;
+
+			pthread_mutex_lock(get_bufferpool_lock(bf));
+			delete_frame_desc(fd);
+			pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+			goto EXIT;
+		}
+		else
+			insert_frame_desc_in_lru_lists(bf, fd);
+	}
 
 	EXIT:;
 	if(bf->has_internal_lock)
