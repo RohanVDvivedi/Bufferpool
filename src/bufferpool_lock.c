@@ -62,8 +62,15 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	return fd;
 }
 
-static frame_desc* get_valid_frame_contents_on_frame(bufferpool* bf, frame_desc* fd, uint64_t page_id, int* call_again)
+static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int* call_again)
 {
+	// if is_dirty, write it back to disk
+	if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty)
+	{
+
+	}
+
+
 	if((!fd->is_valid) || (fd->is_valid && fd->page_id != page_id && !fd->is_dirty)) // contents can be directly over written without writing anything to disk
 	{
 		fd->page_id = page_id;
@@ -124,7 +131,7 @@ void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 		}
 
 		call_again = 0;
-		fd = get_valid_frame_contents_on_frame(bf, fd, page_id, &call_again);
+		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, &call_again);
 		if(fd == NULL)
 
 		// perform necessary IO
