@@ -19,6 +19,7 @@ struct frame_desc
 	void* frame;
 
 	// the page_id and frame hold valid values only if the is_valid_* bit is set
+	// once a page has_valid_page_id, it never becomes invalid, only its page_id changes
 	int has_valid_page_id : 1;
 	int has_valid_frame_contents : 1;
 
