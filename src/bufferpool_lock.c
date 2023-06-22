@@ -52,6 +52,7 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	}
 
 	// if there is any frame_desc in dirty_frame_descs_lru_list, then take 1 from it's head
+	// here we need to check that the frame satisfies bf->can_be_flushed_to_disk(fd->page_id, fd->frame) :: TODO
 	if(evict_dirty_if_necessary && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
 	{
 		fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
