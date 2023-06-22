@@ -2,17 +2,11 @@
 
 #include<bufferpool_util.h>
 
-// this function must be called with bufferpool lock held
 // this function also removes the frame_desc from any list that was previously holding it, 
-// thus a frame_desc selected for eviction will not be selected again
-static frame_desc* get_frame_desc_to_acquire_lock_on(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
+// so a frame_desc selected for eviction will not be selected again
+static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_necessary, int* call_again)
 {
-	frame_desc* fd = find_frame_desc_by_page_id(bf, page_id);
-	if(fd != NULL)
-	{
-		remove_frame_desc_from_lru_lists(bf, fd);
-		return fd;
-	}
+	(*call_again) = 0;
 
 	// if there is any frame_desc in invalid_frame_descs_list, then take 1 from it's head
 	if(fd == NULL && !is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
@@ -34,24 +28,17 @@ static frame_desc* get_frame_desc_to_acquire_lock_on(bufferpool* bf, uint64_t pa
 		
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		// attempt to find one from the buffer pool again
-		// someone might have done the IO and brought our page in the bufferpool, while we were creating the new frame_desc
-		fd = find_frame_desc_by_page_id(bf, page_id);
-		if(fd != NULL)
-		{
-			remove_frame_desc_from_lru_lists(bf, fd);
-			return fd;
-		}
-
 		if(_new_frame_desc == NULL)	// if the new call failed, then reverse the incremented counter
+		{
 			bf->total_frame_desc_count--;
-		else if(fd == NULL) // take fd as the frame we will use and quit
-			fd = _new_frame_desc;
+			(*call_again) = 0;
+			return NULL;
+		}
 		else // fd for given page_id is already found, so insert the new frame_desc to the invalid_frame_descs_list
+		{
+			(*call_again) = 0;
 			insert_head_in_linkedlist(&(bf->invalid_frame_descs_list), _new_frame_desc);
-
-		if(fd != NULL)
-			return fd;
+		}
 	}
 
 	// if there is any frame_desc in clean_frame_descs_lru_list, then take 1 from it's head
@@ -108,30 +95,40 @@ void* get_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirt
 
 	while(1)
 	{
-		// get a frame desc
-		fd = get_frame_desc_to_acquire_lock_on(bf, page_id, evict_dirty_if_necessary);
-		if(fd == NULL)
-			goto EXIT;
-
-		// check that the page has valid data for page_id, if not perform necessary IO to get data
-		fd = check_OR_get_page_using_IO_on_frame(bf, fd, page_id);
-		if(fd == NULL)
-			goto EXIT;
-
-		// wait while there are any writers for this page
-		while(fd->writers_count && fd->page_id == page_id)
+		fd = find_frame_desc_by_page_id(bf, page_id); // fd we get from here will always have has_valid_page_id set, page_id equal to page_id
+		if(fd != NULL)
 		{
-			fd->readers_waiting++;
-			pthread_cond_wait(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
-			fd->readers_waiting--;
+			remove_frame_desc_from_lru_lists(bf, fd);
+
+			while(fd->writers_count && fd->page_id == page_id) // page_id of a page may change, if it gets evicted, after we go to wait on it
+			{
+				fd->readers_waiting++;
+				pthread_cond_wait(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
+				fd->readers_waiting--;
+			}
+
+			if(fd->page_id != page_id)
+				if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+					insert_frame_desc_in_lru_lists(bf, fd);
+			else
+				goto TAKE_LOCK_AND_EXIT;
 		}
 
-		if(fd->page_id == page_id)
-			break;
+		int call_again = 0;
+		fd = get_frame_desc_to_evict(bf, evict_dirty_if_necessary, &call_again);
+		if(fd == NULL)
+		{
+			if(call_again)
+				continue;
+			else
+				goto EXIT;
+		}
 
-
+		// perform necessary IO
+		call_again = 0;
 	}
 
+	TAKE_LOCK_AND_EXIT:;
 	// take read lock
 	fd->readers_count++;
 
