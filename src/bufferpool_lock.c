@@ -10,7 +10,7 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	frame_desc* fd = NULL;
 
 	// if there is any frame_desc in invalid_frame_descs_list, then take 1 from it's head
-	if(fd == NULL && !is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
+	if(!is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
 	{
 		fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list));
 		remove_from_linkedlist(&(bf->invalid_frame_descs_list), fd);
@@ -18,7 +18,7 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	}
 
 	// check if a new frame_desc can be added to the bufferpool, if yes, then do it and add the new frame_desc to invalid_frame_descs_list
-	if(fd == NULL && bf->total_frame_desc_count < bf->max_frame_desc_count)
+	if(bf->total_frame_desc_count < bf->max_frame_desc_count)
 	{
 		// increment the total_frame_desc_count
 		bf->total_frame_desc_count++;
@@ -44,7 +44,7 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	}
 
 	// if there is any frame_desc in clean_frame_descs_lru_list, then take 1 from it's head
-	if(fd == NULL && !is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)))
+	if(!is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)))
 	{
 		fd = (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list));
 		remove_from_linkedlist(&(bf->clean_frame_descs_lru_list), fd);
@@ -52,7 +52,7 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	}
 
 	// if there is any frame_desc in dirty_frame_descs_lru_list, then take 1 from it's head
-	if(fd == NULL && evict_dirty_if_necessary && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
+	if(evict_dirty_if_necessary && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
 	{
 		fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
 		remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd);
