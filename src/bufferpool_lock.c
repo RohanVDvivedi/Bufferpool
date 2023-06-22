@@ -52,11 +52,27 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 	}
 
 	// if there is any frame_desc in dirty_frame_descs_lru_list, then take 1 from it's head
-	// here we need to check that the frame satisfies bf->can_be_flushed_to_disk(fd->page_id, fd->frame) :: TODO
+	// here we need to check that the frame satisfies bf->can_be_flushed_to_disk(fd->page_id, fd->frame)
 	if(evict_dirty_if_necessary && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
 	{
-		fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
-		remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd);
+		linkedlist dirty_frame_descs_lru_list_UNFLUSHABLE;
+		initialize_linkedlist(&dirty_frame_descs_lru_list_UNFLUSHABLE, offsetof(frame_desc, embed_node_lru_lists));
+
+		while(!is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
+		{
+			frame_desc* _fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+			remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), _fd);
+
+			if(bf.can_be_flushed_to_disk(_fd->page_id, _fd->frame))
+			{
+				fd = _fd;
+				break;
+			}
+			else
+				insert_tail_in_linkedlist(&dirty_frame_descs_lru_list_UNFLUSHABLE, _fd);
+		}
+
+		insert_all_at_tail_in_linkedlist(&(bf->dirty_frame_descs_lru_list), &dirty_frame_descs_lru_list_UNFLUSHABLE);
 		return fd;
 	}
 
