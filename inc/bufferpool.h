@@ -82,7 +82,8 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 
 		was_modified -> this bit suggests if the page was dirtied by the user, dirty_bit = dirty_bit || was_modified
 
-		force_flush  -> the call returns only after writing and flushing the page to disk
+		force_flush -> this is a suggestion to writing and flushing the page to disk, while releasing writer lock
+		            -> this is done only if the page is dirty and can_be_flushed_to_disk(page_id, frame) returns true
 */
 
 // change max frame count for the bufferpool
