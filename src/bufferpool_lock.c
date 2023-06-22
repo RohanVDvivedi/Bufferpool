@@ -290,13 +290,13 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	fd->writers_count--;
 	fd->readers_count++;
 	if(fd->readers_waiting > 0)
-		pthread_cond_broadcast(&(fd->waiting_for_read_lock));\
+		pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 
 	// success
 	result = 1;
 
 	// if force flush is set then, flush the page to disk with its read lock held
-	if(force_flush)
+	if(force_flush && fd->is_dirty && bf.can_be_flushed_to_disk(fd->page_id, fd->frame))
 	{
 		fd->is_under_write_IO = 1;
 
@@ -374,7 +374,11 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 		goto EXIT;
 
 	result = 1;
+	
+	// release reader lock
 	fd->readers_count--;
+
+	// if this is the last reader thread, then wake up waiting upgrader thread or waiting writer threads
 	if(fd->readers_count == 1 && fd->upgraders_waiting)
 		pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
 	else if(fd->readers_count == 0 && fd->writers_waiting)
@@ -385,6 +389,8 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 		if(bf->total_frame_desc_count > bf->max_frame_desc_count && !fd->is_dirty)
 		{
 			bf->total_frame_desc_count--;
+
+			remove_frame_desc(bf, fd);
 
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 			delete_frame_desc(fd);
@@ -423,7 +429,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 	// release writer lock
 	fd->writers_count--;
 
-	if(force_flush)
+	if(force_flush && fd->is_dirty && bf.can_be_flushed_to_disk(fd->page_id, fd->frame))
 	{
 		// we will effectively downgrade the lock just to flush the page
 
@@ -468,6 +474,8 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		if(bf->total_frame_desc_count > bf->max_frame_desc_count && !fd->is_dirty) // delete frame desc, if we are running in excess
 		{
 			bf->total_frame_desc_count--;
+
+			remove_frame_desc(bf, fd);
 
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 			delete_frame_desc(fd);
