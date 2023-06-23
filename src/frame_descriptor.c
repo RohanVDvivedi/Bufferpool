@@ -22,7 +22,6 @@ frame_desc* new_frame_desc(uint32_t page_size)
 	fd->has_valid_page_id = 0;
 	fd->has_valid_frame_contents = 0;
 
-	// if this bit is set only if the frame_desc is valid, but the page frame has been modified, but it has not yet reached disk
 	fd->is_dirty = 0;
 
 	fd->is_under_read_IO = 0;
@@ -46,7 +45,16 @@ frame_desc* new_frame_desc(uint32_t page_size)
 	return fd;
 }
 
-void delete_frame_desc(frame_desc* fd);
+void delete_frame_desc(frame_desc* fd, uint32_t page_size)
+{
+	pthread_cond_destroy(&(fd->waiting_for_read_lock));
+	pthread_cond_destroy(&(fd->waiting_for_write_lock));
+	pthread_cond_destroy(&(fd->waiting_for_upgrading_lock));
+
+	munmap(fd->frame, page_size);
+
+	free(fd);
+}
 
 int is_frame_desc_under_IO(frame_desc* fd)
 {

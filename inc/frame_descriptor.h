@@ -80,10 +80,10 @@ struct frame_desc
 
 // get_new_frame_desc -> returns an empty frame_desc with all its attributes initialized and frame allocated
 // call this function without holding the global bufferpool lock
-frame_desc* new_frame_desc();
+frame_desc* new_frame_desc(uint32_t page_size);
 
 // delete frame_desc, freeing frame and all its memory
-void delete_frame_desc(frame_desc* fd);
+void delete_frame_desc(frame_desc* fd, uint32_t page_size);
 
 // fd->is_under_read_IO || fd->is_under_write_IO
 int is_frame_desc_under_IO(frame_desc* fd);

@@ -161,7 +161,7 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 			if(bf->total_frame_desc_count > bf->max_frame_desc_count)
 			{
 				pthread_mutex_unlock(get_bufferpool_lock(bf));
-				delete_frame_desc(fd);
+				delete_frame_desc(fd, bf->page_size);
 				fd = NULL;
 				pthread_mutex_lock(get_bufferpool_lock(bf));
 			}
@@ -432,7 +432,7 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 			remove_frame_desc(bf, fd);
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			delete_frame_desc(fd);
+			delete_frame_desc(fd, bf->page_size);
 			fd = NULL;
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 		}
@@ -516,7 +516,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 			remove_frame_desc(bf, fd);
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			delete_frame_desc(fd);
+			delete_frame_desc(fd, bf->page_size);
 			fd = NULL;
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 		}
