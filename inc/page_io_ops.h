@@ -8,6 +8,8 @@ struct page_io_ops
 {
 	const void* page_io_ops_handle;
 
+	// all the below functions return 1 on success and 0 on failure
+
 	// read page from disk at page_id into the frame pointed by frame_dest
 	int (*read_page)(const void* page_io_ops_handle, void* frame_dest, uint64_t page_id, uint32_t page_size);
 
