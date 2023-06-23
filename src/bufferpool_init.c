@@ -39,25 +39,25 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 
 void deinitialize_bufferpool(bufferpool* bf)
 {
-	for(frame_desc* fd = get_head_of_linkedlist(&(bf->invalid_frame_descs_list)); !is_empty_linkedlist(&(bf->invalid_frame_descs_list)); fd = get_head_of_linkedlist(&(bf->invalid_frame_descs_list)))
-		delete_frame_desc(fd);
+	for(frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list)); !is_empty_linkedlist(&(bf->invalid_frame_descs_list)); fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list)))
+		delete_frame_desc(fd, bf->page_size);
 
-	for(frame_desc* fd = get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list)); !is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)); fd = get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list)))
+	for(frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list)); !is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)); fd = (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list)))
 	{
 		remove_frame_desc(bf, fd);
-		delete_frame_desc(fd);
+		delete_frame_desc(fd, bf->page_size);
 	}
 
-	for(frame_desc* fd = get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)); !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)); fd = get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)))
+	for(frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)); !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)); fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)))
 	{
 		remove_frame_desc(bf, fd);
-		delete_frame_desc(fd);
+		delete_frame_desc(fd, bf->page_size);
 	}
 
 	// remove all from hashmaps, and put them in linkedlist
 
-	initialize_hashmap(&(bf->page_id_to_frame_desc));
-	initialize_hashmap(&(bf->frame_ptr_to_frame_desc));
+	deinitialize_hashmap(&(bf->page_id_to_frame_desc));
+	deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 
 	if(bf->has_internal_lock)
 		pthread_mutex_destroy(&(bf->internal_lock));
