@@ -175,54 +175,137 @@ void read_print(uint64_t page_id)
 	if((rand() % 10) < 7)
 	{
 		void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
+		if(frame == NULL)
+		{
+			printf("(%ld) failed to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
+			return;
+		}
+		else
+			printf("(%ld) success in acquiring read lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 		read_print_UNSAFE(page_id, frame);
 
-		release_reader_lock_on_page(&bpm, frame);
+		int res = release_reader_lock_on_page(&bpm, frame);
+		if(!res)
+			printf("(%ld) failed to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
+		else
+			printf("(%ld) success in release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 	}
 	else
 	{
 		void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
+		if(frame == NULL)
+		{
+			printf("(%ld) failed to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
+			return;
+		}
+		else
+			printf("(%ld) success in acquiring write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 		read_print_UNSAFE(page_id, frame);
 
-		release_writer_lock_on_page(&bpm, frame, 0, EVICT_DIRTY_IF_NECESSARY);
+		int res = release_writer_lock_on_page(&bpm, frame, 0, EVICT_DIRTY_IF_NECESSARY);
+		if(!res)
+			printf("(%ld) failed to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		else
+			printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 	}
 }
 
 void read_print_upgrade_write_print(uint64_t page_id)
 {
 	void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
+	if(frame == NULL)
+	{
+		printf("(%ld) failed to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
+		return;
+	}
+	else
+		printf("(%ld) success in acquiring read lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	read_print_UNSAFE(page_id, frame);
 
-	upgrade_reader_lock_to_writer_lock(&bpm, frame);
+	int res = upgrade_reader_lock_to_writer_lock(&bpm, frame);
+	if(!res)
+	{
+		printf("(%ld) failed to upgrade read lock on %" PRIu64 "\n", pthread_self(), page_id);
+
+		res = release_reader_lock_on_page(&bpm, frame);
+		if(!res)
+			printf("(%ld) failed to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
+		else
+			printf("(%ld) success in release read lock on %" PRIu64 "\n", pthread_self(), page_id);
+
+		return;
+	}
+	else
+		printf("(%ld) success in uprading read lock to write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	write_print_UNSAFE(page_id, frame);
 
-	release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	if(!res)
+		printf("(%ld) failed to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+	else
+		printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 }
 
 void write_print(uint64_t page_id)
 {
 	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
+	if(frame == NULL)
+	{
+		printf("(%ld) failed to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		return;
+	}
+	else
+		printf("(%ld) success in acquiring write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	write_print_UNSAFE(page_id, frame);
 
-	release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	int res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	if(!res)
+		printf("(%ld) failed to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+	else
+		printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 }
 
 void write_print_downgrade_read_print(uint64_t page_id)
 {
 	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
+	if(frame == NULL)
+	{
+		printf("(%ld) failed to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		return;
+	}
+	else
+		printf("(%ld) success in acquiring write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	write_print_UNSAFE(page_id, frame);
 
-	downgrade_writer_lock_to_reader_lock(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	int res = downgrade_writer_lock_to_reader_lock(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	if(!res)
+	{
+		printf("(%ld) failed to downgrade write lock on %" PRIu64 "\n", pthread_self(), page_id);
+
+		res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		if(!res)
+			printf("(%ld) failed to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		else
+			printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+
+		return;
+	}
+	else
+		printf("(%ld) success in downgrading write lock to read lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	read_print_UNSAFE(page_id, frame);
 
-	release_reader_lock_on_page(&bpm, frame);
+	res = release_reader_lock_on_page(&bpm, frame);
+	if(!res)
+		printf("(%ld) failed to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
+	else
+		printf("(%ld) success in release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 }
 
 int always_can_be_flushed_to_disk(uint64_t page_id, const void* frame)
