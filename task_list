@@ -1,7 +1,7 @@
  * dry runs for locking functions
  * discard frame_descs while modifying the max_frame_desc count, from the invalid and clean lru lists
    * call delete on them without the lock
- * implement delete framr_desc and delete bufferpool functions
+ * implement delete bufferpool functions
 
 
 
