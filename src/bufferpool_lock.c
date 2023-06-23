@@ -81,7 +81,7 @@ static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_ne
 
 // fd must have no readers/writers or waiters, while this function is called
 // and fd must not have the correct contents on its frame
-static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int wake_up_other_readers_after_IO, int* call_again)
+static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int wake_up_other_readers_after_IO, int to_be_overwritten, int* call_again)
 {
 	(*call_again) = 0;
 
@@ -134,9 +134,15 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	fd->writers_count++;
 	fd->is_under_read_IO = 1;
 
-	pthread_mutex_unlock(get_bufferpool_lock(bf));
-	int io_error = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
-	pthread_mutex_lock(get_bufferpool_lock(bf));
+	int io_error = 0;
+
+	// avoid read IO, if the page is going to be overwritten
+	if(!to_be_overwritten)
+	{
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+		io_error = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+	}
 
 	fd->is_under_read_IO = 0;
 	fd->writers_count--;
@@ -225,7 +231,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 		}
 
 		call_again = 0;
-		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 1, &call_again);
+		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 1, 0, &call_again);
 		if(fd == NULL)
 		{
 			if(call_again)
@@ -290,7 +296,7 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 		}
 
 		call_again = 0;
-		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0, &call_again);
+		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0, to_be_overwritten, &call_again);
 		if(fd == NULL)
 		{
 			if(call_again)
