@@ -67,6 +67,8 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
+
 	page_io_ops page_io_functions = (page_io_ops){
 													.page_io_ops_handle = &bfile,
 													.read_page = read_page_from_block_file,
