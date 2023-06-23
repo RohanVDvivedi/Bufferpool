@@ -30,8 +30,8 @@
 #define EVICT_DIRTY_IF_NECESSARY 1
 
 // workload to test
-#define MODERATE_READS_WRITES_WORKLOAD
-//#define HIGH_READS_WORKLOAD
+//#define MODERATE_READS_WRITES_WORKLOAD
+#define HIGH_READS_WORKLOAD
 
 typedef enum io_task_type io_task_type;
 enum io_task_type
