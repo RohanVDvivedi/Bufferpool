@@ -1,4 +1,6 @@
  * dry runs for locking functions
+ * timely asynchronous flushing to disk
+ * aschronous request to bring a page in the bufferpool
 
 
 
