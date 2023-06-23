@@ -239,6 +239,8 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 			else
 				goto EXIT;
 		}
+		else
+			goto TAKE_LOCK_AND_EXIT;
 
 		// perform necessary IO
 		call_again = 0;
@@ -304,6 +306,8 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 			else
 				goto EXIT;
 		}
+		else
+			goto TAKE_LOCK_AND_EXIT;
 
 		// perform necessary IO
 		call_again = 0;
