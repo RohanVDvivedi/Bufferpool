@@ -25,6 +25,9 @@
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
+#define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
+#define EVICT_DIRTY_IF_NECESSARY 1
+
 typedef enum io_task_type io_task_type;
 enum io_task_type
 {
@@ -168,16 +171,28 @@ void write_print_UNSAFE(uint64_t page_id, void* frame)
 
 void read_print(uint64_t page_id)
 {
-	void* frame = acquire_page_with_reader_lock(&bpm, page_id, 1);
+	// randomly choose to select read lock or write lock, to read the page
+	if((rand() % 10) < 7)
+	{
+		void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
 
-	read_print_UNSAFE(page_id, frame);
+		read_print_UNSAFE(page_id, frame);
 
-	release_reader_lock_on_page(&bpm, frame);
+		release_reader_lock_on_page(&bpm, frame);
+	}
+	else
+	{
+		void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
+
+		read_print_UNSAFE(page_id, frame);
+
+		release_writer_lock_on_page(&bpm, frame, 0, EVICT_DIRTY_IF_NECESSARY);
+	}
 }
 
 void read_print_upgrade_write_print(uint64_t page_id)
 {
-	void* frame = acquire_page_with_reader_lock(&bpm, page_id, 1);
+	void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
 
 	read_print_UNSAFE(page_id, frame);
 
@@ -185,25 +200,25 @@ void read_print_upgrade_write_print(uint64_t page_id)
 
 	write_print_UNSAFE(page_id, frame);
 
-	release_writer_lock_on_page(&bpm, frame, 1, 1);
+	release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 }
 
 void write_print(uint64_t page_id)
 {
-	void* frame = acquire_page_with_writer_lock(&bpm, page_id, 1, 0);
+	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
 
 	write_print_UNSAFE(page_id, frame);
 
-	release_writer_lock_on_page(&bpm, frame, 1, 1);
+	release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 }
 
 void write_print_downgrade_read_print(uint64_t page_id)
 {
-	void* frame = acquire_page_with_writer_lock(&bpm, page_id, 1, 0);
+	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
 
 	write_print_UNSAFE(page_id, frame);
 
-	downgrade_writer_lock_to_reader_lock(&bpm, frame, 1, 1);
+	downgrade_writer_lock_to_reader_lock(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 
 	read_print_UNSAFE(page_id, frame);
 
