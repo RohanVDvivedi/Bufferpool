@@ -111,6 +111,8 @@ int main(int argc, char **argv)
 	// TODO flush buffer pool here
 
 	deinitialize_bufferpool(&bpm);
+
+	close_block_file(&bfile);
 	
 	printf("Buffer pool and executor deleted\n\n");
 
