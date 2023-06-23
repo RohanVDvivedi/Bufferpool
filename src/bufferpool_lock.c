@@ -92,9 +92,9 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_error = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
-		if(!io_error)
-			io_error = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		if(io_success)
+			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		fd->is_under_write_IO = 0;
@@ -104,13 +104,13 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		else if(fd->readers_count == 0 && fd->writers_waiting)
 			pthread_cond_signal(&(fd->waiting_for_write_lock));
 
-		if(io_error)
-			(*call_again) = 0;
-		else
+		if(io_success)
 		{
 			(*call_again) = 1;
 			fd->is_dirty = 0;
 		}
+		else
+			(*call_again) = 0;
 		
 		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
 			insert_frame_desc_in_lru_lists(bf, fd);
@@ -134,20 +134,26 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	fd->writers_count++;
 	fd->is_under_read_IO = 1;
 
-	int io_error = 0;
+	int io_success = 1;
 
 	// avoid read IO, if the page is going to be overwritten
 	if(!to_be_overwritten)
 	{
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		io_error = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		io_success = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 	}
 
 	fd->is_under_read_IO = 0;
 	fd->writers_count--;
 
-	if(io_error)
+	if(io_success)
+	{
+		if(wake_up_other_readers_after_IO && fd->readers_waiting > 0)
+			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
+		fd->has_valid_frame_contents = 1;
+	}
+	else
 	{
 		// mark this as an invalid frame
 		fd->has_valid_frame_contents = 0;
@@ -178,12 +184,6 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		// do not call again, and fail the page from being locked
 		(*call_again) = 0;
 		return NULL;
-	}
-	else
-	{
-		if(wake_up_other_readers_after_IO && fd->readers_waiting > 0)
-			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
-		fd->has_valid_frame_contents = 1;
 	}
 	
 	return fd;
@@ -349,15 +349,15 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_error = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
-		if(!io_error)
-			io_error = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		if(io_success)
+			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		fd->is_under_write_IO = 0;
 
 		// after a force flush the page is nolonger dirty
-		if(!io_error)
+		if(io_success)
 			fd->is_dirty = 0;
 	}
 
@@ -486,9 +486,9 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_error = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
-		if(!io_error)
-			io_error = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		if(io_success)
+			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		// release reader lock
@@ -501,7 +501,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 			pthread_cond_signal(&(fd->waiting_for_write_lock));
 
 		// after a force flush the page is no longer dirty
-		if(!io_error)
+		if(io_success)
 			fd->is_dirty = 0;
 	}
 	else
