@@ -39,17 +39,27 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 
 void deinitialize_bufferpool(bufferpool* bf)
 {
-	for(frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list)); !is_empty_linkedlist(&(bf->invalid_frame_descs_list)); fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list)))
-		delete_frame_desc(fd, bf->page_size);
+	frame_desc* fd = NULL;
 
-	for(frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list)); !is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)); fd = (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list)))
+	while(!is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
 	{
+		fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list));
+		remove_head_from_linkedlist(&(bf->invalid_frame_descs_list));
+		delete_frame_desc(fd, bf->page_size);
+	}
+
+	while(!is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)))
+	{
+		fd = (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list));
+		remove_head_from_linkedlist(&(bf->clean_frame_descs_lru_list));
 		remove_frame_desc(bf, fd);
 		delete_frame_desc(fd, bf->page_size);
 	}
 
-	for(frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)); !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)); fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)))
+	while(!is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
 	{
+		fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+		remove_head_from_linkedlist(&(bf->dirty_frame_descs_lru_list));
 		remove_frame_desc(bf, fd);
 		delete_frame_desc(fd, bf->page_size);
 	}
