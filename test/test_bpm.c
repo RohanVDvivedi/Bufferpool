@@ -100,6 +100,24 @@ int main(int argc, char **argv)
 	}
 	printf("writing 0s to all the pages of the heapfile -- completed\n\n\n");
 
+	printf("testing to see that we get the old value, of the page, when the page is already in bufferpool\n");
+	{
+		uint64_t page_id_test = UINT64_C(19);
+		void* frame = acquire_page_with_writer_lock(&bpm, page_id_test, EVICT_DIRTY_IF_NECESSARY, 1);
+		if(frame == NULL)
+		{
+			printf("failed to get write lock on frame 19\n");
+			exit(-1);
+		}
+		printf("page_id = %"PRIu64" -> %s\n", page_id_test, ((const char*)(frame)));
+		int res = release_writer_lock_on_page(&bpm, frame, 0, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		if(res == 0)
+		{
+			printf("failed to release write lock on frame 19\n");
+			exit(-1);
+		}
+	}
+
 	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS + 32, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
