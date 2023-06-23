@@ -106,14 +106,32 @@ int main(int argc, char **argv)
 		void* frame = acquire_page_with_writer_lock(&bpm, page_id_test, EVICT_DIRTY_IF_NECESSARY, 1);
 		if(frame == NULL)
 		{
-			printf("failed to get write lock on frame 19\n");
+			printf("failed to get write lock on frame %"PRIu64"\n", page_id_test);
 			exit(-1);
 		}
 		printf("page_id = %"PRIu64" -> %s\n", page_id_test, ((const char*)(frame)));
 		int res = release_writer_lock_on_page(&bpm, frame, 0, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 		if(res == 0)
 		{
-			printf("failed to release write lock on frame 19\n");
+			printf("failed to release write lock on frame %"PRIu64"\n", page_id_test);
+			exit(-1);
+		}
+	}
+
+	printf("testing to see that we get the zero value, of the page, when the page is not in bufferpool\n");
+	{
+		uint64_t page_id_test = UINT64_C(2);
+		void* frame = acquire_page_with_writer_lock(&bpm, page_id_test, EVICT_DIRTY_IF_NECESSARY, 1);
+		if(frame == NULL)
+		{
+			printf("failed to get write lock on frame %"PRIu64"\n", page_id_test);
+			exit(-1);
+		}
+		printf("page_id = %"PRIu64" -> %s\n", page_id_test, ((const char*)(frame)));
+		int res = release_writer_lock_on_page(&bpm, frame, 0, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		if(res == 0)
+		{
+			printf("failed to release write lock on frame %"PRIu64"\n", page_id_test);
 			exit(-1);
 		}
 	}
