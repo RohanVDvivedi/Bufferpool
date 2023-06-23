@@ -35,8 +35,7 @@ enum io_task_type
 	READ_PRINT,
 	READ_PRINT_UPGRADE_WRITE_PRINT,
 	WRITE_PRINT,
-	WRITE_PRINT_DOWNGRADE_READ_PRINT,
-	NUMBER_OF_TYPES
+	WRITE_PRINT_DOWNGRADE_READ_PRINT
 };
 
 typedef struct io_task io_task;
@@ -104,8 +103,16 @@ int main(int argc, char **argv)
 	for(uint32_t i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		io_task* io_t_p = &(io_tasks[i]);
-		io_t_p->task_type = rand() % NUMBER_OF_TYPES;
-		io_t_p->page_id = (uint32_t)(rand() % PAGES_IN_HEAP_FILE);
+		int task_percentage = rand() % 100;
+		if(task_percentage < 40)
+			io_t_p->task_type = READ_PRINT;
+		else if(task_percentage < 60)
+			io_t_p->task_type = READ_PRINT_UPGRADE_WRITE_PRINT;
+		else if(task_percentage < 80)
+			io_t_p->task_type = WRITE_PRINT;
+		else
+			io_t_p->task_type = WRITE_PRINT_DOWNGRADE_READ_PRINT;
+		io_t_p->page_id = (uint64_t)(rand() % PAGES_IN_HEAP_FILE);
 		if(io_t_p->task_type == READ_PRINT)
 			read_tasks++;
 		else
