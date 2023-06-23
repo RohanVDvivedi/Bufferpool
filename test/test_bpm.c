@@ -21,7 +21,7 @@
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_FRAMES_IN_BUFFER_POOL 6
 
-#define FIXED_THREAD_POOL_SIZE 1
+#define FIXED_THREAD_POOL_SIZE 4
 #define COUNT_OF_IO_TASKS 100
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
@@ -127,6 +127,7 @@ int main(int argc, char **argv)
 
 	// TODO flush buffer pool here
 
+
 	deinitialize_bufferpool(&bpm);
 
 	close_block_file(&bfile);
@@ -209,7 +210,7 @@ void write_print_UNSAFE(uint64_t page_id, void* frame)
 void read_print(uint64_t page_id)
 {
 	// randomly choose to select read lock or write lock, to read the page
-	if((rand() % 10) < 7)
+	if((rand() % 20) < 16)
 	{
 		void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
 		if(frame == NULL)
