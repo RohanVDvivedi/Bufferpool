@@ -29,6 +29,10 @@
 #define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 1
 #define EVICT_DIRTY_IF_NECESSARY 1
 
+// workload to test
+#define MODERATE_READS_WRITES_WORKLOAD
+//#define HIGH_READS_WORKLOAD
+
 typedef enum io_task_type io_task_type;
 enum io_task_type
 {
@@ -104,14 +108,31 @@ int main(int argc, char **argv)
 	{
 		io_task* io_t_p = &(io_tasks[i]);
 		int task_percentage = rand() % 100;
-		if(task_percentage < 40)
-			io_t_p->task_type = READ_PRINT;
-		else if(task_percentage < 60)
-			io_t_p->task_type = READ_PRINT_UPGRADE_WRITE_PRINT;
-		else if(task_percentage < 80)
-			io_t_p->task_type = WRITE_PRINT;
-		else
-			io_t_p->task_type = WRITE_PRINT_DOWNGRADE_READ_PRINT;
+
+		#ifdef MODERATE_READS_WRITES_WORKLOAD
+
+			if(task_percentage < 40)
+				io_t_p->task_type = READ_PRINT;
+			else if(task_percentage < 60)
+				io_t_p->task_type = READ_PRINT_UPGRADE_WRITE_PRINT;
+			else if(task_percentage < 80)
+				io_t_p->task_type = WRITE_PRINT;
+			else
+				io_t_p->task_type = WRITE_PRINT_DOWNGRADE_READ_PRINT;
+
+		#elif defined HIGH_READS_WORKLOAD
+
+			if(task_percentage < 60)
+				io_t_p->task_type = READ_PRINT;
+			else if(task_percentage < 80)
+				io_t_p->task_type = READ_PRINT_UPGRADE_WRITE_PRINT;
+			else if(task_percentage < 90)
+				io_t_p->task_type = WRITE_PRINT;
+			else
+				io_t_p->task_type = WRITE_PRINT_DOWNGRADE_READ_PRINT;
+
+		#endif
+
 		io_t_p->page_id = (uint64_t)(rand() % PAGES_IN_HEAP_FILE);
 		if(io_t_p->task_type == READ_PRINT)
 			read_tasks++;
