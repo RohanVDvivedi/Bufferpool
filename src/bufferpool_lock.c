@@ -137,7 +137,14 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	int io_success = 1;
 
 	// avoid read IO, if the page is going to be overwritten
-	if(!to_be_overwritten)
+	if(to_be_overwritten) // we will just reset all the bits here, sicne the page is destined to be overwritten
+	{
+		// the writers_count is incremented hence we can release the lock while we set the page to all zeros
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+		memory_set(fd->frame, 0, bf->page_size);
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+	}
+	else
 	{
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		io_success = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
