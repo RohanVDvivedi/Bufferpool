@@ -168,22 +168,46 @@ void write_print_UNSAFE(uint64_t page_id, void* frame)
 
 void read_print(uint64_t page_id)
 {
+	void* frame = acquire_page_with_reader_lock(&bpm, page_id, 1);
 
+	read_print_UNSAFE(page_id, frame);
+
+	release_reader_lock_on_page(&bpm, frame);
 }
 
 void read_print_upgrade_write_print(uint64_t page_id)
 {
+	void* frame = acquire_page_with_reader_lock(&bpm, page_id, 1);
 
+	read_print_UNSAFE(page_id, frame);
+
+	upgrade_reader_lock_to_writer_lock(&bpm, frame);
+
+	write_print_UNSAFE(page_id, frame);
+
+	release_writer_lock_on_page(&bpm, frame, 1, 1);
 }
 
 void write_print(uint64_t page_id)
 {
+	void* frame = acquire_page_with_writer_lock(&bpm, page_id, 1, 0);
 
+	write_print_UNSAFE(page_id, frame);
+
+	release_writer_lock_on_page(&bpm, frame, 1, 1);
 }
 
 void write_print_downgrade_read_print(uint64_t page_id)
 {
+	void* frame = acquire_page_with_writer_lock(&bpm, page_id, 1, 0);
 
+	write_print_UNSAFE(page_id, frame);
+
+	downgrade_writer_lock_to_reader_lock(&bpm, frame, 1, 1);
+
+	read_print_UNSAFE(page_id, frame);
+
+	release_reader_lock_on_page(&bpm, frame);
 }
 
 int always_can_be_flushed_to_disk(uint64_t page_id, const void* frame)
