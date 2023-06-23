@@ -90,10 +90,10 @@ int main(int argc, char **argv)
 			exit(-1);
 		}
 		memset(frame, 0, PAGE_SIZE);
+		sprintf(frame, PAGE_DATA_FORMAT, i, 0UL);
 		release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	}
 	printf("writing 0s to all the pages of the heapfile -- completed\n\n\n");
-
 
 	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS + 32, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
@@ -177,6 +177,15 @@ void* io_task_execute(io_task* io_t_p)
 void read_print_UNSAFE(uint64_t page_id, void* frame)
 {
 	printf("(%ld) reading page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
+	uint64_t page_id_read = page_id;
+	uint64_t value_read = 0;
+	if(((const char*)frame)[0] != '\0')
+		sscanf(frame, PAGE_DATA_FORMAT, &page_id_read, &value_read);
+	if(page_id != page_id_read)
+	{
+		printf("GOT WRONG PAGE LOCK\n\n");
+		exit(-1);
+	}
 }
 
 void write_print_UNSAFE(uint64_t page_id, void* frame)
@@ -185,7 +194,14 @@ void write_print_UNSAFE(uint64_t page_id, void* frame)
 	uint64_t page_id_read = page_id;
 	uint64_t value_read = 0;
 	if(((const char*)frame)[0] != '\0')
+	{
 		sscanf(frame, PAGE_DATA_FORMAT, &page_id_read, &value_read);
+		if(page_id != page_id_read)
+		{
+			printf("GOT WRONG PAGE LOCK\n\n");
+			exit(-1);
+		}
+	}
 	sprintf(frame, PAGE_DATA_FORMAT, page_id, ++value_read);
 	printf("(%ld) after writing page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 }
