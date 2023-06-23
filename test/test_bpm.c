@@ -152,7 +152,7 @@ void* io_task_execute(io_task* io_t_p)
 
 void read_print_UNSAFE(uint64_t page_id, void* frame)
 {
-	printf("reading page_id(%" PRIu64 ") -> %s\n", page_id, ((const char*)frame));
+	printf("reading by %ld page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 }
 
 void write_print_UNSAFE(uint64_t page_id, void* frame)

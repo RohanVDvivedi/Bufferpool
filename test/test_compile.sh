@@ -1,1 +1,1 @@
-gcc -o test_bpm.out test_bpm.c -lbufferpool -lpthread -lcutlery
+gcc -o test_bpm.out test_bpm.c -lblockio -lboompar -lbufferpool -lpthread -lcutlery
