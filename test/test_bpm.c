@@ -92,7 +92,9 @@ int main(int argc, char **argv)
 			printf("error acquiring lock on page %" PRIu64 "\n\n", i);
 			exit(-1);
 		}
-		memset(frame, 0, PAGE_SIZE);
+		// the below memset is not needed, since if we asked for a page that we suggested will be over written
+		// we either get a page that has been zeroed out, or the page with its previous values set
+		// memset(frame, 0, PAGE_SIZE);
 		sprintf(frame, PAGE_DATA_FORMAT, i, 0UL);
 		release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	}
