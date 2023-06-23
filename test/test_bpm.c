@@ -3,9 +3,11 @@
 #include<stdint.h>
 #include<unistd.h>
 #include<limits.h>
+#include<inttypes.h>
 
 #include<string.h>
 
+#include<block_io.h>
 #include<bufferpool.h>
 
 #include<executor.h>
@@ -21,7 +23,7 @@
 #define FIXED_THREAD_POOL_SIZE 10
 #define COUNT_OF_IO_TASKS 100
 
-#define PAGE_DATA_FORMAT "Hello World, This is page number %u -> %u writes completed...\n"
+#define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
 typedef enum io_task_type io_task_type;
 enum io_task_type
@@ -41,8 +43,6 @@ struct io_task
 };
 
 bufferpool bpm;
-
-executor* exe = NULL;
 io_task io_tasks[COUNT_OF_IO_TASKS];
 
 int always_can_be_flushed_to_disk(uint64_t page_id, const void* frame);
@@ -51,14 +51,14 @@ int read_page_from_block_file(const void* page_io_ops_handle, void* frame_dest, 
 int write_page_to_block_file(const void* page_io_ops_handle, const void* frame_src, uint64_t page_id, uint32_t page_size);
 int flush_all_pages_to_block_file(const void* page_io_ops_handle);
 
-void* io_task_execute(io_task* io_t_p)
+void* io_task_execute(io_task* io_t_p);
 
 int main(int argc, char **argv)
 {
 	printf("\n\ntest started\n\n");
 
 	block_file bfile;
-	if(!create_and_open_block_file(&bf, BLOCK_FILENAME, BLOCK_FILENAME_FLAGS) && !open_block_file(&bf, BLOCK_FILENAME, BLOCK_FILENAME_FLAGS | O_TRUNC))
+	if(!create_and_open_block_file(&bfile, BLOCK_FILENAME, BLOCK_FILE_FLAGS) && !open_block_file(&bfile, BLOCK_FILENAME, BLOCK_FILE_FLAGS | O_TRUNC))
 	{
 		printf("failed to create block file\n");
 		return -1;
@@ -71,9 +71,9 @@ int main(int argc, char **argv)
 													.flush_all_writes = flush_all_pages_to_block_file,
 												};
 
-	init_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, page_io_functions, always_can_be_flushed_to_disk);
+	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, page_io_functions, always_can_be_flushed_to_disk);
 
-	exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS, 0, NULL, NULL, NULL);
+	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
 	printf("Initializing IO tasks\n\n");
@@ -114,14 +114,14 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void read_print(uint32_t page_id);
-void read_print_upgrade_write_print(uint32_t page_id);
-void write_print(uint32_t page_id);
-void write_print_downgrade_read_print(uint32_t page_id);
+void read_print(uint64_t page_id);
+void read_print_upgrade_write_print(uint64_t page_id);
+void write_print(uint64_t page_id);
+void write_print_downgrade_read_print(uint64_t page_id);
 
 void* io_task_execute(io_task* io_t_p)
 {
-	switch(io_t_p->do_write)
+	switch(io_t_p->task_type)
 	{
 		case READ_PRINT:
 		{
@@ -150,22 +150,38 @@ void* io_task_execute(io_task* io_t_p)
 	return NULL;
 }
 
-void read_print(uint32_t page_id)
+void read_print_UNSAFE(uint64_t page_id, void* frame)
+{
+	printf("reading page_id(%" PRIu64 ") -> %s\n", page_id, ((const char*)frame));
+}
+
+void write_print_UNSAFE(uint64_t page_id, void* frame)
+{
+	printf("writing by %ld before page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
+	uint64_t page_id_read = page_id;
+	uint64_t value_read = 0;
+	if(((const char*)frame)[0] != '\0')
+		sscanf(frame, PAGE_DATA_FORMAT, &page_id_read, &value_read);
+	sprintf(frame, PAGE_DATA_FORMAT, page_id, ++value_read);
+	printf("writing by %ld after page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
+}
+
+void read_print(uint64_t page_id)
 {
 
 }
 
-void read_print_upgrade_write_print(uint32_t page_id)
+void read_print_upgrade_write_print(uint64_t page_id)
 {
 
 }
 
-void write_print(uint32_t page_id)
+void write_print(uint64_t page_id)
 {
 
 }
 
-void write_print_downgrade_read_print(uint32_t page_id)
+void write_print_downgrade_read_print(uint64_t page_id)
 {
 
 }
