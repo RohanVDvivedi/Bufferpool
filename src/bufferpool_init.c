@@ -5,8 +5,8 @@
 #include<frame_descriptor_util.h>
 
 #include<cutlery_math.h>
-
-#define HASHTABLE_BUCKET_CAPACITY(max_frame_desc_count) (max((((max_frame_desc_count)/4)+32),(CY_UINT_MAX/32)))
+#include<stdio.h>
+#define HASHTABLE_BUCKET_CAPACITY(max_frame_desc_count) (min((((max_frame_desc_count)/2)+8),(CY_UINT_MAX/32)))
 
 void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame))
 {
