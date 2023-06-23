@@ -143,6 +143,9 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		memory_set(fd->frame, 0, bf->page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+		// here we knowingly make the page dirty, since wrote 0s for the to_be_overwritten page
+		fd->is_dirty = 1;
 	}
 	else
 	{
