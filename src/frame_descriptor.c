@@ -3,6 +3,8 @@
 #include<stdlib.h>
 #include<sys/mman.h>
 
+#define OS_PAGE_SIZE 4096
+
 frame_desc* new_frame_desc(uint32_t page_size)
 {
 	frame_desc* fd = malloc(sizeof(frame_desc));
@@ -12,11 +14,26 @@ frame_desc* new_frame_desc(uint32_t page_size)
 
 	// since we are setting is_valid to 0, below 2 attributes are meaning less
 	fd->page_id = 0;
-	fd->frame = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_POPULATE, -1, -1);
-	if(fd->frame == NULL)
+
+	uint32_t os_page_size = OS_PAGE_SIZE;
+
+	if(page_size >= os_page_size)
 	{
-		free(fd);
-		return NULL;
+		fd->frame = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_POPULATE, -1, -1);
+		if(fd->frame == NULL || fd->frame == ((void*)(-1)))
+		{
+			free(fd);
+			return NULL;
+		}
+	}
+	else
+	{
+		fd->frame = aligned_alloc(os_page_size, page_size);
+		if(fd->frame == NULL || fd->frame == ((void*)(-1)))
+		{
+			free(fd);
+			return NULL;
+		}
 	}
 
 	fd->has_valid_page_id = 0;
