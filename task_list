@@ -1,11 +1,3 @@
  * dry runs for locking functions
- * timely asynchronous flushing to disk
+ * timely asynchronous flushing to disk after iterating over the hashtable
  * aschronous request to bring a page in the bufferpool
-
-
-
- * Actual simple buffer pool
-  * set up a multi-threaded job that check if a page is flushable and flush it, a valid page is flushable if is_dirty && can_be_flushed && writers_count == 0, asynchronously flush a page from the buffer pool
-  * asynchornously bring a page with a page_id to bufferpool, and put it at the end of the buffer pool's lru, if it is already in the buffer pool then only bump it to the end of lru
-  * evict on non-dirty pages from the bufferpool, if there are no clean pages, then run a page flush mechanism, where all the dirty pages are check if they can be flushed to disk, if yes, these pages are given to threadpool to be written to disk, while we wait on a condition variable to become true. Once all pages are written, we call fsync and then clear dirty bits of all the pages, and wake up any thread that is waiting for the flush to be completed.
- * use a flag to suggest if flush is in progress, and a condition variable so other threads can wait on it.
