@@ -91,4 +91,6 @@ int is_frame_desc_under_IO(frame_desc* fd);
 // fd->readers_count || fd->writers_count || fd->readers_waiting || fd->writers_waiting || fd->upgraders_waiting
 int is_frame_desc_locked_or_waiting_to_be_locked(frame_desc* fd);
 
+void print_frame_desc(frame_desc* fd);
+
 #endif
