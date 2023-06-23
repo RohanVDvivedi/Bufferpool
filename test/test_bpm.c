@@ -1,3 +1,5 @@
+#include<block_io.h>
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdint.h>
@@ -7,7 +9,6 @@
 
 #include<string.h>
 
-#include<block_io.h>
 #include<bufferpool.h>
 
 #include<executor.h>
@@ -20,7 +21,7 @@
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_FRAMES_IN_BUFFER_POOL 6
 
-#define FIXED_THREAD_POOL_SIZE 10
+#define FIXED_THREAD_POOL_SIZE 1
 #define COUNT_OF_IO_TASKS 100
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
@@ -77,6 +78,22 @@ int main(int argc, char **argv)
 												};
 
 	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, page_io_functions, always_can_be_flushed_to_disk);
+
+	printf("writing 0s to all the pages of the heapfile\n");
+	for(uint64_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
+	{
+		printf("zeroing out page %" PRIu64 "\n\n", i);
+		void* frame = acquire_page_with_writer_lock(&bpm, i, EVICT_DIRTY_IF_NECESSARY, 1);
+		if(frame == NULL)
+		{
+			printf("error acquiring lock on page %" PRIu64 "\n\n", i);
+			exit(-1);
+		}
+		memset(frame, 0, PAGE_SIZE);
+		release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	}
+	printf("writing 0s to all the pages of the heapfile -- completed\n\n\n");
+
 
 	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS + 32, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
@@ -319,12 +336,20 @@ int always_can_be_flushed_to_disk(uint64_t page_id, const void* frame)
 
 int read_page_from_block_file(const void* page_io_ops_handle, void* frame_dest, uint64_t page_id, uint32_t page_size)
 {
-	return read_blocks_from_block_file(((block_file*)(page_io_ops_handle)), frame_dest, (page_id * page_size) / get_block_size_for_block_file(((block_file*)(page_io_ops_handle))), page_size / get_block_size_for_block_file(((block_file*)(page_io_ops_handle))));
+	size_t block_size = get_block_size_for_block_file(((block_file*)(page_io_ops_handle)));
+	off_t block_id = (page_id * page_size) / block_size;
+	size_t block_count = page_size / block_size;
+	printf("reading %"PRIu64" - %"PRIu64" into  %p\n", block_id, block_id + block_count - 1, frame_dest);
+	return read_blocks_from_block_file(((block_file*)(page_io_ops_handle)), frame_dest, block_id, block_count);
 }
 
 int write_page_to_block_file(const void* page_io_ops_handle, const void* frame_src, uint64_t page_id, uint32_t page_size)
 {
-	return write_blocks_to_block_file(((block_file*)(page_io_ops_handle)), frame_src, (page_id * page_size) / get_block_size_for_block_file(((block_file*)(page_io_ops_handle))), page_size / get_block_size_for_block_file(((block_file*)(page_io_ops_handle))));
+	size_t block_size = get_block_size_for_block_file(((block_file*)(page_io_ops_handle)));
+	off_t block_id = (page_id * page_size) / block_size;
+	size_t block_count = page_size / block_size;
+	printf("writing %"PRIu64" - %"PRIu64" from  %p\n", block_id, block_id + block_count - 1, frame_src);
+	return write_blocks_to_block_file(((block_file*)(page_io_ops_handle)), frame_src, block_id, block_count);
 }
 
 int flush_all_pages_to_block_file(const void* page_io_ops_handle)
