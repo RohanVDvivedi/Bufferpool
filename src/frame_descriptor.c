@@ -33,6 +33,7 @@ frame_desc* new_frame_desc(uint32_t page_size)
 			free(fd);
 			return NULL;
 		}
+		memory_set(fd->frame, 0, page_size);
 	}
 
 	fd->has_valid_page_id = 0;
