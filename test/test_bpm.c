@@ -176,18 +176,18 @@ void* io_task_execute(io_task* io_t_p)
 
 void read_print_UNSAFE(uint64_t page_id, void* frame)
 {
-	printf("reading by %ld page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
+	printf("(%ld) reading page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 }
 
 void write_print_UNSAFE(uint64_t page_id, void* frame)
 {
-	printf("writing by %ld before page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
+	printf("(%ld) before writing page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 	uint64_t page_id_read = page_id;
 	uint64_t value_read = 0;
 	if(((const char*)frame)[0] != '\0')
 		sscanf(frame, PAGE_DATA_FORMAT, &page_id_read, &value_read);
 	sprintf(frame, PAGE_DATA_FORMAT, page_id, ++value_read);
-	printf("writing by %ld after page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
+	printf("(%ld) after writing page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 }
 
 void read_print(uint64_t page_id)
@@ -198,7 +198,7 @@ void read_print(uint64_t page_id)
 		void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
 		if(frame == NULL)
 		{
-			printf("(%ld) failed to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%ld) *** failed *** to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
 			return;
 		}
 		else
@@ -208,7 +208,7 @@ void read_print(uint64_t page_id)
 
 		int res = release_reader_lock_on_page(&bpm, frame);
 		if(!res)
-			printf("(%ld) failed to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%ld) *** failed *** to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 		else
 			printf("(%ld) success in release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 	}
@@ -217,7 +217,7 @@ void read_print(uint64_t page_id)
 		void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
 		if(frame == NULL)
 		{
-			printf("(%ld) failed to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%ld) *** failed *** to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
 			return;
 		}
 		else
@@ -227,7 +227,7 @@ void read_print(uint64_t page_id)
 
 		int res = release_writer_lock_on_page(&bpm, frame, 0, EVICT_DIRTY_IF_NECESSARY);
 		if(!res)
-			printf("(%ld) failed to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 		else
 			printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 	}
@@ -238,7 +238,7 @@ void read_print_upgrade_write_print(uint64_t page_id)
 	void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
 	if(frame == NULL)
 	{
-		printf("(%ld) failed to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
 		return;
 	}
 	else
@@ -249,11 +249,11 @@ void read_print_upgrade_write_print(uint64_t page_id)
 	int res = upgrade_reader_lock_to_writer_lock(&bpm, frame);
 	if(!res)
 	{
-		printf("(%ld) failed to upgrade read lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to upgrade read lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 		res = release_reader_lock_on_page(&bpm, frame);
 		if(!res)
-			printf("(%ld) failed to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%ld) *** failed *** to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 		else
 			printf("(%ld) success in release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 
@@ -266,7 +266,7 @@ void read_print_upgrade_write_print(uint64_t page_id)
 
 	res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	if(!res)
-		printf("(%ld) failed to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 	else
 		printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 }
@@ -276,7 +276,7 @@ void write_print(uint64_t page_id)
 	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
 	if(frame == NULL)
 	{
-		printf("(%ld) failed to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
 		return;
 	}
 	else
@@ -286,7 +286,7 @@ void write_print(uint64_t page_id)
 
 	int res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	if(!res)
-		printf("(%ld) failed to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 	else
 		printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 }
@@ -296,7 +296,7 @@ void write_print_downgrade_read_print(uint64_t page_id)
 	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
 	if(frame == NULL)
 	{
-		printf("(%ld) failed to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
 		return;
 	}
 	else
@@ -307,11 +307,11 @@ void write_print_downgrade_read_print(uint64_t page_id)
 	int res = downgrade_writer_lock_to_reader_lock(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	if(!res)
 	{
-		printf("(%ld) failed to downgrade write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to downgrade write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 		res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 		if(!res)
-			printf("(%ld) failed to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 		else
 			printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
@@ -324,7 +324,7 @@ void write_print_downgrade_read_print(uint64_t page_id)
 
 	res = release_reader_lock_on_page(&bpm, frame);
 	if(!res)
-		printf("(%ld) failed to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 	else
 		printf("(%ld) success in release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 }
