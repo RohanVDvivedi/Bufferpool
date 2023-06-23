@@ -2,6 +2,9 @@
  * timely asynchronous flushing to disk after iterating over the hashtable, for only dirty pages on which only read locks or no locks are held, i.e. on which a read lock can be held while we flush it to disk
  * aschronous request to bring a page in the bufferpool, disregard the request if the page is already in bufferpool, here a dirty page can not be evicted
 
+ * REFACTORING (*future after testing)
+   * segregate flush_page_to_disk, discard_frame_desc, read_page_from_disk, checks before removing and inserting frame_desc in lru lists from the main code.
+
  * testcases
  * specific test case tailored to 4-5 threads reading the same same, print after they get lock and wait for seconds, and make 2 of them to try to upgrade the lock, a lot of test cases will be covered in this special test case
  * restructure the test cases to allow the above mentioned test case, bringing common code together.
