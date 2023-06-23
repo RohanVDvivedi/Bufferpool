@@ -4,6 +4,7 @@
 #include<sys/mman.h>
 
 #define OS_PAGE_SIZE 4096
+static uint32_t os_page_size = OS_PAGE_SIZE;
 
 frame_desc* new_frame_desc(uint32_t page_size)
 {
@@ -14,8 +15,6 @@ frame_desc* new_frame_desc(uint32_t page_size)
 
 	// since we are setting is_valid to 0, below 2 attributes are meaning less
 	fd->page_id = 0;
-
-	uint32_t os_page_size = OS_PAGE_SIZE;
 
 	if(page_size >= os_page_size)
 	{
@@ -68,7 +67,10 @@ void delete_frame_desc(frame_desc* fd, uint32_t page_size)
 	pthread_cond_destroy(&(fd->waiting_for_write_lock));
 	pthread_cond_destroy(&(fd->waiting_for_upgrading_lock));
 
-	munmap(fd->frame, page_size);
+	if(page_size >= os_page_size)
+		munmap(fd->frame, page_size);
+	else
+		free(fd->frame);
 
 	free(fd);
 }
