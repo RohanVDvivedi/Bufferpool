@@ -64,7 +64,19 @@ void deinitialize_bufferpool(bufferpool* bf)
 		delete_frame_desc(fd, bf->page_size);
 	}
 
-	// remove all from hashmaps, and put them in linkedlist
+	linkedlist locked_or_waited_frame_descs;
+	initialize_linkedlist(&locked_or_waited_frame_descs, offsetof(frame_desc, embed_node_lru_lists));
+
+	for(fd = (frame_desc*) get_first_of_in_hashmap(&(bf->page_id_to_frame_desc), FIRST_OF_HASHMAP); fd != NULL; fd = (frame_desc*) get_next_of_in_hashmap(&(bf->page_id_to_frame_desc), fd, ANY_IN_HASHMAP))
+		insert_head_in_linkedlist(&locked_or_waited_frame_descs, fd);
+
+	while(!is_empty_linkedlist(&locked_or_waited_frame_descs))
+	{
+		fd = (frame_desc*) get_head_of_linkedlist(&locked_or_waited_frame_descs);
+		remove_head_from_linkedlist(&locked_or_waited_frame_descs);
+		remove_frame_desc(bf, fd);
+		delete_frame_desc(fd, bf->page_size);
+	}
 
 	deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 	deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
