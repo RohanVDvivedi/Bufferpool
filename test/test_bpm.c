@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 	}
 
 	// flush everything, this make initialization complete
-	printf("flushing evrything\n");
+	printf("flushing everything\n");
 	flush_all_possible_dirty_pages(&bpm);
 
 	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS + 32, 0, NULL, NULL, NULL);
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
 
 	delete_executor(exe);
 
-	printf("flushing evrything\n");
+	printf("flushing everything\n");
 	flush_all_possible_dirty_pages(&bpm);
 
 	deinitialize_bufferpool(&bpm);
