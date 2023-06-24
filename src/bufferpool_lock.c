@@ -511,6 +511,10 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
+		// after a force flush the page is no longer dirty
+		if(io_success)
+			fd->is_dirty = 0;
+
 		// release reader lock
 		fd->is_under_write_IO = 0;
 		fd->readers_count--;
@@ -519,10 +523,6 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 			pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
 		else if(fd->readers_count == 0 && fd->writers_waiting)
 			pthread_cond_signal(&(fd->waiting_for_write_lock));
-
-		// after a force flush the page is no longer dirty
-		if(io_success)
-			fd->is_dirty = 0;
 	}
 	else
 	{
