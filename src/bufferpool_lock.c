@@ -2,59 +2,6 @@
 
 #include<bufferpool_util.h>
 
-// performs a flush/ write frame to disk only if no write locks are held, else fails with 0
-// this function may also fail if the fd is not dirty, or does not have valid page_id or valid_frame_contents
-// an IO call is made if the function returns 1, you must check dirty bit to know if the page actually reached the disk
-// you can not trust, any of global variables since during this call lock may have been released
-static int flush_frame_desc_to_disk(bufferpool* bf, frame_desc* fd)
-{
-	// if the frame_desc has invalid page_id or frame contents then we flush nothing
-	if(!fd->has_valid_page_id || !fd->has_valid_frame_contents)
-		return 0;
-
-	// if the frame is not dirty then there is not need to flush 
-	if(!fd->is_dirty)
-		return 0;
-
-	// we can not get read lock (to flush this page) if there are writers writing to this page
-	if(fd->writers_count)
-		return 0;
-
-	// take read lock first
-	fd->readers_count++;
-
-	// after taking the read lock, remove frame from any of the lru lists
-	remove_frame_desc_from_lru_lists(bf, fd);
-
-	// the frame will now be written to disk
-	fd->is_under_write_IO = 1;
-
-	// release lock and perform write IO
-	pthread_mutex_unlock(get_bufferpool_lock(bf));
-	int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
-	if(io_success)
-		io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
-	pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	// write/flush is now complete, so reset the bit
-	fd->is_under_write_IO = 0;
-
-	// if the io was a success, then clear the is_dirty bit
-	if(io_success)
-		fd->is_dirty = 0;
-
-	// release read lock
-	fd->readers_count--;
-
-	// wake up any upgraders or writers, if we were the last to read it
-	if(fd->readers_count == 1 && fd->upgraders_waiting)
-		pthread_cond_signal(&(fd->waiting_for_upgrading_lock), get_bufferpool_lock(bf));
-	else if(fd->readers_count == 0 && fd->writers_waiting)
-		pthread_cond_signal(&(fd->waiting_for_writer_lock), get_bufferpool_lock(bf));
-
-	return 1;
-}
-
 // this function also removes the frame_desc from any list that was previously holding it, 
 // so a frame_desc selected for eviction will not be selected again
 static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_necessary, int* call_again)
