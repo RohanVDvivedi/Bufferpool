@@ -2,6 +2,33 @@
 
 #include<bufferpool_util.h>
 
+// if the frame_desc fd, is not not references by any one, then
+// -> if you are over max_frame_desc_count and the frame is not dirty, then delete it
+// -> insert it to lru lists
+// returns 1 if the frame was discarded
+// this function must be called every time, you decrement any of the reference counters, 
+int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
+{
+	// do this only if the frame is not referenced by any one, i.e. the frame is not locked and not being waited on by any one
+	if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+	{
+		// for a frame to be discarded, it must either have invalid data, OR must be clean with valid data
+		if((fd->has_valid_frame_contents == 0 || fd->is_dirty == 0) && bf->total_frame_desc_count > bf->max_frame_desc_count)
+		{
+			pthread_mutex_unlock(get_bufferpool_lock(bf));
+			delete_frame_desc(fd, bf->page_size);
+			fd = NULL;
+			pthread_mutex_lock(get_bufferpool_lock(bf));
+
+			return 1;
+		}
+		else // if the frame is not being waited on or locked by anyone and if we are not suppossed to discard it, then insert it in lru lists
+			insert_frame_desc_in_lru_lists(bf, fd);
+	}
+
+	return 0;
+}
+
 // this function also removes the frame_desc from any list that was previously holding it, 
 // so a frame_desc selected for eviction will not be selected again
 static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_necessary, int* call_again)
