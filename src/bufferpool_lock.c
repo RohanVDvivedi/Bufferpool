@@ -2,6 +2,8 @@
 
 #include<bufferpool_util.h>
 
+#include<stdlib.h>
+
 // if the frame_desc fd, is not not references by any one, then
 // -> if you are over max_frame_desc_count and the frame is not dirty, then delete it
 // -> insert it to lru lists
