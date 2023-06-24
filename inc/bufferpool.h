@@ -92,7 +92,7 @@ uint64_t get_max_frame_desc_count(bufferpool* bf);
 uint64_t get_total_frame_desc_count(bufferpool* bf);
 void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
-// TODO think about mechanism to do this
+// flushes all pages that are dirty and are not write locked and are not currently being flushed
 int flush_all_possible_dirty_pages(bufferpool* bf);
 
 #endif
