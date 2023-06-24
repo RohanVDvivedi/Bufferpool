@@ -16,7 +16,7 @@ int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 		if((fd->has_valid_frame_contents == 0 || fd->is_dirty == 0) && bf->total_frame_desc_count > bf->max_frame_desc_count)
 		{
 			// decrement the total frame_desc count
-			fd->total_frame_desc_count--;
+			bf->total_frame_desc_count--;
 
 			// remove it from hashtables of the bufferpool, if it has valid page_id or valid frame_contents
 			if(fd->has_valid_page_id && fd->has_valid_frame_contents)
@@ -80,10 +80,10 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 		// we need to flush a frame_desc, before we can use anything from this list
 		frame_desc* fd_to_flush = NULL;
 
-		frame_desc* original_head = get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+		frame_desc* original_head = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
 		do
 		{
-			frame_desc* to_check = get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+			frame_desc* to_check = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
 			remove_head_from_linkedlist(&(bf->dirty_frame_descs_lru_list));
 			insert_tail_in_linkedlist(&(bf->dirty_frame_descs_lru_list), to_check);
 
@@ -94,7 +94,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 				fd_to_flush = to_check;
 				break;
 			}
-		}while(get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)) != original_head)
+		}while(get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)) != original_head);
 
 		if(fd_to_flush != NULL)
 		{
@@ -102,28 +102,28 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_flush);
 
 			// the fd_to_fludh is neither locked nor is any one waiting to get lock on it, so we can grab a read lock instantly, without any checks
-			fd->readers_count++;
-			fd->is_under_write_IO = 1;
+			fd_to_flush->readers_count++;
+			fd_to_flush->is_under_write_IO = 1;
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd_to_flush->frame, fd_to_flush->page_id, bf->page_size);
 			if(io_success)
 				io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 
 			// clear dirty but if write IO was a success
 			if(io_success)
-				fd->is_dirty = 0;
+				fd_to_flush->is_dirty = 0;
 
 			// release read lock
-			fd->is_under_write_IO = 0;
-			fd->readers_count--;
+			fd_to_flush->is_under_write_IO = 0;
+			fd_to_flush->readers_count--;
 
 			// if we are the last reader then we need to wake people up
-			if(fd->readers_count == 1 && fd->upgraders_waiting)
-				pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
-			else if(fd->readers_count == 0 && fd->writers_waiting)
-				pthread_cond_signal(&(fd->waiting_for_write_lock));
+			if(fd_to_flush->readers_count == 1 && fd_to_flush->upgraders_waiting)
+				pthread_cond_signal(&(fd_to_flush->waiting_for_upgrading_lock));
+			else if(fd_to_flush->readers_count == 0 && fd_to_flush->writers_waiting)
+				pthread_cond_signal(&(fd_to_flush->waiting_for_write_lock));
 
 			// this is neccessary to insert the fd_to_flush back into the lru list
 			handle_frame_desc_if_not_referenced(bf, fd_to_flush);
@@ -358,30 +358,27 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 			}
 		}
 
-		int call_again = 0;
-		fd = get_frame_desc_to_evict(bf, evict_dirty_if_necessary, &call_again);
+		int error = 0;
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &error);
 		if(fd == NULL)
 		{
-			if(call_again)
-				continue;
-			else
+			if(error)
 				goto EXIT;
+			else
+				continue;
 		}
 
-		call_again = 0;
-		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 1, 0, &call_again);
+		error = 0;
+		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 1, 0, &error);
 		if(fd == NULL)
 		{
-			if(call_again)
-				continue;
-			else
+			if(error)
 				goto EXIT;
+			else
+				continue;
 		}
 		else
 			goto TAKE_LOCK_AND_EXIT;
-
-		// perform necessary IO
-		call_again = 0;
 	}
 
 	TAKE_LOCK_AND_EXIT:;
@@ -419,36 +416,32 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 				goto TAKE_LOCK_AND_EXIT;
 			else
 			{
-				if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
-					insert_frame_desc_in_lru_lists(bf, fd);
+				handle_frame_desc_if_not_referenced(bf, fd);
 				continue;
 			}
 		}
 
-		int call_again = 0;
-		fd = get_frame_desc_to_evict(bf, evict_dirty_if_necessary, &call_again);
+		int error = 0;
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &error);
 		if(fd == NULL)
 		{
-			if(call_again)
-				continue;
-			else
+			if(error)
 				goto EXIT;
+			else
+				continue;
 		}
 
-		call_again = 0;
-		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0, to_be_overwritten, &call_again);
+		error = 0;
+		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0, to_be_overwritten, &error);
 		if(fd == NULL)
 		{
-			if(call_again)
-				continue;
-			else
+			if(error)
 				goto EXIT;
+			else
+				continue;
 		}
 		else
 			goto TAKE_LOCK_AND_EXIT;
-
-		// perform necessary IO
-		call_again = 0;
 	}
 
 	TAKE_LOCK_AND_EXIT:;
