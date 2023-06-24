@@ -36,6 +36,113 @@ int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 	return 0;
 }
 
+// it will not remove the frame_desc from the lists
+static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpool* bf, int evict_dirty_if_necessary, int* error)
+{
+	(*error) = 0;
+
+	// if there is any frame_desc in invalid_frame_descs_list, then return it's head
+	if(!is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
+		return (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list));
+
+	// check if a new frame_desc can be added to the bufferpool, if yes, then do it and add the new frame_desc to invalid_frame_descs_list
+	if(bf->total_frame_desc_count < bf->max_frame_desc_count)
+	{
+		// increment the total_frame_desc_count
+		bf->total_frame_desc_count++;
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+		// create a new frame_desc
+		frame_desc* _new_frame_desc = new_frame_desc(bf->page_size);
+
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+		if(_new_frame_desc == NULL)	// if the new call failed, then reverse the incremented counter
+			bf->total_frame_desc_count--;
+		else // this is not an error, we want the caller to retry, because we just created a new frame_desc
+			insert_head_in_linkedlist(&(bf->invalid_frame_descs_list), _new_frame_desc);
+
+		// here even a failure to allocate a frame_desc is not an error, to refrain the lock
+		// because while we were allocating a new frame_desc,
+		// some other thread wanting the same page, might have performed IO and brought it in bufferpool
+
+		return NULL;
+	}
+
+	// if there is any frame_desc in clean_frame_descs_lru_list, then take 1 from it's head
+	if(!is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)))
+		return (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list));
+
+	// if there is any frame_desc in dirty_frame_descs_lru_list, then take 1 from it's head
+	// here we need to check that the frame satisfies bf->can_be_flushed_to_disk(fd->page_id, fd->frame)
+	if(evict_dirty_if_necessary && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
+	{
+		// we need to flush a frame_desc, before we can use anything from this list
+		frame_desc* fd_to_flush = NULL;
+
+		frame_desc* original_head = get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+		do
+		{
+			frame_desc* to_check = get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+			remove_head_from_linkedlist(&(bf->dirty_frame_descs_lru_list));
+			insert_tail_in_linkedlist(&(bf->dirty_frame_descs_lru_list), to_check);
+
+			// here we already know that the page is not referenced by any one and is dirty
+			// we only need to check that it can_be_flushed_to_disk, inorder to flush it
+			if(bf->can_be_flushed_to_disk(to_check->page_id, to_check->frame))
+			{
+				fd_to_flush = to_check;
+				break;
+			}
+		}while(get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)) != original_head)
+
+		if(fd_to_flush != NULL)
+		{
+			// before we grab a lock, we need to remove it from lru lists
+			remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_flush);
+
+			// the fd_to_fludh is neither locked nor is any one waiting to get lock on it, so we can grab a read lock instantly, without any checks
+			fd->readers_count++;
+			fd->is_under_write_IO = 1;
+
+			pthread_mutex_unlock(get_bufferpool_lock(bf));
+			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+			if(io_success)
+				io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+			pthread_mutex_lock(get_bufferpool_lock(bf));
+
+			// clear dirty but if write IO was a success
+			if(io_success)
+				fd->is_dirty = 0;
+
+			// release read lock
+			fd->is_under_write_IO = 0;
+			fd->readers_count--;
+
+			// if we are the last reader then we need to wake people up
+			if(fd->readers_count == 1 && fd->upgraders_waiting)
+				pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
+			else if(fd->readers_count == 0 && fd->writers_waiting)
+				pthread_cond_signal(&(fd->waiting_for_write_lock));
+
+			// this is neccessary to insert the fd_to_flush back into the lru list
+			handle_frame_desc_if_not_referenced(bf, fd_to_flush);
+
+			// here even an io_success == 0 is not an error, to refrain the lock
+			// because while we were flushing the page some other thread wanting the same page,
+			// might have performed IO and brought it in bufferpool
+
+			return NULL;
+		}
+
+		// we did not find anything worthy of flushing in dirty_frame_descs_lru_list
+	}
+
+	// this situation is an error, because no frame_desc can be evicted, and hence this request will not be fulfilled
+	(*error) = 1;
+	return NULL;
+}
+
 // this function also removes the frame_desc from any list that was previously holding it, 
 // so a frame_desc selected for eviction will not be selected again
 static frame_desc* get_frame_desc_to_evict(bufferpool* bf, int evict_dirty_if_necessary, int* call_again)
