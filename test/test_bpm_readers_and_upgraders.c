@@ -1,6 +1,6 @@
 #include<block_io.h>
 
-#include<unistd.h>
+#include<time.h>
 #include<stdio.h>
 #include<stdint.h>
 #include<limits.h>
@@ -133,7 +133,7 @@ void write_print_UNSAFE(int param, uint64_t page_id, void* frame)
 	sprintf(frame, PAGE_DATA_FORMAT, page_id, ++value_read);
 	printf("(%d) after writing page_id(%" PRIu64 ") -> %s\n", param, page_id, ((const char*)frame));
 }
-
+#include<errno.h>
 void* io_task_execute(int* io_t_p)
 {
 	int param = (*io_t_p);
@@ -151,11 +151,11 @@ void* io_task_execute(int* io_t_p)
 		else
 			printf("(%d) success in acquiring read lock on %" PRIu64 "\n", param, page_id);
 
-		usleep(1000);
+		nanosleep(&((struct timespec){3,0}), NULL);
 
 		read_print_UNSAFE(param, page_id, frame);
 
-		usleep(1000);
+		nanosleep(&((struct timespec){3,0}), NULL);
 
 		int res = release_reader_lock_on_page(&bpm, frame);
 		if(!res)
@@ -174,11 +174,11 @@ void* io_task_execute(int* io_t_p)
 		else
 			printf("(%d) success in acquiring read lock on %" PRIu64 "\n", param, page_id);
 
-		usleep(500);
+		nanosleep(&((struct timespec){1,0}), NULL);
 
 		read_print_UNSAFE(param, page_id, frame);
 
-		usleep(500);
+		nanosleep(&((struct timespec){1,0}), NULL);
 
 		int res = upgrade_reader_lock_to_writer_lock(&bpm, frame);
 		if(!res)
@@ -196,11 +196,11 @@ void* io_task_execute(int* io_t_p)
 		else
 			printf("(%d) success in upgrading read lock to write lock on %" PRIu64 "\n", param, page_id);
 
-		usleep(1000);
+		nanosleep(&((struct timespec){1,0}), NULL);
 
 		write_print_UNSAFE(param, page_id, frame);
 
-		usleep(1000);
+		nanosleep(&((struct timespec){1,0}), NULL);
 
 		res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 		if(!res)
