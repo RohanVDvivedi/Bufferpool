@@ -3,6 +3,8 @@
 #include<bufferpool_util.h>
 #include<frame_descriptor.h>
 
+#include<arraylist.h>
+
 typedef struct flush_params flush_params;
 struct flush_params
 {
@@ -69,10 +71,9 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	// find out all the frame_descs that can be immediately flushed and put them in this linkedlist
-	linkedlist dirty_frame_descs_to_be_flushed;
-	uint64_t dirty_frame_descs_to_be_flushed_count = 0;
-	initialize_linkedlist(&dirty_frame_descs_to_be_flushed, offsetof(frame_desc, embed_node_lru_lists));
+	// find out all the frame_descs that can be immediately flushed and put them in this arraylist
+	arraylist dirty_frame_descs_to_be_flushed;
+	initialize_arraylist(&dirty_frame_descs_to_be_flushed, bf->total_frame_desc_count);
 
 	for(frame_desc* fd = (frame_desc*) get_first_of_in_hashmap(&(bf->page_id_to_frame_desc), FIRST_OF_HASHMAP); fd != NULL; fd = (frame_desc*) get_next_of_in_hashmap(&(bf->page_id_to_frame_desc), fd, ANY_IN_HASHMAP))
 	{
@@ -86,37 +87,39 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 			fd->readers_count++;
 			fd->is_under_write_IO = 1;
 
-			insert_tail_in_linkedlist(&dirty_frame_descs_to_be_flushed, fd);
-
-			dirty_frame_descs_to_be_flushed_count++;
+			push_back_to_arraylist(&dirty_frame_descs_to_be_flushed, fd);
 		}
 	}
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 	// initialize array of params for the write IO jobs and submit them to the bufferpool's cached thread pool executor
-	flush_params* flush_job_params = malloc(sizeof(flush_params) * dirty_frame_descs_to_be_flushed_count);
+	uint64_t flush_job_params_count = get_element_count_arraylist(&dirty_frame_descs_to_be_flushed);
+	flush_params* flush_job_params = malloc(sizeof(flush_params) * flush_job_params_count);
 	{uint64_t i = 0;
-	while(!is_empty_linkedlist(&dirty_frame_descs_to_be_flushed))
+	while(!is_empty_arraylist(&dirty_frame_descs_to_be_flushed))
 	{
-		frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&dirty_frame_descs_to_be_flushed);
-		remove_head_from_linkedlist(&dirty_frame_descs_to_be_flushed);
+		frame_desc* fd = (frame_desc*) get_front_of_arraylist(&dirty_frame_descs_to_be_flushed);
+		pop_front_from_arraylist(&dirty_frame_descs_to_be_flushed);
 		initialize_flush_params(&(flush_job_params[i]), bf, fd);
 		submit_job(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), 0);
 		i++;
 	}}
 
+	// destroy arraylist
+	deinitialize_arraylist(&dirty_frame_descs_to_be_flushed);
+
 	// wait for all of them to finish
-	for(uint64_t i = 0; i < dirty_frame_descs_to_be_flushed_count; i++)
+	for(uint64_t i = 0; i < flush_job_params_count; i++)
 		get_promised_result(&(flush_job_params[i].completion));
 
 	// after that flush all the writes
-	int flush_success = (dirty_frame_descs_to_be_flushed_count == 0) || bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+	int flush_success = (flush_job_params_count == 0) || bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
 	// unlock them and set their dirty bit
-	for(uint64_t i = 0; i < dirty_frame_descs_to_be_flushed_count; i++)
+	for(uint64_t i = 0; i < flush_job_params_count; i++)
 	{
 		frame_desc* fd = flush_job_params[i].fd;
 
