@@ -1,7 +1,5 @@
  * dry runs for locking functions
 
- * discard invalid frame_desc in the modify max_frame_desc_count, if the total_frame_desc_count > max_frame_desc_count
-
  * REFACTORING (*future after testing)
    * segregate flush_page_to_disk, discard_frame_desc, read_page_from_disk, checks before removing and inserting frame_desc in lru lists from the main code.
 
