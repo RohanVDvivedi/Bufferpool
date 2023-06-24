@@ -53,10 +53,7 @@ bufferpool bpm;
 io_task io_tasks[COUNT_OF_IO_TASKS];
 
 int always_can_be_flushed_to_disk(uint64_t page_id, const void* frame);
-
-int read_page_from_block_file(const void* page_io_ops_handle, void* frame_dest, uint64_t page_id, uint32_t page_size);
-int write_page_to_block_file(const void* page_io_ops_handle, const void* frame_src, uint64_t page_id, uint32_t page_size);
-int flush_all_pages_to_block_file(const void* page_io_ops_handle);
+page_io_ops get_block_file_page_io_ops(block_file* bfile);
 
 void* io_task_execute(io_task* io_t_p);
 
@@ -73,14 +70,7 @@ int main(int argc, char **argv)
 
 	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
 
-	page_io_ops page_io_functions = (page_io_ops){
-													.page_io_ops_handle = &bfile,
-													.read_page = read_page_from_block_file,
-													.write_page = write_page_to_block_file,
-													.flush_all_writes = flush_all_pages_to_block_file,
-												};
-
-	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, page_io_functions, always_can_be_flushed_to_disk);
+	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(bfile), always_can_be_flushed_to_disk);
 
 	printf("writing 0s to all the pages of the heapfile\n");
 	for(uint64_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
@@ -410,32 +400,4 @@ void write_print_downgrade_read_print(uint64_t page_id)
 		printf("(%ld) *** failed *** to release read lock on %" PRIu64 "\n", pthread_self(), page_id);
 	else
 		printf("(%ld) success in release read lock on %" PRIu64 "\n", pthread_self(), page_id);
-}
-
-int always_can_be_flushed_to_disk(uint64_t page_id, const void* frame)
-{
-	return 1;
-}
-
-int read_page_from_block_file(const void* page_io_ops_handle, void* frame_dest, uint64_t page_id, uint32_t page_size)
-{
-	size_t block_size = get_block_size_for_block_file(((block_file*)(page_io_ops_handle)));
-	off_t block_id = (page_id * page_size) / block_size;
-	size_t block_count = page_size / block_size;
-	printf("reading %"PRIu64" - %"PRIu64" into  %p\n", block_id, block_id + block_count - 1, frame_dest);
-	return read_blocks_from_block_file(((block_file*)(page_io_ops_handle)), frame_dest, block_id, block_count);
-}
-
-int write_page_to_block_file(const void* page_io_ops_handle, const void* frame_src, uint64_t page_id, uint32_t page_size)
-{
-	size_t block_size = get_block_size_for_block_file(((block_file*)(page_io_ops_handle)));
-	off_t block_id = (page_id * page_size) / block_size;
-	size_t block_count = page_size / block_size;
-	printf("writing %"PRIu64" - %"PRIu64" from  %p\n", block_id, block_id + block_count - 1, frame_src);
-	return write_blocks_to_block_file(((block_file*)(page_io_ops_handle)), frame_src, block_id, block_count);
-}
-
-int flush_all_pages_to_block_file(const void* page_io_ops_handle)
-{
-	return flush_all_writes_to_block_file(((block_file*)(page_io_ops_handle)));
 }
