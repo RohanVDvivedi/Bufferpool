@@ -15,6 +15,13 @@ int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 		// for a frame to be discarded, it must either have invalid data, OR must be clean with valid data
 		if((fd->has_valid_frame_contents == 0 || fd->is_dirty == 0) && bf->total_frame_desc_count > bf->max_frame_desc_count)
 		{
+			// decrement the total frame_desc count
+			fd->total_frame_desc_count--;
+
+			// remove it from hashtables of the bufferpool, if it has valid page_id or valid frame_contents
+			if(fd->has_valid_page_id && fd->has_valid_frame_contents)
+				remove_frame_desc(bf, fd);
+
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
 			delete_frame_desc(fd, bf->page_size);
 			fd = NULL;
@@ -139,18 +146,7 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		else
 			(*call_again) = 0;
 
-		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
-		{
-			if(bf->total_frame_desc_count > bf->max_frame_desc_count)
-			{
-				pthread_mutex_unlock(get_bufferpool_lock(bf));
-				delete_frame_desc(fd, bf->page_size);
-				fd = NULL;
-				pthread_mutex_lock(get_bufferpool_lock(bf));
-			}
-			else // if the frame is not being waited on or locked by anyone, then insert it in lru lists
-				insert_frame_desc_in_lru_lists(bf, fd);
-		}
+		handle_frame_desc_if_not_referenced(bf, fd);
 
 		return NULL;
 	}
@@ -215,18 +211,7 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		// remove page from hashtables, so that no one finds it by the page_id
 		remove_frame_desc(bf, fd);
 
-		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
-		{
-			if(bf->total_frame_desc_count > bf->max_frame_desc_count)
-			{
-				pthread_mutex_unlock(get_bufferpool_lock(bf));
-				delete_frame_desc(fd, bf->page_size);
-				fd = NULL;
-				pthread_mutex_lock(get_bufferpool_lock(bf));
-			}
-			else // if the frame is not being waited on or locked by anyone, then insert it in lru lists
-				insert_frame_desc_in_lru_lists(bf, fd);
-		}
+		handle_frame_desc_if_not_referenced(bf, fd);
 
 		// do not call again, and fail the page from being locked
 		(*call_again) = 0;
@@ -261,8 +246,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 				goto TAKE_LOCK_AND_EXIT;
 			else
 			{
-				if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
-					insert_frame_desc_in_lru_lists(bf, fd);
+				handle_frame_desc_if_not_referenced(bf, fd);
 				continue;
 			}
 		}
@@ -480,22 +464,7 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 	else if(fd->readers_count == 0 && fd->writers_waiting)
 		pthread_cond_signal(&(fd->waiting_for_write_lock));
 
-	if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
-	{
-		if(bf->total_frame_desc_count > bf->max_frame_desc_count && !fd->is_dirty)
-		{
-			bf->total_frame_desc_count--;
-
-			remove_frame_desc(bf, fd);
-
-			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			delete_frame_desc(fd, bf->page_size);
-			fd = NULL;
-			pthread_mutex_lock(get_bufferpool_lock(bf));
-		}
-		else
-			insert_frame_desc_in_lru_lists(bf, fd);
-	}
+	handle_frame_desc_if_not_referenced(bf, fd);
 
 	EXIT:;
 	if(bf->has_internal_lock)
@@ -563,23 +532,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 	}
 
-	// after releasing the locks, check if the frame_desc needs to be inserted in to any of the lru lists
-	if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
-	{
-		if(bf->total_frame_desc_count > bf->max_frame_desc_count && !fd->is_dirty) // delete frame desc, if we are running in excess
-		{
-			bf->total_frame_desc_count--;
-
-			remove_frame_desc(bf, fd);
-
-			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			delete_frame_desc(fd, bf->page_size);
-			fd = NULL;
-			pthread_mutex_lock(get_bufferpool_lock(bf));
-		}
-		else
-			insert_frame_desc_in_lru_lists(bf, fd);
-	}
+	handle_frame_desc_if_not_referenced(bf, fd);
 
 	EXIT:;
 	if(bf->has_internal_lock)
