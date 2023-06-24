@@ -1,13 +1,9 @@
 #include<block_io.h>
 
 #include<stdio.h>
-#include<stdlib.h>
 #include<stdint.h>
-#include<unistd.h>
 #include<limits.h>
 #include<inttypes.h>
-
-#include<string.h>
 
 #include<bufferpool.h>
 
@@ -70,7 +66,7 @@ int main(int argc, char **argv)
 
 	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
 
-	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(bfile), always_can_be_flushed_to_disk);
+	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile), always_can_be_flushed_to_disk);
 
 	printf("writing 0s to all the pages of the heapfile\n");
 	for(uint64_t i = 0; i < PAGES_IN_HEAP_FILE; i++)

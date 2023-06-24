@@ -1,5 +1,11 @@
 #include<block_io.h>
 
+#include<stdio.h>
+#include<stdint.h>
+#include<inttypes.h>
+
+#include<page_io_ops.h>
+
 int read_page_from_block_file(const void* page_io_ops_handle, void* frame_dest, uint64_t page_id, uint32_t page_size)
 {
 	size_t block_size = get_block_size_for_block_file(((block_file*)(page_io_ops_handle)));
@@ -26,7 +32,7 @@ int flush_all_pages_to_block_file(const void* page_io_ops_handle)
 page_io_ops get_block_file_page_io_ops(block_file* bfile)
 {
 	return (page_io_ops){
-					.page_io_ops_handle = &bfile,
+					.page_io_ops_handle = bfile,
 					.read_page = read_page_from_block_file,
 					.write_page = write_page_to_block_file,
 					.flush_all_writes = flush_all_pages_to_block_file,
