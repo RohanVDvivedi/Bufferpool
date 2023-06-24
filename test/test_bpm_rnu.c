@@ -23,7 +23,7 @@
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
-#define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 1
+#define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
 #define EVICT_DIRTY_IF_NECESSARY 0
 
 #define PAGE_ID_TO_READ_TEST UINT64_C(2)
@@ -68,6 +68,10 @@ int main(int argc, char **argv)
 		release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	}
 	printf("writing 0s to all the pages of the heapfile -- completed\n\n\n");
+
+	// flush everything, this make initialization complete
+	printf("flushing evrything\n");
+	flush_all_possible_dirty_pages(&bpm);
 
 	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS + 32, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
