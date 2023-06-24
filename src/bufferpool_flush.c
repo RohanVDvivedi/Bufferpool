@@ -78,7 +78,7 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 	{
 		// here the frame_desc, must have valid page_id and valid frame_contents
 		// we only check for the frame_desc being is_dirty, writers_count == 0 and is_under_write_IO == 0
-		if(fd->is_dirty && fd->writers_count == 0 && !fd->is_under_write_IO)
+		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && fd->writers_count == 0 && !fd->is_under_write_IO)
 		{
 			// read lock them, and mark them being under write IO
 			remove_frame_desc_from_lru_lists(bf, fd);
