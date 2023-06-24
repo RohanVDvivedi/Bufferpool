@@ -32,6 +32,8 @@ int flush_all_possible_dirty_pages(bufferpool* bf)
 
 	// queue them for writes and only after they all have returned flush them
 
+	int flush_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
 	// unlock them and set their dirty bit
