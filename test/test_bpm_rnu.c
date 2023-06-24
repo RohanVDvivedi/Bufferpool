@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 	void* frame_w_p = acquire_page_with_writer_lock(&bpm, writer_lock_page_id, 0, 0);
 
 	// flush everything, this make initialization complete
-	printf("flushing evrything\n");
+	printf("flushing everything\n");
 	flush_all_possible_dirty_pages(&bpm);
 
 	printf("releasing all prior locks\n");
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 	delete_executor(exe);
 
 	// flush everything, this make initialization complete
-	printf("flushing evrything\n");
+	printf("flushing everything\n");
 	flush_all_possible_dirty_pages(&bpm);
 
 	deinitialize_bufferpool(&bpm);
