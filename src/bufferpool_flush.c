@@ -3,8 +3,6 @@
 #include<bufferpool_util.h>
 #include<frame_descriptor.h>
 
-#include<arraylist.h>
-
 typedef struct flush_params flush_params;
 struct flush_params
 {
@@ -22,6 +20,14 @@ void initialize_flush_params(flush_params* fp, bufferpool* bf, frame_desc* fd)
 	fp->fd = fd;
 	fp->bf = bf;
 	initialize_promise(&(fp->completion));
+	fp->write_success = 0;
+}
+
+void deinitialize_flush_params(flush_params* fp)
+{
+	fp->fd = NULL;
+	fp->bf = NULL;
+	deinitialize_promise(&(fp->completion));
 	fp->write_success = 0;
 }
 
@@ -71,9 +77,9 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	// find out all the frame_descs that can be immediately flushed and put them in this arraylist
-	arraylist dirty_frame_descs_to_be_flushed;
-	initialize_arraylist(&dirty_frame_descs_to_be_flushed, bf->total_frame_desc_count);
+	// find out all the frame_descs that can be immediately flushed and put them in this array, to be used as parameters
+	uint64_t flush_job_params_count = 0;
+	flush_params* flush_job_params = malloc(sizeof(flush_params) * bf->total_frame_desc_count);
 
 	for(frame_desc* fd = (frame_desc*) get_first_of_in_hashmap(&(bf->page_id_to_frame_desc), FIRST_OF_HASHMAP); fd != NULL; fd = (frame_desc*) get_next_of_in_hashmap(&(bf->page_id_to_frame_desc), fd, ANY_IN_HASHMAP))
 	{
@@ -87,27 +93,12 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 			fd->readers_count++;
 			fd->is_under_write_IO = 1;
 
-			push_back_to_arraylist(&dirty_frame_descs_to_be_flushed, fd);
+			// now create a flush job params for each one of them
+			initialize_flush_params(&(flush_job_params[flush_job_params_count++]), bf, fd);
 		}
 	}
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	// initialize array of params for the write IO jobs and submit them to the bufferpool's cached thread pool executor
-	uint64_t flush_job_params_count = get_element_count_arraylist(&dirty_frame_descs_to_be_flushed);
-	flush_params* flush_job_params = malloc(sizeof(flush_params) * flush_job_params_count);
-	{uint64_t i = 0;
-	while(!is_empty_arraylist(&dirty_frame_descs_to_be_flushed))
-	{
-		frame_desc* fd = (frame_desc*) get_front_of_arraylist(&dirty_frame_descs_to_be_flushed);
-		pop_front_from_arraylist(&dirty_frame_descs_to_be_flushed);
-		initialize_flush_params(&(flush_job_params[i]), bf, fd);
-		submit_job(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), 0);
-		i++;
-	}}
-
-	// destroy arraylist
-	deinitialize_arraylist(&dirty_frame_descs_to_be_flushed);
 
 	// wait for all of them to finish
 	for(uint64_t i = 0; i < flush_job_params_count; i++)
@@ -142,6 +133,9 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
+	// deinitialize flush params and release it's memory
+	for(uint64_t i = 0; i < flush_job_params_count; i++)
+		deinitialize_flush_params(&(flush_job_params[i]));
 	free(flush_job_params);
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
