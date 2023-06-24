@@ -111,9 +111,19 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		}
 		else
 			(*call_again) = 0;
-		
+
 		if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
-			insert_frame_desc_in_lru_lists(bf, fd);
+		{
+			if(bf->total_frame_desc_count > bf->max_frame_desc_count)
+			{
+				pthread_mutex_unlock(get_bufferpool_lock(bf));
+				delete_frame_desc(fd, bf->page_size);
+				fd = NULL;
+				pthread_mutex_lock(get_bufferpool_lock(bf));
+			}
+			else // if the frame is not being waited on or locked by anyone, then insert it in lru lists
+				insert_frame_desc_in_lru_lists(bf, fd);
+		}
 
 		return NULL;
 	}
