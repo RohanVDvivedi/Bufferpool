@@ -9,7 +9,7 @@
 // -> insert it to lru lists
 // returns 1 if the frame was discarded
 // this function must be called every time, you decrement any of the reference counters, 
-int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
+static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 {
 	// do this only if the frame is not referenced by any one, i.e. the frame is not locked and not being waited on by any one
 	if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
