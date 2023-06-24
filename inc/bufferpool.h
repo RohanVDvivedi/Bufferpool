@@ -4,6 +4,8 @@
 #include<hashmap.h>
 #include<linkedlist.h>
 
+#include<executor.h>
+
 #include<pthread.h>
 
 #include<stdint.h>
@@ -56,6 +58,9 @@ struct bufferpool
 
 	// a page gets flushed to disk only if it passes this test
 	int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame);
+
+	// this executor should be used for handling various internal parallel io tasks in the bufferpool
+	executor* cached_threadpool_executor;
 };
 
 void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame));

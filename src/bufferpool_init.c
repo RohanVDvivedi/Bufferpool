@@ -35,10 +35,16 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 	bf->page_io_functions = page_io_functions;
 
 	bf->can_be_flushed_to_disk = can_be_flushed_to_disk;
+
+	bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL);
 }
 
 void deinitialize_bufferpool(bufferpool* bf)
 {
+	shutdown_executor(bf->cached_threadpool_executor, 0);
+	wait_for_all_threads_to_complete(bf->cached_threadpool_executor);
+	delete_executor(bf->cached_threadpool_executor);
+
 	frame_desc* fd = NULL;
 
 	while(!is_empty_linkedlist(&(bf->invalid_frame_descs_list)))

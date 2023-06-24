@@ -1,5 +1,8 @@
 #include<bufferpool.h>
 
+#include<bufferpool_util.h>
+#include<frame_descriptor.h>
+
 int flush_all_possible_dirty_pages(bufferpool* bf)
 {
 	if(bf->has_internal_lock)
