@@ -22,7 +22,7 @@
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
-#define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 1
+#define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
 #define EVICT_DIRTY_IF_NECESSARY 1
 
 // workload to test
@@ -177,8 +177,7 @@ int main(int argc, char **argv)
 
 	delete_executor(exe);
 
-	// TODO flush buffer pool here
-
+	flush_all_possible_dirty_pages(&bpm);
 
 	deinitialize_bufferpool(&bpm);
 
