@@ -194,7 +194,7 @@ void* io_task_execute(int* io_t_p)
 			return NULL;
 		}
 		else
-			printf("(%d) success in uprading read lock to write lock on %" PRIu64 "\n", param, page_id);
+			printf("(%d) success in upgrading read lock to write lock on %" PRIu64 "\n", param, page_id);
 
 		usleep(1000);
 

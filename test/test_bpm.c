@@ -329,7 +329,7 @@ void read_print_upgrade_write_print(uint64_t page_id)
 		return;
 	}
 	else
-		printf("(%ld) success in uprading read lock to write lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) success in upgrading read lock to write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	write_print_UNSAFE(page_id, frame);
 
