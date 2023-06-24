@@ -24,7 +24,7 @@
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
 #define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
-#define EVICT_DIRTY_IF_NECESSARY 0
+#define EVICT_DIRTY_IF_NECESSARY 1
 
 #define PAGE_ID_TO_READ_TEST UINT64_C(2)
 
@@ -69,9 +69,21 @@ int main(int argc, char **argv)
 	}
 	printf("writing 0s to all the pages of the heapfile -- completed\n\n\n");
 
+	uint64_t reader_lock_page_id = UINT64_C(19);
+	uint64_t writer_lock_page_id = UINT64_C(18);
+
+	printf("acquiring reader lock on frame %" PRIu64 " and writer lock on %" PRIu64 " before the flush\n", reader_lock_page_id, writer_lock_page_id);
+	void* frame_r_p = acquire_page_with_reader_lock(&bpm, reader_lock_page_id, 0);
+	void* frame_w_p = acquire_page_with_writer_lock(&bpm, writer_lock_page_id, 0, 0);
+
 	// flush everything, this make initialization complete
 	printf("flushing evrything\n");
 	flush_all_possible_dirty_pages(&bpm);
+
+	printf("releasing all prior locks\n");
+
+	release_writer_lock_on_page(&bpm, frame_w_p, 1, 0);
+	release_reader_lock_on_page(&bpm, frame_r_p);
 
 	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS + 32, 0, NULL, NULL, NULL);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
@@ -92,8 +104,9 @@ int main(int argc, char **argv)
 
 	delete_executor(exe);
 
-	// TODO flush buffer pool here
-
+	// flush everything, this make initialization complete
+	printf("flushing evrything\n");
+	flush_all_possible_dirty_pages(&bpm);
 
 	deinitialize_bufferpool(&bpm);
 
