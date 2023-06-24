@@ -204,9 +204,9 @@ void* io_task_execute(int* io_t_p)
 
 		res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 		if(!res)
-			printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%d) *** failed *** to release write lock on %" PRIu64 "\n", param, page_id);
 		else
-			printf("(%ld) success in release write lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%d) success in release write lock on %" PRIu64 "\n", param, page_id);
 	}
 
 	return NULL;
