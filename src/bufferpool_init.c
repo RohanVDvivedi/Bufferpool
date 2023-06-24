@@ -118,8 +118,32 @@ void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 
 	bf->max_frame_desc_count = max_frame_desc_count;
 
+	// resize both the hashmap to fit the new max_frame_desc_count
 	resize_hashmap(&(bf->page_id_to_frame_desc), HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count));
 	resize_hashmap(&(bf->frame_ptr_to_frame_desc), HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count));
+
+	// build a linkedlist to hold all excess invalid frame_desc s
+	linkedlist invalid_frame_descs_to_del;
+	initialize_linkedlist(&invalid_frame_descs_to_del, offsetof(frame_desc, embed_node_lru_lists));
+	while(!is_empty_linkedlist(&(bf->invalid_frame_descs_list)) && bf->total_frame_desc_count > bf->max_frame_desc_count)
+	{
+		frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list));
+		remove_head_from_linkedlist(&(bf->invalid_frame_descs_list));
+		insert_tail_in_linkedlist(&invalid_frame_descs_to_del, fd);
+		bf->total_frame_desc_count--;
+	}
+
+	pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	// once the lock is released, we delete all the invalid frame descriptors
+	while(!is_empty_linkedlist(&invalid_frame_descs_to_del))
+	{
+		frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&invalid_frame_descs_to_del);
+		remove_head_from_linkedlist(&invalid_frame_descs_to_del);
+		delete_frame_desc(fd, bf->page_size);
+	}
+
+	pthread_mutex_lock(get_bufferpool_lock(bf));
 
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
