@@ -143,43 +143,24 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 	return NULL;
 }
 
-// fd must have no readers/writers or waiters, while this function is called
+// fd must pass is_frame_desc_locked_or_waiting_to_be_locked() and must not be dirty i.e. its (is_dirty == 0)
 // and fd must not have the correct contents on its frame
-static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int wake_up_other_readers_after_IO, int to_be_overwritten, int* call_again)
+// i.e. fd must come directly from invalid_frame_desc_list or clean_frame_desc_lru_list
+// return of 0 is an error, 1 implies success
+static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int wake_up_other_readers_after_IO, int to_be_overwritten_by_user)
 {
-	(*call_again) = 0;
-
-	// if is_dirty, write it back to disk
-	if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty)
+	// this is an error, the parameter fd is invalid and does not formform to the requirements
+	if( (is_frame_desc_locked_or_waiting_to_be_locked(fd)) ||
+		(fd->has_valid_page_id && fd->has_valid_frame_contents && ((fd->page_id == page_id) || fd->is_dirty))
+		)
 	{
-		fd->readers_count++;
-		fd->is_under_write_IO = 1;
-
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
-		if(io_success)
-			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-		fd->is_under_write_IO = 0;
-		fd->readers_count--;
-		if(fd->readers_count == 1 && fd->upgraders_waiting)
-			pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
-		else if(fd->readers_count == 0 && fd->writers_waiting)
-			pthread_cond_signal(&(fd->waiting_for_write_lock));
-
-		if(io_success)
-		{
-			(*call_again) = 1;
-			fd->is_dirty = 0;
-		}
-		else
-			(*call_again) = 0;
-
-		handle_frame_desc_if_not_referenced(bf, fd);
-
-		return NULL;
+		// This situation must never occur
+		exit(-1);
+		return 0;
 	}
+
+	// remove fd from the lru lists, since we are going to update its valid bit, while we do it, it must not eixst in lru lists
+	remove_frame_desc_from_lru_lists(bf, fd);
 
 	// make has_valid_page_id = 1, and put page_id on the frame_desc
 	if(!fd->has_valid_page_id)
@@ -200,7 +181,7 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 	int io_success = 1;
 
 	// avoid read IO, if the page is going to be overwritten
-	if(to_be_overwritten) // we will just reset all the bits here, sicne the page is destined to be overwritten
+	if(to_be_overwritten_by_user) // we will just reset all the bits here, sicne the page is destined to be overwritten
 	{
 		// the writers_count is incremented hence we can release the lock while we set the page to all zeros
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -225,6 +206,8 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 		if(wake_up_other_readers_after_IO && fd->readers_waiting > 0)
 			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 		fd->has_valid_frame_contents = 1;
+
+		return 1;
 	}
 	else
 	{
@@ -243,12 +226,8 @@ static frame_desc* get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf,
 
 		handle_frame_desc_if_not_referenced(bf, fd);
 
-		// do not call again, and fail the page from being locked
-		(*call_again) = 0;
-		return NULL;
+		return 0;
 	}
-	
-	return fd;
 }
 
 void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
@@ -291,17 +270,10 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 				continue;
 		}
 
-		error = 0;
-		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 1, 0, &error);
-		if(fd == NULL)
-		{
-			if(error)
-				goto EXIT;
-			else
-				continue;
-		}
-		else
+		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 1, 0))
 			goto TAKE_LOCK_AND_EXIT;
+		else
+			goto EXIT;
 	}
 
 	TAKE_LOCK_AND_EXIT:;
@@ -354,17 +326,10 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 				continue;
 		}
 
-		error = 0;
-		fd = get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0, to_be_overwritten, &error);
-		if(fd == NULL)
-		{
-			if(error)
-				goto EXIT;
-			else
-				continue;
-		}
-		else
+		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0, to_be_overwritten))
 			goto TAKE_LOCK_AND_EXIT;
+		else
+			goto EXIT;
 	}
 
 	TAKE_LOCK_AND_EXIT:;
