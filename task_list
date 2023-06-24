@@ -1,10 +1,11 @@
  * dry runs for locking functions
- * timely asynchronous flushing to disk after iterating over the hashtable, for only dirty pages on which only read locks or no locks are held, i.e. on which a read lock can be held while we flush it to disk
- * aschronous request to bring a page in the bufferpool, disregard the request if the page is already in bufferpool, here a dirty page can not be evicted
+
  * discard invalid frame_desc in the modify max_frame_desc_count, if the total_frame_desc_count > max_frame_desc_count
 
  * REFACTORING (*future after testing)
    * segregate flush_page_to_disk, discard_frame_desc, read_page_from_disk, checks before removing and inserting frame_desc in lru lists from the main code.
 
- * testcases
+ * timely asynchronous flushing to disk after iterating over the hashtable, for only dirty pages on which only read locks or no locks are held, i.e. on which a read lock can be held while we flush it to disk
+ * aschronous request to bring a page in the bufferpool, disregard the request if the page is already in bufferpool, here a dirty page can not be evicted
+
  * test original test case with higher thread count then the number of buffers with evict_if_necessary set to false, and a combination of both.
