@@ -167,3 +167,56 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 }
+
+#include<time.h>
+
+void* periodic_flush_job(void* bf_p)
+{
+	bufferpool* bf = bf_p;
+
+	pthread_mutex_lock(get_bufferpool_lock(bf));
+	uint64_t flush_job_params_capacity = bf->total_frame_desc_count;
+	uint64_t flush_every_X_milliseconds = bf->flush_every_X_milliseconds;
+	pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	flush_params* flush_job_params = malloc(sizeof(flush_params) * flush_job_params_capacity);
+	if(flush_job_params == NULL)
+		flush_job_params_capacity = 0;
+
+	int exit_flush_loop = 0;
+
+	while(!exit_flush_loop)
+	{
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+		exit_flush_loop = bf->exit_periodic_flush_loop;
+		if(!exit_flush_loop && flush_job_params_capacity != 0)
+			flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, flush_job_params, flush_job_params_capacity);
+		uint64_t flush_job_params_capacity_new = bf->total_frame_desc_count;
+
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+		if(exit_flush_loop)
+			break;
+
+		// if new capacity is not same as old capacity, then reallocate
+		if(flush_job_params_capacity != flush_job_params_capacity_new)
+		{
+			// if reallocation succeeds, update the flush_job_params and flush_job_params_capacity
+			void* flush_job_params_new = realloc(flush_job_params, sizeof(flush_params) * flush_job_params_capacity_new);
+			if(!(flush_job_params_new == NULL && flush_job_params_capacity_new != 0))
+			{
+				flush_job_params = flush_job_params_new;
+				flush_job_params_capacity = flush_job_params_capacity_new;
+			}
+		}
+
+		// wait for flush_every_X_milliseconds
+		nanosleep(&(struct timespec){.tv_sec = (flush_every_X_milliseconds / 1000ULL), .tv_nsec = (flush_every_X_milliseconds % 1000ULL) * 1000000ULL}, NULL);
+	}
+
+	if(flush_job_params_capacity != 0)
+		free(flush_job_params);
+
+	return NULL;
+}

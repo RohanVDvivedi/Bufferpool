@@ -5,6 +5,7 @@
 #include<linkedlist.h>
 
 #include<executor.h>
+#include<promise.h>
 
 #include<pthread.h>
 
@@ -61,6 +62,18 @@ struct bufferpool
 
 	// this executor should be used for handling various internal parallel io tasks in the bufferpool
 	executor* cached_threadpool_executor;
+
+	// below parameters are only for periodic flush job
+
+	// this value must be set to 1, to make the periodic flush job to exit
+	int exit_periodic_flush_loop;
+
+	// flush occurs every X milliseconds
+	// set this value to 0, to not avail this facility
+	uint64_t flush_every_X_milliseconds;
+
+	// wait on this promise to wait until the job completes
+	promise periodic_flush_job_completion;
 };
 
 void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame));
