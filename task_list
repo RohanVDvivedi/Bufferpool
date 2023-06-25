@@ -1,3 +1,5 @@
  * dry runs for locking functions
 
+ * instant kill for periodic_flush job, ability to online update flush_every_X_milliseconds, turning the periodic flush on and off and change flush periodicity, use a condition variable to perform a timed wait, so as to kill early
+
  * aschronous request to bring a page in the bufferpool, disregard the request if the page is already in bufferpool, here a dirty page can not be evicted
