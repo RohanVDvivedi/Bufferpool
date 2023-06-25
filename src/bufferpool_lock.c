@@ -145,11 +145,15 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 	return NULL;
 }
 
+#define DESTINED_TO_NOT_BE_LOCKED_IMMEDIATELY    0
+#define DESTINED_TO_BE_READ_LOCKED_IMMEDIATELY   1
+#define DESTINED_TO_BE_WRITE_LOCKED_IMMEDIATELY  2
+
 // fd must pass is_frame_desc_locked_or_waiting_to_be_locked() and must not be dirty i.e. its (is_dirty == 0)
 // and fd must not have the correct contents on its frame
 // i.e. fd must come directly from invalid_frame_desc_list or clean_frame_desc_lru_list
 // return of 0 is an error, 1 implies success
-static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int wake_up_other_readers_after_IO, int to_be_overwritten_by_user)
+static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int destined_to_be_locked_type, int to_be_overwritten_by_user)
 {
 	// this is an error, the parameter fd is invalid and does not formform to the requirements
 	if( (is_frame_desc_locked_or_waiting_to_be_locked(fd)) ||
@@ -203,11 +207,36 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	fd->is_under_read_IO = 0;
 	fd->writers_count--;
 
+	// since here we are releasing write lock on the page
+	// we have to wake someone up, as you will see further
+
 	if(io_success)
 	{
-		if(wake_up_other_readers_after_IO && fd->readers_waiting > 0)
-			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
+		// write IO was a success, hence the frame contents are valid
+		// has_valid_page_id was already set
 		fd->has_valid_frame_contents = 1;
+
+		if(destined_to_be_locked_type == DESTINED_TO_BE_READ_LOCKED_IMMEDIATELY)
+		{
+			// wake up any threads waiting for a read lock
+			if(fd->readers_waiting > 0)
+				pthread_cond_broadcast(&(fd->waiting_for_read_lock));
+		}
+		else if(destined_to_be_locked_type == DESTINED_TO_BE_WRITE_LOCKED_IMMEDIATELY)
+		{
+			// since the page will further be write lock, we do not need to wake up any one
+		}
+		else if(destined_to_be_locked_type == DESTINED_TO_NOT_BE_LOCKED_IMMEDIATELY)
+		{
+			// wake up one writer OR all readers, 
+			// since the caller of this function is not going to lock the page,
+			// hence we can let someone in to have lock on this page
+			// as we are releasing write lock on this page
+			if(fd->writers_waiting > 0)
+				pthread_cond_signal(&(fd->waiting_for_write_lock));
+			else if(fd->readers_waiting > 0)
+				pthread_cond_broadcast(&(fd->waiting_for_read_lock));
+		}
 
 		return 1;
 	}
@@ -272,7 +301,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 				continue;
 		}
 
-		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 1, 0))
+		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, DESTINED_TO_BE_READ_LOCKED_IMMEDIATELY, 0))
 			goto TAKE_LOCK_AND_EXIT;
 		else
 			goto EXIT;
@@ -328,7 +357,7 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 				continue;
 		}
 
-		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0, to_be_overwritten))
+		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, DESTINED_TO_BE_WRITE_LOCKED_IMMEDIATELY, to_be_overwritten))
 			goto TAKE_LOCK_AND_EXIT;
 		else
 			goto EXIT;
