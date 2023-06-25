@@ -2,4 +2,8 @@
 
  * instant kill for periodic_flush job, ability to online update flush_every_X_milliseconds, turning the periodic flush on and off and change flush periodicity, use a condition variable to perform a timed wait, so as to kill early
 
+ * increment a number_of_threads_flushing_count, when ever a flush is called, by user or by periodic flushing
+ * when acquiring lock, if the page is not in bufferpool, and nothing can be evicted, then check the above mentioned variable, and if it is set, when wait on a condition variable for flushing to complete, and then go ahead to acquire the lock, else as usual quit with NULL, failing to acquire the lock.
+ * above task will mitigate the failures to acquire locks, because of on going flushes. implement all of the above in UNSAFE_UTIL function
+
  * aschronous request to bring a page in the bufferpool, disregard the request if the page is already in bufferpool, here a dirty page can not be evicted
