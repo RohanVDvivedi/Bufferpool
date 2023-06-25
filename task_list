@@ -1,4 +1,3 @@
  * dry runs for locking functions
 
- * timely asynchronous calls to flush_all_possible_dirty_pages(bf), at specific intervals
  * aschronous request to bring a page in the bufferpool, disregard the request if the page is already in bufferpool, here a dirty page can not be evicted
