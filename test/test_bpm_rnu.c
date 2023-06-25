@@ -23,6 +23,8 @@
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
+#define FLUSH_EVERY_X_MILLISECONDS 30
+
 #define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
 #define EVICT_DIRTY_IF_NECESSARY 1
 
@@ -49,7 +51,7 @@ int main(int argc, char **argv)
 
 	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
 
-	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile), always_can_be_flushed_to_disk);
+	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile), always_can_be_flushed_to_disk, FLUSH_EVERY_X_MILLISECONDS);
 
 	printf("writing 0s to all the pages of the heapfile\n");
 	for(uint64_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
