@@ -72,16 +72,12 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 	return 0;
 }
 
-void flush_all_possible_dirty_pages(bufferpool* bf)
+void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* flush_job_params, uint64_t flush_job_params_capacity)
 {
-	if(bf->has_internal_lock)
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
 	// find out all the frame_descs that can be immediately flushed and put them in this array, to be used as parameters
 	uint64_t flush_job_params_count = 0;
-	flush_params* flush_job_params = malloc(sizeof(flush_params) * bf->total_frame_desc_count);
 
-	for(frame_desc* fd = (frame_desc*) get_first_of_in_hashmap(&(bf->page_id_to_frame_desc), FIRST_OF_HASHMAP); fd != NULL; fd = (frame_desc*) get_next_of_in_hashmap(&(bf->page_id_to_frame_desc), fd, ANY_IN_HASHMAP))
+	for(frame_desc* fd = (frame_desc*) get_first_of_in_hashmap(&(bf->page_id_to_frame_desc), FIRST_OF_HASHMAP); fd != NULL && flush_job_params_count < flush_job_params_capacity; fd = (frame_desc*) get_next_of_in_hashmap(&(bf->page_id_to_frame_desc), fd, ANY_IN_HASHMAP))
 	{
 		// here the frame_desc, must have valid page_id and valid frame_contents
 		// we only check for the frame_desc being is_dirty, writers_count == 0 and is_under_write_IO == 0
@@ -140,8 +136,32 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 	// deinitialize flush params and release it's memory
 	for(uint64_t i = 0; i < flush_job_params_count; i++)
 		deinitialize_flush_params(&(flush_job_params[i]));
+
+	pthread_mutex_lock(get_bufferpool_lock(bf));
+}
+
+void flush_all_possible_dirty_pages(bufferpool* bf)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	uint64_t flush_job_params_capacity = bf->total_frame_desc_count;
+
+	pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	flush_params* flush_job_params = malloc(sizeof(flush_params) * flush_job_params_capacity);
+	if(flush_job_params == NULL)
+		goto UNLOCKED_EXIT;
+
+	pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, flush_job_params, flush_job_params_capacity);
+
+	pthread_mutex_unlock(get_bufferpool_lock(bf));
+
 	free(flush_job_params);
 
+	UNLOCKED_EXIT:;
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
 	if(bf->has_internal_lock)
