@@ -8,7 +8,9 @@
 #include<stdio.h>
 #define HASHTABLE_BUCKET_CAPACITY(max_frame_desc_count) (min((((max_frame_desc_count)/2)+8),(CY_UINT_MAX/32)))
 
-void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame))
+void* periodic_flush_job(void* bf_p);
+
+void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame), uint64_t flush_every_X_milliseconds)
 {
 	bf->has_internal_lock = (external_lock == NULL);
 	if(bf->has_internal_lock)
@@ -37,10 +39,34 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 	bf->can_be_flushed_to_disk = can_be_flushed_to_disk;
 
 	bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL);
+
+	if(flush_every_X_milliseconds != 0)
+	{
+		bf->flush_every_X_milliseconds = flush_every_X_milliseconds;
+
+		bf->exit_periodic_flush_loop = 0;
+
+		initialize_promise(&(bf->periodic_flush_job_completion));
+
+		submit_job(bf->cached_threadpool_executor, periodic_flush_job, bf, &(bf->periodic_flush_job_completion), 0);
+	}
 }
 
 void deinitialize_bufferpool(bufferpool* bf)
 {
+	// first task is to shutdown the periodic flush job
+	if(bf->flush_every_X_milliseconds != 0)
+	{
+		// taking locks is essential while there are other jobs working with the bufferpool, hence take lock before calling exit
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+		bf->exit_periodic_flush_loop = 1;
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+		get_promised_result(&(bf->periodic_flush_job_completion));
+	}
+
+	//
+
 	shutdown_executor(bf->cached_threadpool_executor, 0);
 	wait_for_all_threads_to_complete(bf->cached_threadpool_executor);
 	delete_executor(bf->cached_threadpool_executor);
