@@ -39,9 +39,9 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 }
 
 // it will not remove the frame_desc from the lists
-static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpool* bf, int evict_dirty_if_necessary, int* error)
+static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpool* bf, int evict_dirty_if_necessary, int* nothing_evictable)
 {
-	(*error) = 0;
+	(*nothing_evictable) = 0;
 
 	// if there is any frame_desc in invalid_frame_descs_list, then return it's head
 	if(!is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
@@ -61,12 +61,12 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 
 		if(_new_frame_desc == NULL)	// if the new call failed, then reverse the incremented counter
 			bf->total_frame_desc_count--;
-		else // this is not an error, we want the caller to retry, because we just created a new frame_desc
+		else // this means we just created a new frame_desc, that can be evicted
 			insert_head_in_linkedlist(&(bf->invalid_frame_descs_list), _new_frame_desc);
 
-		// here even a failure to allocate a frame_desc is not an error, to refrain the lock
-		// because while we were allocating a new frame_desc,
-		// some other thread wanting the same page, might have performed IO and brought it in bufferpool
+		// here even a failure to allocate a frame_desc does not mean nothing_evictable, i.e. to refrain the lock
+		// because while we were trying to allocate a new frame_desc,
+		// some other thread wanting the same page, might have performed IO and brought it in bufferpool, making eviction unnecessary
 
 		return NULL;
 	}
@@ -130,9 +130,9 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			// this is neccessary to insert the fd_to_flush back into the lru list
 			handle_frame_desc_if_not_referenced(bf, fd_to_flush);
 
-			// here even an io_success == 0 is not an error, to refrain the lock
+			// here even an io_success == 0 does not mean nothing_evictable i.e. to refrain the lock
 			// because while we were flushing the page some other thread wanting the same page,
-			// might have performed IO and brought it in bufferpool
+			// might have performed IO and brought it in bufferpool, making eviction unnecessary
 
 			return NULL;
 		}
@@ -140,8 +140,8 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 		// we did not find anything worthy of flushing in dirty_frame_descs_lru_list
 	}
 
-	// this situation is an error, because no frame_desc can be evicted, and hence this request will not be fulfilled
-	(*error) = 1;
+	// this situation means nothing_evictable, because no frame_desc can be evicted, and hence this request may possibly not be fulfilled
+	(*nothing_evictable) = 1;
 	return NULL;
 }
 
@@ -291,11 +291,11 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 			}
 		}
 
-		int error = 0;
-		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &error);
+		int nothing_evictable = 0;
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable);
 		if(fd == NULL)
 		{
-			if(error)
+			if(nothing_evictable)
 				goto EXIT;
 			else
 				continue;
@@ -347,11 +347,11 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 			}
 		}
 
-		int error = 0;
-		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &error);
+		int nothing_evictable = 0;
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable);
 		if(fd == NULL)
 		{
-			if(error)
+			if(nothing_evictable)
 				goto EXIT;
 			else
 				continue;
