@@ -38,6 +38,12 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 
 	bf->can_be_flushed_to_disk = can_be_flushed_to_disk;
 
+	bf->count_of_ongoing_flushes = 0;
+
+	bf->thread_count_waiting_for_any_ongoing_flush_to_finish = 0;
+
+	pthread_cond_init(&(bf->waiting_for_any_ongoing_flush_to_finish), NULL);
+
 	bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL);
 
 	if(flush_every_X_milliseconds != 0)
@@ -70,6 +76,8 @@ void deinitialize_bufferpool(bufferpool* bf)
 	shutdown_executor(bf->cached_threadpool_executor, 0);
 	wait_for_all_threads_to_complete(bf->cached_threadpool_executor);
 	delete_executor(bf->cached_threadpool_executor);
+
+	pthread_cond_destroy(&(bf->waiting_for_any_ongoing_flush_to_finish));
 
 	frame_desc* fd = NULL;
 
