@@ -97,6 +97,8 @@ int main(int argc, char **argv)
 	for(int i = 0; i < COUNT_OF_IO_TASKS; i++)
 		io_task_params[i] = i;
 
+	nanosleep(&((struct timespec){2,0}), NULL);
+
 	for(int i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		int* io_t_p = &(io_task_params[i]);
@@ -162,13 +164,15 @@ void* io_task_execute(int* io_t_p)
 
 	uint64_t page_id = PAGE_ID_TO_READ_TEST;
 
+	// every thread except the last thread has an additional delay of half a second, before they start
+	if(param != (COUNT_OF_IO_TASKS - 1))
+		nanosleep(&((struct timespec){1,0}), NULL);
+
 	if(param == 0 || param == (COUNT_OF_IO_TASKS - 1))
 	{
-		printf("(%d) synchronously prefetching page %" PRIu64 "\n", param, PAGE_ID_TO_READ_TEST);
+		printf("(%d) asynchronously prefetching page %" PRIu64 "\n", param, PAGE_ID_TO_READ_TEST);
 
-		int prefetched_success = prefetch_page(&bpm, PAGE_ID_TO_READ_TEST, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY);
-
-		printf("(%d) prefetch was a %s\n\n", param, (prefetched_success ? "SUCCESS" : "FAILURE"));
+		prefetch_page_async(&bpm, PAGE_ID_TO_READ_TEST, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY);
 	}
 	else if(param % 2 == 0)
 	{
