@@ -261,7 +261,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	}
 }
 
-void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
+void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -296,7 +296,21 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 		if(fd == NULL)
 		{
 			if(nothing_evictable)
-				goto EXIT;
+			{
+				// if nothing_evictable, and the user is fine with wanting for any ongoing flushes, then we wait once
+				// flushing is a long process of writing dirty pages to disk, this involved locking a lot of dirty pages (even unused ones) with a read lock, making them unevictable
+				// so we offer th users to wait if such a situation arises
+				if(wait_for_any_ongoing_flushes_if_necessary && bf->count_of_ongoing_flushes)
+				{
+					bf->thread_count_waiting_for_any_ongoing_flush_to_finish++;
+					pthread_cond_wait(&(bf->waiting_for_any_ongoing_flush_to_finish), get_bufferpool_lock(bf));
+					bf->thread_count_waiting_for_any_ongoing_flush_to_finish--;
+					continue;
+				}
+				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit, returning to the user with no lock
+				else
+					goto EXIT;
+			}
 			else
 				continue;
 		}
@@ -317,7 +331,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 	return (fd != NULL) ? fd->frame : NULL;
 }
 
-void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int to_be_overwritten)
+void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary, int to_be_overwritten)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -352,7 +366,21 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 		if(fd == NULL)
 		{
 			if(nothing_evictable)
-				goto EXIT;
+			{
+				// if nothing_evictable, and the user is fine with wanting for any ongoing flushes, then we wait once
+				// flushing is a long process of writing dirty pages to disk, this involved locking a lot of dirty pages (even unused ones) with a read lock, making them unevictable
+				// so we offer th users to wait if such a situation arises
+				if(wait_for_any_ongoing_flushes_if_necessary && bf->count_of_ongoing_flushes)
+				{
+					bf->thread_count_waiting_for_any_ongoing_flush_to_finish++;
+					pthread_cond_wait(&(bf->waiting_for_any_ongoing_flush_to_finish), get_bufferpool_lock(bf));
+					bf->thread_count_waiting_for_any_ongoing_flush_to_finish--;
+					continue;
+				}
+				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit, returning to the user with no lock
+				else
+					goto EXIT;
+			}
 			else
 				continue;
 		}
