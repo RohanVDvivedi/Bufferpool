@@ -78,12 +78,12 @@ struct bufferpool
 
 	// below parameters are only for periodic flush job
 
-	// this value must be set to 1, to make the periodic flush job to exit
-	int exit_periodic_flush_loop;
-
 	// flush occurs every X milliseconds
 	// set this value to 0, to not avail this facility
 	uint64_t flush_every_X_milliseconds;
+
+	// all updates to flush_every_X_milliseconds, must be posted here
+	pthread_cond_t flush_every_X_milliseconds_update;
 
 	// wait on this promise to wait until the job completes
 	promise periodic_flush_job_completion;
@@ -122,6 +122,9 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 uint64_t get_max_frame_desc_count(bufferpool* bf);
 uint64_t get_total_frame_desc_count(bufferpool* bf);
 void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
+
+// change flush_every_X_milliseconds
+void modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds);
 
 // flushes all pages that are dirty and are not write locked and are not currently being flushed
 void flush_all_possible_dirty_pages(bufferpool* bf);
