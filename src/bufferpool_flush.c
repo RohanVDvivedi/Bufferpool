@@ -37,7 +37,7 @@ void* write_io_job(void* flush_params_vp)
 	fp->write_success = fp->bf->page_io_functions.write_page(fp->bf->page_io_functions.page_io_ops_handle, fp->fd->frame, fp->fd->page_id, fp->bf->page_size);
 	return NULL;
 }
-
+#include<stdio.h>
 // if the frame_desc fd, is not not references by any one, then
 // -> if you are over max_frame_desc_count and the frame is not dirty, then delete it
 // -> insert it to lru lists
@@ -82,6 +82,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 
 	for(frame_desc* fd = (frame_desc*) get_first_of_in_hashmap(&(bf->page_id_to_frame_desc), FIRST_OF_HASHMAP); fd != NULL && flush_job_params_count < flush_job_params_capacity; fd = (frame_desc*) get_next_of_in_hashmap(&(bf->page_id_to_frame_desc), fd, ANY_IN_HASHMAP))
 	{
+		print_frame_desc(fd);
 		// here the frame_desc, must have valid page_id and valid frame_contents
 		// we only check for the frame_desc being is_dirty, writers_count == 0 and is_under_write_IO == 0
 		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && fd->writers_count == 0 && !fd->is_under_write_IO && bf->can_be_flushed_to_disk(fd->page_id, fd->frame))
@@ -117,8 +118,9 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 	{
 		frame_desc* fd = flush_job_params[i].fd;
 
-		// release reader lock
+		// release reader lock, and clear write IO bit
 		fd->readers_count--;
+		fd->is_under_write_IO = 0;
 
 		// wake up upgraders or writers if we are the last one to hold the reader lock
 		if(fd->readers_count == 1 && fd->upgraders_waiting)
