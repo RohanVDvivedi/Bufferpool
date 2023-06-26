@@ -133,8 +133,9 @@ int main(int argc, char **argv)
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
 	printf("Initializing IO tasks\n\n");
-	int read_tasks = 0;
-	int write_tasks = 0;
+	uint64_t read_tasks = 0;
+	uint64_t write_tasks = 0;
+	uint64_t write_tasks_per_page[PAGES_IN_HEAP_FILE] = {};
 	for(uint32_t i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		io_task* io_t_p = &(io_tasks[i]);
@@ -168,10 +169,17 @@ int main(int argc, char **argv)
 		if(io_t_p->task_type == READ_PRINT)
 			read_tasks++;
 		else
+		{
+			write_tasks_per_page[io_t_p->page_id]++;
 			write_tasks++;
+		}
 	}
 
-	printf("Initialized %d only read IO tasks and %d write IO tasks, submitting them now\n\n", read_tasks, write_tasks);
+	printf("Initialized %" PRIu64 " only read IO tasks and %" PRIu64 " write IO tasks, submitting them now\n\n", read_tasks, write_tasks);
+	printf("Write jobs per page ::\n");
+	for(uint64_t pg = 0; pg < PAGES_IN_HEAP_FILE; pg++)
+		printf("%" PRIu64 " : %" PRIu64 "\n", pg, write_tasks_per_page[pg]);
+	printf("\n\n");
 	for(uint32_t i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		io_task* io_t_p = &(io_tasks[i]);
@@ -194,6 +202,11 @@ int main(int argc, char **argv)
 	printf("Buffer pool and executor deleted\n\n");
 
 	printf("test completed\n\n\n");
+
+	printf("There this many writes per page ::\n");
+	for(uint64_t pg = 0; pg < PAGES_IN_HEAP_FILE; pg++)
+		printf("%" PRIu64 " : %" PRIu64 "\n", pg, write_tasks_per_page[pg]);
+	printf("\n\n\n");
 
 	return 0;
 }
