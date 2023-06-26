@@ -180,7 +180,7 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 
 #include<time.h>
 #include<errno.h>
-#include<stdio.h>
+
 void* periodic_flush_job(void* bf_p)
 {
 	bufferpool* bf = bf_p;
@@ -197,7 +197,6 @@ void* periodic_flush_job(void* bf_p)
 	{
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		printf("\n\nflushing NOW\n\n\n");
 		if(flush_job_params_capacity != 0)
 			flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, flush_job_params, flush_job_params_capacity);
 
@@ -212,8 +211,6 @@ void* periodic_flush_job(void* bf_p)
 			int err = 0;
 			if(ETIMEDOUT == (err = pthread_cond_timedwait(&(bf->flush_every_X_milliseconds_update), get_bufferpool_lock(bf), &stop_at)))
 				break;
-			if(err && err != ETIMEDOUT)
-				printf("error cond_timedwait %d\n", err);
 		}
 
 		uint64_t flush_job_params_capacity_new = bf->total_frame_desc_count;
