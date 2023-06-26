@@ -1,21 +1,21 @@
 # Bufferpool
-It is an implementation of a Buffer Pool Manager library in C (like Linux page cache, but in user-space), used for accessing pages of a Heap File (or directly a partition on raw disk) from a HDD/SSD and caching it, by using well defined eviction policy for replacement.
+It is an implementation of a Buffer Pool Manager library in C, used for accessing (with Read/Write lcoks) and caching pages of secondary memory (SSD/HDD).
 
-**A Heap File** is a file of unordered fixed sized pages, where each page is identified using a 32 bit integer but the integer itself does not reveal anything about the actual location of the page in the file.
-
- * "Bufferpool" is not itself a database storage engine although it can be used to build a database storage engine.
- * A very simple linkedlist based actual LRU Policy (not a clock LRU algorithm) is implemented to evict the pages for replacement.
- * You may specifically use MRU policy for a particular access of a page, which can be helpfull, when you are performing a sequential scan.
- * The bufferpool man also provides a synchronous queue based access policy, which when used will result in piggy-backing page accesses, which can be helpful if you are performing multiple concurrent sequential scans (scan-sharing).
- * "Bufferpool" does not provide any restriction on the schema that you use to store your data. Its pages are your blank slate.
- * "Bufferpool" does not impose any restriction on the size of the page you wish to use for your heap file but the page size must be a multiple of the physical block size of the disk. It is recommended to keep the page size equal to file system block size to avoid any unsuspected issues.
- * To use this project on raw ext3/ext4 filesystems, you may need to turn off data journaling on the respective filesystem partition because (using O_DIRECT flag) direct I/O and syncing writes (immediately flushing pages) are used (and expected) by the project.
+ * It primarily solves 2 problems
+   * Caching disk pages in a maximum number of page frames, and evicting them as necessary using an LRU policy (Actual LRU not clock based LRU) for replacement.
+   * Databases need page level latches (mutexes in database terminology) on pages, while modifying individual disk pages, **this library provides you an api to latch pages that have reader-writer lock like api and functionality**.
+ * Additionally,
+   * It provides plenty of flags with an extensive api to acquire read/write locks on pages, upgrading read lock to write lock on a page, downgrade write lock to read lock on a page and release read/write lock on page, gives wide flexibility to build your storage engine on top of this bufferpool.
+   * This library allows you to lock (traditionally called latch in Database terminology) pages with reader and writer lock while accessing them, allowing higher concurrency to your database storage engine.
+   * It also allows you to prefetch pages, both synchronously and asynchronously.
+   * It supports periodic jobs that can be run in background to flush dirty pages to disk, keeping your bufferpool pages clean.
+   * It does not perfrom I/O for you, but instead takes structure of call back functions that get called to perform I/O, allowing you to intercept read and write I/O calls.
+   * This also allows you to switch the underlying storage from (conventionally) SSD/HDD to some network storage accessed over TCP/UDP, very easily.
 
 ## Setup instructions
 **Install dependencies :**
  * [Cutlery](https://github.com/RohanVDvivedi/Cutlery)
  * [BoomPar](https://github.com/RohanVDvivedi/BoomPar)
- * [ReaderWriterLock](https://github.com/RohanVDvivedi/ReaderWriterLock)
 
 **Download source code :**
  * `git clone https://github.com/RohanVDvivedi/Bufferpool.git`
@@ -29,9 +29,10 @@ It is an implementation of a Buffer Pool Manager library in C (like Linux page c
  * ***Once you have installed from source, you may discard the build by*** `make clean`
 
 ## Using The library
- * add `-lbufferpool -lboompar -lrwlock -lpthread -lcutlery` linker flag, while compiling your application
+ * add `-lbufferpool -lboompar -lpthread -lcutlery` linker flag, while compiling your application
  * do not forget to include appropriate public api headers as and when needed. this includes
-   * `#include<bufferpool.h>`
+   * `#include<bufferpool.h>` -> read this to get the gist of the API
+   * `#include<page_io_ops.h>` -> defines the structure of read/write I/O callback function struct
 
 ## Instructions for uninstalling library
 
