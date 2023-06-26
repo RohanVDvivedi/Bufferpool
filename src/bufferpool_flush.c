@@ -187,29 +187,25 @@ void* periodic_flush_job(void* bf_p)
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 	uint64_t flush_job_params_capacity = bf->total_frame_desc_count;
-	uint64_t flush_every_X_milliseconds = bf->flush_every_X_milliseconds;
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 	flush_params* flush_job_params = malloc(sizeof(flush_params) * flush_job_params_capacity);
 	if(flush_job_params == NULL)
 		flush_job_params_capacity = 0;
 
-	int exit = 0;
-
-	while(!exit)
+	while(1)
 	{
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		printf("\n\nflushing NOW\n\n\n");
 		if(flush_job_params_capacity != 0)
 			flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, flush_job_params, flush_job_params_capacity);
-		uint64_t flush_job_params_capacity_new = bf->total_frame_desc_count;
 
 		while(bf->flush_every_X_milliseconds != 0)
 		{
 			struct timespec now;
 			clock_gettime(CLOCK_REALTIME, &now);
-			struct timespec diff = {.tv_sec = (flush_every_X_milliseconds / 1000ULL), .tv_nsec = (flush_every_X_milliseconds % 1000ULL) * 1000000ULL};
+			struct timespec diff = {.tv_sec = (bf->flush_every_X_milliseconds / 1000ULL), .tv_nsec = (bf->flush_every_X_milliseconds % 1000ULL) * 1000000ULL};
 			struct timespec stop_at = {.tv_sec = now.tv_sec + diff.tv_sec, .tv_nsec = now.tv_nsec + diff.tv_nsec};
 			stop_at.tv_sec += stop_at.tv_nsec / 1000000000ULL;
 			stop_at.tv_nsec = stop_at.tv_nsec % 1000000000ULL;
@@ -217,11 +213,11 @@ void* periodic_flush_job(void* bf_p)
 			if(ETIMEDOUT == (err = pthread_cond_timedwait(&(bf->flush_every_X_milliseconds_update), get_bufferpool_lock(bf), &stop_at)))
 				break;
 			if(err && err != ETIMEDOUT)
-				printf("error timedout %d\n", err);
+				printf("error cond_timedwait %d\n", err);
 		}
 
-		if(bf->flush_every_X_milliseconds == 0)
-			exit = 1;
+		uint64_t flush_job_params_capacity_new = bf->total_frame_desc_count;
+		int exit = (bf->flush_every_X_milliseconds == 0);
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
