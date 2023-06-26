@@ -421,7 +421,20 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary
 	{
 		fd = find_frame_desc_by_page_id(bf, page_id); // fd we get from here will always have has_valid_page_id set, page_id equal to page_id
 		if(fd != NULL)
+		{
+			// need to bump the frame_desc in the lru, since we want to make it stay longer in the bufferpool
+
+			// first remove it from lru lists,
+			// and then if it is not locked or wanted on by anyone then reinsert it
+			// this effectively bumps it to tail in which ever lru lists it exists
+
+			remove_frame_desc_from_lru_lists(bf, fd);
+
+			if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+				insert_frame_desc_in_lru_lists(bf, fd);
+
 			goto EXIT;
+		}
 
 		int nothing_evictable = 0;
 		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable);
