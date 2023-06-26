@@ -657,3 +657,40 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 
 	return result;
 }
+
+//-------------------------------------------------------------------------------
+// JUGAAD for making prefetch_page() into an asynchronous call
+
+typedef struct async_prefetch_page_params async_prefetch_page_params;
+struct async_prefetch_page_params
+{
+	bufferpool* bf;
+	uint64_t page_id;
+	int evict_dirty_if_necessary : 1;
+	int wait_for_any_ongoing_flushes_if_necessary : 1;
+};
+
+void* async_prefetch_page_job_func(void* appp_p)
+{
+	// copy params in to local stack variables
+	async_prefetch_page_params appp = *((async_prefetch_page_params *)appp_p);
+	free(appp_p);
+
+	// take lock if the bufferpool has external locks
+	if(!appp.bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(appp.bf));
+
+	prefetch_page(appp.bf, appp.page_id, appp.evict_dirty_if_necessary, appp.wait_for_any_ongoing_flushes_if_necessary);
+
+	if(!appp.bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(appp.bf));
+
+	return NULL;
+}
+
+void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
+{
+	async_prefetch_page_params* appp = malloc(sizeof(async_prefetch_page_params));
+	(*appp) = (async_prefetch_page_params){bf, page_id, evict_dirty_if_necessary, wait_for_any_ongoing_flushes_if_necessary};
+	submit_job(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, 0);
+}

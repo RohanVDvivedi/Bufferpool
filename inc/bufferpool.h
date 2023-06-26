@@ -123,6 +123,9 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 // after this call you still need call acquire_page_with_*_lock, to get the page with lock on it
 int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary);
 
+// asynchronous version of prefetch page
+void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary);
+
 // change max frame count for the bufferpool
 uint64_t get_max_frame_desc_count(bufferpool* bf);
 uint64_t get_total_frame_desc_count(bufferpool* bf);
