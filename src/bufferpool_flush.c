@@ -208,8 +208,7 @@ void* periodic_flush_job(void* bf_p)
 			struct timespec stop_at = {.tv_sec = now.tv_sec + diff.tv_sec, .tv_nsec = now.tv_nsec + diff.tv_nsec};
 			stop_at.tv_sec += stop_at.tv_nsec / 1000000000ULL;
 			stop_at.tv_nsec = stop_at.tv_nsec % 1000000000ULL;
-			int err = 0;
-			if(ETIMEDOUT == (err = pthread_cond_timedwait(&(bf->flush_every_X_milliseconds_update), get_bufferpool_lock(bf), &stop_at)))
+			if(ETIMEDOUT == pthread_cond_timedwait(&(bf->flush_every_X_milliseconds_update), get_bufferpool_lock(bf), &stop_at))
 				break;
 		}
 
