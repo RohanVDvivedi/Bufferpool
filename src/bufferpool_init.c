@@ -191,6 +191,7 @@ void modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_mi
 	}
 	else if(bf->flush_every_X_milliseconds == 0 && flush_every_X_milliseconds_new != 0)
 	{
+		// periodic_flush_job is not running, we now will start it
 		bf->flush_every_X_milliseconds = flush_every_X_milliseconds_new;
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		initialize_promise(&(bf->periodic_flush_job_completion));
@@ -199,6 +200,7 @@ void modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_mi
 	}
 	else if(bf->flush_every_X_milliseconds != 0 && flush_every_X_milliseconds_new == 0)
 	{
+		// periodic_flush_job is running, we now will stop it and wait for it to stop on promise (periodic_flush_job_completion)
 		bf->flush_every_X_milliseconds = 0;
 		pthread_cond_signal(&(bf->flush_every_X_milliseconds_update));
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -208,6 +210,7 @@ void modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_mi
 	}
 	else // if none of them are 0
 	{
+		// update the flush_every_X_milliseconds and wake up thread that may be waiting, to notify for an update
 		bf->flush_every_X_milliseconds = flush_every_X_milliseconds_new;
 		pthread_cond_signal(&(bf->flush_every_X_milliseconds_update));
 	}
