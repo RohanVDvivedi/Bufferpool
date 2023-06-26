@@ -119,8 +119,8 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 		frame_desc* fd = flush_job_params[i].fd;
 
 		// release reader lock, and clear write IO bit
-		fd->readers_count--;
 		fd->is_under_write_IO = 0;
+		fd->readers_count--;
 
 		// wake up upgraders or writers if we are the last one to hold the reader lock
 		if(fd->readers_count == 1 && fd->upgraders_waiting)
