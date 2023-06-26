@@ -26,6 +26,7 @@
 
 #define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
 #define EVICT_DIRTY_IF_NECESSARY 1
+#define WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY 1
 
 // workload to test
 //#define MODERATE_READS_WRITES_WORKLOAD
@@ -74,7 +75,7 @@ int main(int argc, char **argv)
 	for(uint64_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
 	{
 		printf("zeroing out page %" PRIu64 "\n\n", i);
-		void* frame = acquire_page_with_writer_lock(&bpm, i, EVICT_DIRTY_IF_NECESSARY, 1);
+		void* frame = acquire_page_with_writer_lock(&bpm, i, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY, 1);
 		if(frame == NULL)
 		{
 			printf("error acquiring lock on page %" PRIu64 "\n\n", i);
@@ -91,7 +92,7 @@ int main(int argc, char **argv)
 	printf("testing to see that we get the old value, of the page, when the page is already in bufferpool\n");
 	{
 		uint64_t page_id_test = UINT64_C(19);
-		void* frame = acquire_page_with_writer_lock(&bpm, page_id_test, EVICT_DIRTY_IF_NECESSARY, 1);
+		void* frame = acquire_page_with_writer_lock(&bpm, page_id_test, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY, 1);
 		if(frame == NULL)
 		{
 			printf("failed to get write lock on frame %"PRIu64"\n", page_id_test);
@@ -109,7 +110,7 @@ int main(int argc, char **argv)
 	printf("testing to see that we get the zero value, of the page, when the page is not in bufferpool\n");
 	{
 		uint64_t page_id_test = UINT64_C(2);
-		void* frame = acquire_page_with_writer_lock(&bpm, page_id_test, EVICT_DIRTY_IF_NECESSARY, 1);
+		void* frame = acquire_page_with_writer_lock(&bpm, page_id_test, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY, 1);
 		if(frame == NULL)
 		{
 			printf("failed to get write lock on frame %"PRIu64"\n", page_id_test);
@@ -270,7 +271,7 @@ void read_print(uint64_t page_id)
 	// randomly choose to select read lock or write lock, to read the page
 	if((rand() % 20) < 16)
 	{
-		void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
+		void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY);
 		if(frame == NULL)
 		{
 			printf("(%ld) *** failed *** to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
@@ -289,7 +290,7 @@ void read_print(uint64_t page_id)
 	}
 	else
 	{
-		void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
+		void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY, 0);
 		if(frame == NULL)
 		{
 			printf("(%ld) *** failed *** to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
@@ -300,7 +301,7 @@ void read_print(uint64_t page_id)
 
 		read_print_UNSAFE(page_id, frame);
 
-		int res = release_writer_lock_on_page(&bpm, frame, 0, EVICT_DIRTY_IF_NECESSARY);
+		int res = release_writer_lock_on_page(&bpm, frame, 0, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 		if(!res)
 			printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 		else
@@ -310,7 +311,7 @@ void read_print(uint64_t page_id)
 
 void read_print_upgrade_write_print(uint64_t page_id)
 {
-	void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY);
+	void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY);
 	if(frame == NULL)
 	{
 		printf("(%ld) *** failed *** to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
@@ -348,7 +349,7 @@ void read_print_upgrade_write_print(uint64_t page_id)
 
 void write_print(uint64_t page_id)
 {
-	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
+	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY, 0);
 	if(frame == NULL)
 	{
 		printf("(%ld) *** failed *** to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
@@ -368,7 +369,7 @@ void write_print(uint64_t page_id)
 
 void write_print_downgrade_read_print(uint64_t page_id)
 {
-	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, 0);
+	void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY, 0);
 	if(frame == NULL)
 	{
 		printf("(%ld) *** failed *** to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
