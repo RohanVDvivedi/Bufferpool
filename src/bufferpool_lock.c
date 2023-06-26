@@ -236,6 +236,15 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 				pthread_cond_signal(&(fd->waiting_for_write_lock));
 			else if(fd->readers_waiting > 0)
 				pthread_cond_broadcast(&(fd->waiting_for_read_lock));
+
+			// we know that the frame_desc's frame is not going to be used immediately
+			// we had the writer lock, and we just released it after read IO, so no one has either or reader or writer lock on it and that's for sure
+			// in this case we need to insert the frame_desc into clean lru list, if it is not being waited on by anyone
+			// we can not call handle_frame_desc_if_not_referenced(bf, fd), because we do not want to discard the frame_desc, even if we are in excess
+
+			// we will effectively only add it clean_frame_descs_lru_list, if it is not being waited on by anyone
+			if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+				insert_frame_desc_in_lru_lists(bf, fd);
 		}
 
 		return 1;
@@ -399,6 +408,54 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 	return (fd != NULL) ? fd->frame : NULL;
+}
+
+int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	frame_desc* fd = NULL;
+
+	while(1)
+	{
+		fd = find_frame_desc_by_page_id(bf, page_id); // fd we get from here will always have has_valid_page_id set, page_id equal to page_id
+		if(fd != NULL)
+			goto EXIT;
+
+		int nothing_evictable = 0;
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable);
+		if(fd == NULL)
+		{
+			if(nothing_evictable)
+			{
+				// if nothing_evictable, and the user is fine with wanting for any ongoing flushes, then we wait once
+				// flushing is a long process of writing dirty pages to disk, this involved locking a lot of dirty pages (even unused ones) with a read lock, making them unevictable
+				// so we offer th users to wait if such a situation arises
+				if(wait_for_any_ongoing_flushes_if_necessary && bf->count_of_ongoing_flushes)
+				{
+					bf->thread_count_waiting_for_any_ongoing_flush_to_finish++;
+					pthread_cond_wait(&(bf->waiting_for_any_ongoing_flush_to_finish), get_bufferpool_lock(bf));
+					bf->thread_count_waiting_for_any_ongoing_flush_to_finish--;
+					continue;
+				}
+				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit, returning to the user with no lock
+				else
+					goto EXIT;
+			}
+			else
+				continue;
+		}
+
+		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, DESTINED_TO_NOT_BE_LOCKED_IMMEDIATELY, 0))
+			goto EXIT;
+	}
+
+	EXIT:;
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return (fd != NULL);
 }
 
 int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_modified, int force_flush)
