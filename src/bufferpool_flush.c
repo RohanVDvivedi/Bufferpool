@@ -74,6 +74,9 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 
 void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* flush_job_params, uint64_t flush_job_params_capacity)
 {
+	// increment count for this as ongoing flush
+	bf->count_of_ongoing_flushes++;
+
 	// find out all the frame_descs that can be immediately flushed and put them in this array, to be used as parameters
 	uint64_t flush_job_params_count = 0;
 
@@ -130,6 +133,12 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 		// this call is necesary, to destroy the frame_desc, or add it to lru lists, once it is clean
 		handle_frame_desc_if_not_referenced(bf, fd);
 	}
+
+	// decrement count for this as ongoing flush
+	// and wake up any thread that is waiting for any ongoing flush to finish
+	bf->count_of_ongoing_flushes++;
+	if(bf->thread_count_waiting_for_any_ongoing_flush_to_finish > 0)
+		pthread_cond_broadcast(&(bf->waiting_for_any_ongoing_flush_to_finish));
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
