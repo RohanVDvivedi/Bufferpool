@@ -18,8 +18,8 @@
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_FRAMES_IN_BUFFER_POOL 6
 
-#define FIXED_THREAD_POOL_SIZE 4
-#define COUNT_OF_IO_TASKS 4
+#define FIXED_THREAD_POOL_SIZE 9
+#define COUNT_OF_IO_TASKS 9
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 
 	nanosleep(&((struct timespec){1,0}), NULL);
 
-	printf("releasing all prior locks\n");
+	printf("releasing all prior locks\n\n\n");
 
 	release_writer_lock_on_page(&bpm, frame_w_p, 1, 0);
 	release_reader_lock_on_page(&bpm, frame_r_p);
@@ -162,7 +162,15 @@ void* io_task_execute(int* io_t_p)
 
 	uint64_t page_id = PAGE_ID_TO_READ_TEST;
 
-	if(param % 2 == 0)
+	if(param == 0 && param == (COUNT_OF_IO_TASKS - 1))
+	{
+		printf("(%d) synchronously prefetching page %" PRIu64 "\n", param, PAGE_ID_TO_READ_TEST);
+
+		int prefetched_success = prefetch_page(&bpm, PAGE_ID_TO_READ_TEST, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY);
+
+		printf("(%d) prefetch was a %s\n\n", param, (prefetched_success ? "SUCCESS" : "FAILURE"));
+	}
+	else if(param % 2 == 0)
 	{
 		void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY);
 		if(frame == NULL)
