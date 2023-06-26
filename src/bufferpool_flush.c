@@ -179,7 +179,8 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 }
 
 #include<time.h>
-
+#include<errno.h>
+#include<stdio.h>
 void* periodic_flush_job(void* bf_p)
 {
 	bufferpool* bf = bf_p;
@@ -193,20 +194,38 @@ void* periodic_flush_job(void* bf_p)
 	if(flush_job_params == NULL)
 		flush_job_params_capacity = 0;
 
-	int exit_flush_loop = 0;
+	int exit = 0;
 
-	while(!exit_flush_loop)
+	while(!exit)
 	{
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		exit_flush_loop = bf->exit_periodic_flush_loop;
-		if(!exit_flush_loop && flush_job_params_capacity != 0)
+		printf("\n\nflushing NOW\n\n\n");
+		if(flush_job_params_capacity != 0)
 			flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, flush_job_params, flush_job_params_capacity);
 		uint64_t flush_job_params_capacity_new = bf->total_frame_desc_count;
 
+		while(bf->flush_every_X_milliseconds != 0)
+		{
+			struct timespec now;
+			clock_gettime(CLOCK_REALTIME, &now);
+			struct timespec diff = {.tv_sec = (flush_every_X_milliseconds / 1000ULL), .tv_nsec = (flush_every_X_milliseconds % 1000ULL) * 1000000ULL};
+			struct timespec stop_at = {.tv_sec = now.tv_sec + diff.tv_sec, .tv_nsec = now.tv_nsec + diff.tv_nsec};
+			stop_at.tv_sec += stop_at.tv_nsec / 1000000000ULL;
+			stop_at.tv_nsec = stop_at.tv_nsec % 1000000000ULL;
+			int err = 0;
+			if(ETIMEDOUT == (err = pthread_cond_timedwait(&(bf->flush_every_X_milliseconds_update), get_bufferpool_lock(bf), &stop_at)))
+				break;
+			if(err && err != ETIMEDOUT)
+				printf("error timedout %d\n", err);
+		}
+
+		if(bf->flush_every_X_milliseconds == 0)
+			exit = 1;
+
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-		if(exit_flush_loop)
+		if(exit)
 			break;
 
 		// if new capacity is not same as old capacity, then reallocate
@@ -220,9 +239,6 @@ void* periodic_flush_job(void* bf_p)
 				flush_job_params_capacity = flush_job_params_capacity_new;
 			}
 		}
-
-		// wait for flush_every_X_milliseconds
-		nanosleep(&(struct timespec){.tv_sec = (flush_every_X_milliseconds / 1000ULL), .tv_nsec = (flush_every_X_milliseconds % 1000ULL) * 1000000ULL}, NULL);
 	}
 
 	if(flush_job_params_capacity != 0)
