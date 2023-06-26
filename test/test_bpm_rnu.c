@@ -162,7 +162,7 @@ void* io_task_execute(int* io_t_p)
 
 	uint64_t page_id = PAGE_ID_TO_READ_TEST;
 
-	if(param == 0 && param == (COUNT_OF_IO_TASKS - 1))
+	if(param == 0 || param == (COUNT_OF_IO_TASKS - 1))
 	{
 		printf("(%d) synchronously prefetching page %" PRIu64 "\n", param, PAGE_ID_TO_READ_TEST);
 
