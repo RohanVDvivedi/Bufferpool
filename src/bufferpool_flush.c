@@ -137,7 +137,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 
 	// decrement count for this as ongoing flush
 	// and wake up any thread that is waiting for any ongoing flush to finish
-	bf->count_of_ongoing_flushes++;
+	bf->count_of_ongoing_flushes--;
 	if(bf->thread_count_waiting_for_any_ongoing_flush_to_finish > 0)
 		pthread_cond_broadcast(&(bf->waiting_for_any_ongoing_flush_to_finish));
 
