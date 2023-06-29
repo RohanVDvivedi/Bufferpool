@@ -10,7 +10,7 @@
 
 void* periodic_flush_job(void* bf_p);
 
-void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame), uint64_t flush_every_X_milliseconds)
+void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds)
 {
 	bf->has_internal_lock = (external_lock == NULL);
 	if(bf->has_internal_lock)
@@ -36,6 +36,7 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 
 	bf->page_io_functions = page_io_functions;
 
+	bf->flush_test_handle = flush_test_handle;
 	bf->can_be_flushed_to_disk = can_be_flushed_to_disk;
 
 	bf->count_of_ongoing_flushes = 0;

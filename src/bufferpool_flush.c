@@ -84,7 +84,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 	{
 		// here the frame_desc, must have valid page_id and valid frame_contents
 		// we only check for the frame_desc being is_dirty, writers_count == 0 and is_under_write_IO == 0
-		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && fd->writers_count == 0 && !fd->is_under_write_IO && bf->can_be_flushed_to_disk(fd->page_id, fd->frame))
+		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && fd->writers_count == 0 && !fd->is_under_write_IO && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
 		{
 			// read lock them, and mark them being under write IO
 			remove_frame_desc_from_lru_lists(bf, fd);

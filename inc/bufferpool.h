@@ -58,7 +58,8 @@ struct bufferpool
 	page_io_ops page_io_functions;
 
 	// a page gets flushed to disk only if it passes this test
-	int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame);
+	void* flush_test_handle;
+	int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame);
 
 	// below attributes allow user threads to wait for any of the flush to finish
 
@@ -89,7 +90,7 @@ struct bufferpool
 	promise periodic_flush_job_completion;
 };
 
-void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(uint64_t page_id, const void* frame), uint64_t flush_every_X_milliseconds);
+void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds);
 
 void deinitialize_bufferpool(bufferpool* bf);
 

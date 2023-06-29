@@ -91,7 +91,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 
 			// here we already know that the page is not referenced by any one and is dirty
 			// we only need to check that it can_be_flushed_to_disk, inorder to flush it
-			if(bf->can_be_flushed_to_disk(to_check->page_id, to_check->frame))
+			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, to_check->page_id, to_check->frame))
 			{
 				fd_to_flush = to_check;
 				break;
@@ -496,7 +496,7 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	result = 1;
 
 	// if force flush is set then, flush the page to disk with its read lock held
-	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(fd->page_id, fd->frame))
+	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
 	{
 		fd->is_under_write_IO = 1;
 
@@ -610,7 +610,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 	// release writer lock
 	fd->writers_count--;
 
-	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(fd->page_id, fd->frame))
+	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
 	{
 		// we will effectively downgrade the lock just to flush the page
 
