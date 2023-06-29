@@ -103,7 +103,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			// before we grab a lock, we need to remove it from lru lists
 			remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_flush);
 
-			// the fd_to_fludh is neither locked nor is any one waiting to get lock on it, so we can grab a read lock instantly, without any checks
+			// the fd_to_flush is neither locked nor is any one waiting to get lock on it, so we can grab a read lock instantly, without any checks
 			fd_to_flush->readers_count++;
 			fd_to_flush->is_under_write_IO = 1;
 
@@ -187,7 +187,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	int io_success = 1;
 
 	// avoid read IO, if the page is going to be overwritten
-	if(to_be_overwritten_by_user) // we will just reset all the bits here, sicne the page is destined to be overwritten
+	if(to_be_overwritten_by_user) // we will just reset all the bits here, since the page is destined to be overwritten
 	{
 		// the writers_count is incremented hence we can release the lock while we set the page to all zeros
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
