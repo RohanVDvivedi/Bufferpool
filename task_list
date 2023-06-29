@@ -1,3 +1,1 @@
- * introduce uint32_t file_id, along with page_id to uniquely identify a page
- * refactor has_valid_page_id to has_valid_file_id_and_page_id
  * add a handle param, a void* to function can_be_flushed_to_disk
