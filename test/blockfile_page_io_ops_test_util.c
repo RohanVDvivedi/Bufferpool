@@ -39,7 +39,7 @@ page_io_ops get_block_file_page_io_ops(block_file* bfile)
 				};
 }
 
-int always_can_be_flushed_to_disk(uint64_t page_id, const void* frame)
+int always_can_be_flushed_to_disk(void* flush_test_handle, uint64_t page_id, const void* frame)
 {
 	return 1;
 }
