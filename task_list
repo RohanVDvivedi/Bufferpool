@@ -1,1 +1,0 @@
- * add a handle param, a void* to function can_be_flushed_to_disk
