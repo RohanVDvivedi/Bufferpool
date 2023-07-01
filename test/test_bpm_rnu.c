@@ -165,7 +165,7 @@ void* io_task_execute(int* io_t_p)
 	uint64_t page_id = PAGE_ID_TO_READ_TEST;
 
 	// every thread except the last thread has an additional delay of half a second, before they start
-	if(param != (COUNT_OF_IO_TASKS - 1))
+	if(param != (COUNT_OF_IO_TASKS - 1) && param != 1)
 		nanosleep(&((struct timespec){1,0}), NULL);
 
 	if(param == 0 || param == (COUNT_OF_IO_TASKS - 1))
@@ -173,6 +173,51 @@ void* io_task_execute(int* io_t_p)
 		printf("(%d) asynchronously prefetching page %" PRIu64 "\n", param, PAGE_ID_TO_READ_TEST);
 
 		prefetch_page_async(&bpm, PAGE_ID_TO_READ_TEST, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY);
+	}
+	else if(param == 1)
+	{
+		void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY, 0);
+		if(frame == NULL)
+		{
+			printf("(%d) *** failed *** to acquire write lock on %" PRIu64 "\n", param, page_id);
+			return NULL;
+		}
+		else
+			printf("(%d) success in acquiring write lock on %" PRIu64 "\n", param, page_id);
+
+		nanosleep(&((struct timespec){3,0}), NULL);
+
+		write_print_UNSAFE(param, page_id, frame);
+
+		nanosleep(&((struct timespec){3,0}), NULL);
+
+		int res = downgrade_writer_lock_to_reader_lock(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		if(!res)
+		{
+			printf("(%d) *** failed *** to downgrade write lock on %" PRIu64 "\n", param, page_id);
+
+			res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+			if(!res)
+				printf("(%d) *** failed *** to release write lock on %" PRIu64 "\n", param, page_id);
+			else
+				printf("(%d) success in release write lock on %" PRIu64 "\n", param, page_id);
+
+			return NULL;
+		}
+		else
+			printf("(%d) success in downgrading write lock to read lock on %" PRIu64 "\n", param, page_id);
+
+		nanosleep(&((struct timespec){1,0}), NULL);
+
+		read_print_UNSAFE(param, page_id, frame);
+
+		nanosleep(&((struct timespec){1,0}), NULL);
+
+		res = release_reader_lock_on_page(&bpm, frame);
+		if(!res)
+			printf("(%d) *** failed *** to release read lock on %" PRIu64 "\n", param, page_id);
+		else
+			printf("(%d) success in release read lock on %" PRIu64 "\n", param, page_id);
 	}
 	else if(param % 2 == 0)
 	{
