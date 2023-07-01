@@ -506,11 +506,14 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		fd->is_under_write_IO = 0;
-
 		// after a force flush the page is nolonger dirty
 		if(io_success)
+		{
 			fd->is_dirty = 0;
+			result |= WAS_FORCE_FLUSHED;
+		}
+
+		fd->is_under_write_IO = 0;
 	}
 
 	EXIT:;
@@ -630,7 +633,10 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 
 		// after a force flush the page is no longer dirty
 		if(io_success)
+		{
 			fd->is_dirty = 0;
+			result |= WAS_FORCE_FLUSHED;
+		}
 
 		// release reader lock
 		fd->is_under_write_IO = 0;

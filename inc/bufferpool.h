@@ -94,6 +94,10 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 
 void deinitialize_bufferpool(bufferpool* bf);
 
+// for the function returning int, 2nd bit will be set, if the page was force flushed to disk
+// this is applicable for only the functions that support force_flush like, downgrade_writer_lock_to_reader_lock and release_writer_lock_on_page function
+#define WAS_FORCE_FLUSHED 0b10
+
 // for the below 6 functions a NULL or 0 implies a failure
 void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary);
 int release_reader_lock_on_page(bufferpool* bf, void* frame);
