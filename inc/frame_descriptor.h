@@ -3,7 +3,7 @@
 
 #include<stdint.h>
 
-#include<pthread.h>
+#include<rwlock.h>
 
 #include<hashmap.h>
 #include<linkedlist.h>
@@ -34,38 +34,8 @@ struct frame_desc
 	// this thread doing the IO is also a reader, because it is reading the frame, to write it to the disk
 	int is_under_write_IO : 1;
 
-	// number of writers writing to this page frame
-	// this will include the thread that is perfroming read IO on this page (if is_under_read_IO is set) and the other user writers
-	unsigned int writers_count : 1;
-
-	// number of readers that are waiting to upgrade their current read lock to a write lock
-	// it still will keep its readers_count incremented
-	// the thread waiting for upgrade will only decrement readers_count and increment writers_count after all readers have exitied and the waiting thread is resumed
-	unsigned int upgraders_waiting : 1;
-
-	// number of readers currently reading this page frame
-	// this will include the thread that is performing write IO (if is_under_write_IO is set) and other user readers
-	uint64_t readers_count;
-
-	// number of writers waiting to get a write lock on this page
-	// conceptually, this may include any thread that want's to perform read IO
-	uint64_t writers_waiting;
-
-	// number of readers waiting to get a read lock on this page
-	// conceptually, this may include any thread that want's to perform write IO
-	uint64_t readers_waiting;
-
-	// threads will wait on this condition variable to get a read lock
-	// broadcast condition => when new readers can take the lock
-	pthread_cond_t waiting_for_read_lock;
-
-	// threads will wait on this condition variable to get a write lock
-	// signal condition => when one of new writer can take the lock
-	pthread_cond_t waiting_for_write_lock;
-
-	// only 1 thread will be allowed to wait for upgrading their read lock to write lock
-	// signal condition => when one waiting for upgrade can take the lock
-	pthread_cond_t waiting_for_upgrading_lock;
+	// lock that must be held while accessing the contents of the page
+	rwlock frame_lock;
 
 	// -------------------------------------
 	// --------- embedded nodes ------------
@@ -80,7 +50,7 @@ struct frame_desc
 
 // get_new_frame_desc -> returns an empty frame_desc with all its attributes initialized and frame allocated
 // call this function without holding the global bufferpool lock
-frame_desc* new_frame_desc(uint32_t page_size);
+frame_desc* new_frame_desc(uint32_t page_size, pthread_mutex_t* bufferpool_lock);
 
 // delete frame_desc, freeing frame and all its memory
 void delete_frame_desc(frame_desc* fd, uint32_t page_size);
