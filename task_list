@@ -1,0 +1,3 @@
+ * get page size of OS by using a system call to align the frame descriptor's buffer's allocation
+
+ * build a stub class to hold uint64_t page_id and void* frame, to find any frame descriptor
