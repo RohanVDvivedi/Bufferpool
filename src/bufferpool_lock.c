@@ -104,7 +104,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_flush);
 
 			// the fd_to_flush is neither locked nor is any one waiting to get lock on it, so we can grab a read lock instantly, without any checks
-			read_lock(&(fd->frame_lock), READ_PREFERRING, NON_BLOCKING);
+			read_lock(&(fd_to_flush->frame_lock), READ_PREFERRING, NON_BLOCKING);
 			fd_to_flush->is_under_write_IO = 1;
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -119,7 +119,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 
 			// release read lock
 			fd_to_flush->is_under_write_IO = 0;
-			read_unlock(&(fd->frame_lock));
+			read_unlock(&(fd_to_flush->frame_lock));
 
 			// this is neccessary to insert the fd_to_flush back into the lru list
 			handle_frame_desc_if_not_referenced(bf, fd_to_flush);
@@ -240,17 +240,15 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 		{
 			remove_frame_desc_from_lru_lists(bf, fd);
 
-			while(fd->writers_count) // page_id of a page may change, if it gets evicted, after we go to wait on it
-			{
-				fd->readers_waiting++;
-				pthread_cond_wait(&(fd->waiting_for_read_lock), get_bufferpool_lock(bf));
-				fd->readers_waiting--;
-			}
+			read_lock(&(fd->frame_lock), WRITE_PREFERRING, BLOCKING);
 
+			// once we have read lock on the frame, make sure that it has valid contents
 			if(fd->has_valid_frame_contents)
-				goto TAKE_LOCK_AND_EXIT;
+				goto EXIT;
 			else
 			{
+				// else unlock read lock on the frame and if possible return it to the lru lists
+				read_unlock(&(fd->frame_lock));
 				handle_frame_desc_if_not_referenced(bf, fd);
 				continue;
 			}
@@ -280,14 +278,13 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 				continue;
 		}
 
-		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, DESTINED_TO_BE_READ_LOCKED_IMMEDIATELY, 0))
-			goto TAKE_LOCK_AND_EXIT;
+		if(!get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0)) // on failure set fd to NULL
+			fd = NULL;
 		else
-			goto EXIT;
-	}
+			downgrade_lock(&(fd->frame_lock)); // frame we get is write locked, while we desire a read lock, so down grade the lock
 
-	TAKE_LOCK_AND_EXIT:;
-	fd->readers_count++;
+		break;
+	}
 
 	EXIT:;
 	if(bf->has_internal_lock)
@@ -310,17 +307,15 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 		{
 			remove_frame_desc_from_lru_lists(bf, fd);
 
-			while(fd->readers_count || fd->writers_count) // page_id of a page may change, if it gets evicted, after we go to wait on it
-			{
-				fd->writers_waiting++;
-				pthread_cond_wait(&(fd->waiting_for_write_lock), get_bufferpool_lock(bf));
-				fd->writers_waiting--;
-			}
+			write_lock(&(fd->frame_lock), BLOCKING);
 
+			// once we have write lock on the frame, make sure that it has valid contents
 			if(fd->has_valid_frame_contents)
-				goto TAKE_LOCK_AND_EXIT;
+				goto EXIT;
 			else
 			{
+				// else unlock read lock on the frame and if possible return it to the lru lists
+				write_unlock(&(fd->frame_lock));
 				handle_frame_desc_if_not_referenced(bf, fd);
 				continue;
 			}
@@ -350,14 +345,11 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 				continue;
 		}
 
-		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, DESTINED_TO_BE_WRITE_LOCKED_IMMEDIATELY, to_be_overwritten))
-			goto TAKE_LOCK_AND_EXIT;
-		else
-			goto EXIT;
-	}
+		if(!get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, to_be_overwritten)) // on failure set fd to NULL
+			fd = NULL;
 
-	TAKE_LOCK_AND_EXIT:;
-	fd->writers_count++;
+		break;
+	}
 
 	EXIT:;
 	if(bf->has_internal_lock)
@@ -416,8 +408,12 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary
 				continue;
 		}
 
-		if(get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, DESTINED_TO_NOT_BE_LOCKED_IMMEDIATELY, 0))
-			goto EXIT;
+		if(!get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0))
+			fd = NULL;
+		else
+			write_unlock(&(fd->frame_lock));
+
+		break;
 	}
 
 	EXIT:;
