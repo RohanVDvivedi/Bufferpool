@@ -16,6 +16,7 @@ It is an implementation of a Buffer Pool Manager library in C, used for accessin
 **Install dependencies :**
  * [Cutlery](https://github.com/RohanVDvivedi/Cutlery)
  * [BoomPar](https://github.com/RohanVDvivedi/BoomPar)
+ * [ReaderWriterLock](https://github.com/RohanVDvivedi/ReaderWriterLock)
 
 **Download source code :**
  * `git clone https://github.com/RohanVDvivedi/Bufferpool.git`
@@ -29,7 +30,7 @@ It is an implementation of a Buffer Pool Manager library in C, used for accessin
  * ***Once you have installed from source, you may discard the build by*** `make clean`
 
 ## Using The library
- * add `-lbufferpool -lboompar -lpthread -lcutlery` linker flag, while compiling your application
+ * add `-lbufferpool -lrwlock -lboompar -lpthread -lcutlery` linker flag, while compiling your application
  * do not forget to include appropriate public api headers as and when needed. this includes
    * `#include<bufferpool.h>` -> read this to get the gist of the API
    * `#include<page_io_ops.h>` -> defines the structure of read/write I/O callback function struct
