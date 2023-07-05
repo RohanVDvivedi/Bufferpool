@@ -83,13 +83,13 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 	for(frame_desc* fd = (frame_desc*) get_first_of_in_hashmap(&(bf->page_id_to_frame_desc), FIRST_OF_HASHMAP); fd != NULL && flush_job_params_count < flush_job_params_capacity; fd = (frame_desc*) get_next_of_in_hashmap(&(bf->page_id_to_frame_desc), fd, ANY_IN_HASHMAP))
 	{
 		// here the frame_desc, must have valid page_id and valid frame_contents
-		// we only check for the frame_desc being is_dirty, writers_count == 0 and is_under_write_IO == 0
-		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && fd->writers_count == 0 && !fd->is_under_write_IO && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
+		// we only check for the frame_desc being is_dirty, is not write_locked and is_under_write_IO == 0
+		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && !is_write_locked(&(fd->frame_lock)) && !fd->is_under_write_IO && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
 		{
 			// read lock them, and mark them being under write IO
 			remove_frame_desc_from_lru_lists(bf, fd);
 
-			fd->readers_count++;
+			read_lock(&(fd->frame_lock), READ_PREFERRING, NON_BLOCKING);
 			fd->is_under_write_IO = 1;
 
 			// now create a flush job params for each one of them
@@ -119,13 +119,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 
 		// release reader lock, and clear write IO bit
 		fd->is_under_write_IO = 0;
-		fd->readers_count--;
-
-		// wake up upgraders or writers if we are the last one to hold the reader lock
-		if(fd->readers_count == 1 && fd->upgraders_waiting)
-			pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
-		else if(fd->readers_count == 0 && fd->writers_waiting)
-			pthread_cond_signal(&(fd->waiting_for_write_lock));
+		read_unlock(&(fd->frame_lock));
 
 		// if both flush and write were successfull then clear it's dirty bit
 		if(flush_success && flush_job_params[i].write_success)
