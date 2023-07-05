@@ -55,7 +55,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 		// create a new frame_desc
-		frame_desc* _new_frame_desc = new_frame_desc(bf->page_size);
+		frame_desc* _new_frame_desc = new_frame_desc(bf->page_size, get_bufferpool_lock(bf));
 
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
@@ -104,7 +104,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_flush);
 
 			// the fd_to_flush is neither locked nor is any one waiting to get lock on it, so we can grab a read lock instantly, without any checks
-			fd_to_flush->readers_count++;
+			read_lock(&(fd->frame_lock), READ_PREFERRING, NON_BLOCKING);
 			fd_to_flush->is_under_write_IO = 1;
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -119,13 +119,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 
 			// release read lock
 			fd_to_flush->is_under_write_IO = 0;
-			fd_to_flush->readers_count--;
-
-			// if we are the last reader then we need to wake people up
-			if(fd_to_flush->readers_count == 1 && fd_to_flush->upgraders_waiting)
-				pthread_cond_signal(&(fd_to_flush->waiting_for_upgrading_lock));
-			else if(fd_to_flush->readers_count == 0 && fd_to_flush->writers_waiting)
-				pthread_cond_signal(&(fd_to_flush->waiting_for_write_lock));
+			read_unlock(&(fd->frame_lock));
 
 			// this is neccessary to insert the fd_to_flush back into the lru list
 			handle_frame_desc_if_not_referenced(bf, fd_to_flush);
