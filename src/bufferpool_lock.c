@@ -602,28 +602,19 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
-	if(fd == NULL || fd->writers_count == 0)
+	if(fd == NULL || !is_write_locked(&(fd->frame_lock)))
 		goto EXIT;
 
 	result = 1;
 
 	// set the dirty bit
 	fd->is_dirty = fd->is_dirty || was_modified;
-	
-	// release writer lock
-	fd->writers_count--;
 
 	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
 	{
-		// we will effectively downgrade the lock just to flush the page
-
-		// take reader lock, to flush the contents of the frame
-		fd->readers_count++;
+		// we will effectively downgrade to the reader lock just to flush the page
+		downgrade_lock(&(fd->frame_lock));
 		fd->is_under_write_IO = 1;
-
-		// there could be readers waiting, so wake them up if any
-		if(fd->readers_waiting)
-			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
@@ -639,21 +630,10 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		}
 
 		// release reader lock
-		fd->is_under_write_IO = 0;
-		fd->readers_count--;
-
-		if(fd->readers_count == 1 && fd->upgraders_waiting)
-			pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
-		else if(fd->readers_count == 0 && fd->writers_waiting)
-			pthread_cond_signal(&(fd->waiting_for_write_lock));
+		read_unlock(&(fd->frame_lock));
 	}
 	else
-	{
-		if(fd->writers_waiting)
-			pthread_cond_signal(&(fd->waiting_for_write_lock));
-		else if(fd->readers_waiting)
-			pthread_cond_broadcast(&(fd->waiting_for_read_lock));
-	}
+		write_unlock(&(fd->frame_lock));
 
 	handle_frame_desc_if_not_referenced(bf, fd);
 
