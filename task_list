@@ -2,4 +2,4 @@
 
  * build a stub class to hold uint64_t page_id and void* frame, to find any frame descriptor
 
- * test bufferpool with 64 pages, 8 threads and 8 buffers, and in all 256 tasks
+ * test bufferpool with 64 pages, 12 threads and 24 buffers, and in all 256 tasks
