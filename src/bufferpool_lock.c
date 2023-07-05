@@ -480,17 +480,14 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
-	if(fd == NULL || fd->writers_count == 0)
+	if(fd == NULL || !is_write_locked(&(fd->frame_lock)))
 		goto EXIT;
 
 	// set dirty bit
 	fd->is_dirty = fd->is_dirty || was_modified;
 
-	// change from writer to reader, and wake up all readers
-	fd->writers_count--;
-	fd->readers_count++;
-	if(fd->readers_waiting > 0)
-		pthread_cond_broadcast(&(fd->waiting_for_read_lock));
+	// downgrade writer lock to read lock
+	result = downgrade_lock(&(fd->frame_lock));
 
 	// success
 	result = 1;
