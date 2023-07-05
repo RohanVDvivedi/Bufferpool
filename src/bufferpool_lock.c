@@ -532,27 +532,10 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame)
 
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
-	if(fd == NULL || fd->readers_count == 0)
+	if(fd == NULL || !is_read_locked(&(fd->frame_lock)))
 		goto EXIT;
 
-	// if there already is an upgrader waiting, then fail upgrading the lock
-	if(fd->upgraders_waiting)
-	{
-		result = 0;
-		goto EXIT;
-	}
-
-	// wait while there are more than 1 readers, i.e. there are readers other than me
-	while(fd->readers_count > 1)
-	{
-		fd->upgraders_waiting++;
-		pthread_cond_wait(&(fd->waiting_for_upgrading_lock), get_bufferpool_lock(bf));
-		fd->upgraders_waiting--;
-	}
-
-	fd->readers_count--;
-	fd->writers_count++;
-	result = 1;
+	result = upgrade_lock(&(fd->frame_lock));
 
 	EXIT:;
 	if(bf->has_internal_lock)
@@ -572,11 +555,8 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
 	if(fd == NULL || !is_read_locked(&(fd->frame_lock)))
 		goto EXIT;
-
-	result = 1;
 	
-	// release reader lock
-	read_unlock(&(fd->frame_lock));
+	result = read_unlock(&(fd->frame_lock));
 
 	handle_frame_desc_if_not_referenced(bf, fd);
 
