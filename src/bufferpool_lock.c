@@ -526,7 +526,7 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame)
 	if(fd == NULL || !is_read_locked(&(fd->frame_lock)))
 		goto EXIT;
 
-	result = upgrade_lock(&(fd->frame_lock));
+	result = upgrade_lock(&(fd->frame_lock), BLOCKING);
 
 	EXIT:;
 	if(bf->has_internal_lock)
