@@ -570,19 +570,13 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 
 	// first, fetch frame_desc by frame ptr
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
-	if(fd == NULL || fd->readers_count == 0)
+	if(fd == NULL || !is_read_locked(&(fd->frame_lock)))
 		goto EXIT;
 
 	result = 1;
 	
 	// release reader lock
-	fd->readers_count--;
-
-	// if this is the last reader thread, then wake up waiting upgrader thread or waiting writer threads
-	if(fd->readers_count == 1 && fd->upgraders_waiting)
-		pthread_cond_signal(&(fd->waiting_for_upgrading_lock));
-	else if(fd->readers_count == 0 && fd->writers_waiting)
-		pthread_cond_signal(&(fd->waiting_for_write_lock));
+	read_unlock(&(fd->frame_lock));
 
 	handle_frame_desc_if_not_referenced(bf, fd);
 
