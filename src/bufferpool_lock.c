@@ -435,14 +435,15 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	if(fd == NULL || !is_write_locked(&(fd->frame_lock)))
 		goto EXIT;
 
-	// set dirty bit
-	fd->is_dirty = fd->is_dirty || was_modified;
-
-	// downgrade writer lock to read lock
+	// downgrade writer lock to read lock on frame
 	result = downgrade_lock(&(fd->frame_lock));
 
-	// success
-	result = 1;
+	// on failure exit
+	if(!result)
+		goto EXIT;
+
+	// set dirty bit, if modified
+	fd->is_dirty = fd->is_dirty || was_modified;
 
 	// if force flush is set then, flush the page to disk with its read lock held
 	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
@@ -484,7 +485,12 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame)
 	if(fd == NULL || !is_read_locked(&(fd->frame_lock)))
 		goto EXIT;
 
+	// upgrade reader lock to writer lock on frame
 	result = upgrade_lock(&(fd->frame_lock), BLOCKING);
+
+	// on failure exit
+	if(!result)
+		goto EXIT;
 
 	EXIT:;
 	if(bf->has_internal_lock)
@@ -504,8 +510,13 @@ int release_reader_lock_on_page(bufferpool* bf, void* frame)
 	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
 	if(fd == NULL || !is_read_locked(&(fd->frame_lock)))
 		goto EXIT;
-	
+
+	// release read lock on frame
 	result = read_unlock(&(fd->frame_lock));
+
+	// on failure exit
+	if(!result)
+		goto EXIT;
 
 	handle_frame_desc_if_not_referenced(bf, fd);
 
@@ -528,15 +539,19 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 	if(fd == NULL || !is_write_locked(&(fd->frame_lock)))
 		goto EXIT;
 
-	result = 1;
-
-	// set the dirty bit
-	fd->is_dirty = fd->is_dirty || was_modified;
-
-	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
+	// Note: the page is dirty if it was already dirty or was_modified by the last writer
+	if(force_flush && (fd->is_dirty || was_modified) && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
 	{
 		// we will effectively downgrade to the reader lock just to flush the page
-		downgrade_lock(&(fd->frame_lock));
+		result = downgrade_lock(&(fd->frame_lock));
+
+		// on failure exit
+		if(!result)
+			goto EXIT;
+
+		// set the dirty bit, if modified
+		fd->is_dirty = fd->is_dirty || was_modified;
+
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -553,10 +568,21 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		}
 
 		// release reader lock
+		fd->is_under_write_IO = 0;
 		read_unlock(&(fd->frame_lock));
 	}
 	else
-		write_unlock(&(fd->frame_lock));
+	{
+		// releae write lock on the frame
+		result = write_unlock(&(fd->frame_lock));
+
+		// on failure exit
+		if(!result)
+			goto EXIT;
+
+		// set the dirty bit, if modified
+		fd->is_dirty = fd->is_dirty || was_modified;
+	}
 
 	handle_frame_desc_if_not_referenced(bf, fd);
 
