@@ -10,7 +10,7 @@
 
 void* periodic_flush_job(void* bf_p);
 
-void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds)
+void initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds)
 {
 	bf->has_internal_lock = (external_lock == NULL);
 	if(bf->has_internal_lock)
@@ -21,8 +21,6 @@ void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_fram
 	bf->max_frame_desc_count = max_frame_desc_count;
 
 	bf->total_frame_desc_count = 0;
-
-	bf->page_size = page_size;
 
 	initialize_hashmap(&(bf->page_id_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count), hash_frame_desc_by_page_id, compare_frame_desc_by_page_id, offsetof(frame_desc, embed_node_page_id_to_frame_desc));
 
@@ -77,7 +75,7 @@ void deinitialize_bufferpool(bufferpool* bf)
 	{
 		fd = (frame_desc*) get_head_of_linkedlist(&(bf->invalid_frame_descs_list));
 		remove_head_from_linkedlist(&(bf->invalid_frame_descs_list));
-		delete_frame_desc(fd, bf->page_size);
+		delete_frame_desc(fd);
 	}
 
 	while(!is_empty_linkedlist(&(bf->clean_frame_descs_lru_list)))
@@ -85,7 +83,7 @@ void deinitialize_bufferpool(bufferpool* bf)
 		fd = (frame_desc*) get_head_of_linkedlist(&(bf->clean_frame_descs_lru_list));
 		remove_head_from_linkedlist(&(bf->clean_frame_descs_lru_list));
 		remove_frame_desc(bf, fd);
-		delete_frame_desc(fd, bf->page_size);
+		delete_frame_desc(fd);
 	}
 
 	while(!is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
@@ -93,7 +91,7 @@ void deinitialize_bufferpool(bufferpool* bf)
 		fd = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
 		remove_head_from_linkedlist(&(bf->dirty_frame_descs_lru_list));
 		remove_frame_desc(bf, fd);
-		delete_frame_desc(fd, bf->page_size);
+		delete_frame_desc(fd);
 	}
 
 	linkedlist locked_or_waited_frame_descs;
@@ -107,7 +105,7 @@ void deinitialize_bufferpool(bufferpool* bf)
 		fd = (frame_desc*) get_head_of_linkedlist(&locked_or_waited_frame_descs);
 		remove_head_from_linkedlist(&locked_or_waited_frame_descs);
 		remove_frame_desc(bf, fd);
-		delete_frame_desc(fd, bf->page_size);
+		delete_frame_desc(fd);
 	}
 
 	deinitialize_hashmap(&(bf->page_id_to_frame_desc));
@@ -172,7 +170,7 @@ void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 	{
 		frame_desc* fd = (frame_desc*) get_head_of_linkedlist(&invalid_frame_descs_to_del);
 		remove_head_from_linkedlist(&invalid_frame_descs_to_del);
-		delete_frame_desc(fd, bf->page_size);
+		delete_frame_desc(fd);
 	}
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));

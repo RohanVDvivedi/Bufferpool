@@ -30,9 +30,6 @@ struct bufferpool
 	// total number of frame descriptor count
 	uint64_t total_frame_desc_count;
 
-	// this is a fixed sized bufferpool
-	uint32_t page_size;
-
 	// hashtable => page_id (uint64_t) -> frame descriptor
 	hashmap page_id_to_frame_desc;
 
@@ -90,7 +87,7 @@ struct bufferpool
 	promise periodic_flush_job_completion;
 };
 
-void initialize_bufferpool(bufferpool* bf, uint32_t page_size, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds);
+void initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds);
 
 void deinitialize_bufferpool(bufferpool* bf);
 

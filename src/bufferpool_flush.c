@@ -34,7 +34,7 @@ void deinitialize_flush_params(flush_params* fp)
 void* write_io_job(void* flush_params_vp)
 {
 	flush_params* fp = (flush_params*) flush_params_vp;
-	fp->write_success = fp->bf->page_io_functions.write_page(fp->bf->page_io_functions.page_io_ops_handle, fp->fd->frame, fp->fd->page_id, fp->bf->page_size);
+	fp->write_success = fp->bf->page_io_functions.write_page(fp->bf->page_io_functions.page_io_ops_handle, fp->fd->frame, fp->fd->page_id, fp->bf->page_io_functions.page_size);
 	return NULL;
 }
 
@@ -59,7 +59,7 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 				remove_frame_desc(bf, fd);
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			delete_frame_desc(fd, bf->page_size);
+			delete_frame_desc(fd);
 			fd = NULL;
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 

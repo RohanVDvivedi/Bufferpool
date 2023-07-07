@@ -25,7 +25,7 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 				remove_frame_desc(bf, fd);
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			delete_frame_desc(fd, bf->page_size);
+			delete_frame_desc(fd);
 			fd = NULL;
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 
@@ -55,7 +55,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 		// create a new frame_desc
-		frame_desc* _new_frame_desc = new_frame_desc(bf->page_size, get_bufferpool_lock(bf));
+		frame_desc* _new_frame_desc = new_frame_desc(bf->page_io_functions.page_size, bf->page_io_functions.page_frame_alignment, get_bufferpool_lock(bf));
 
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
@@ -108,7 +108,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			fd_to_flush->is_under_write_IO = 1;
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd_to_flush->frame, fd_to_flush->page_id, bf->page_size);
+			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd_to_flush->frame, fd_to_flush->page_id, bf->page_io_functions.page_size);
 			if(io_success)
 				io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 			pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -182,7 +182,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	{
 		// the writers_count is incremented hence we can release the lock while we set the page to all zeros
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		memory_set(fd->frame, 0, bf->page_size);
+		memory_set(fd->frame, 0, bf->page_io_functions.page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		// here we knowingly make the page dirty, since wrote 0s for the to_be_overwritten page
@@ -191,7 +191,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	else
 	{
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		io_success = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		io_success = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_io_functions.page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 	}
 
@@ -451,7 +451,7 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_io_functions.page_size);
 		if(io_success)
 			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -555,7 +555,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_size);
+		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_io_functions.page_size);
 		if(io_success)
 			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));

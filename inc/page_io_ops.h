@@ -8,6 +8,13 @@ struct page_io_ops
 {
 	const void* page_io_ops_handle;
 
+	// each page in the bufferpool is of page_size bytes
+	uint64_t page_size;
+
+	// all the page_frames allocated in the bufferpool will have this alignment
+	// i.e. all the read_page and write_page calls will have frame_src and frame_desc always aligned to this alignment value
+	uint64_t page_frame_alignment;
+
 	// all the below functions return 1 on success and 0 on failure
 
 	// read page from disk at page_id into the frame pointed by frame_dest

@@ -3,10 +3,7 @@
 #include<stdlib.h>
 #include<sys/mman.h>
 
-#define OS_PAGE_SIZE 4096
-static uint32_t os_page_size = OS_PAGE_SIZE;
-
-frame_desc* new_frame_desc(uint32_t page_size, pthread_mutex_t* bufferpool_lock)
+frame_desc* new_frame_desc(uint32_t page_size, uint64_t page_frame_alignment, pthread_mutex_t* bufferpool_lock)
 {
 	frame_desc* fd = malloc(sizeof(frame_desc));
 
@@ -16,25 +13,13 @@ frame_desc* new_frame_desc(uint32_t page_size, pthread_mutex_t* bufferpool_lock)
 	// since we are setting is_valid to 0, below 2 attributes are meaning less
 	fd->page_id = 0;
 
-	if(page_size >= os_page_size)
+	fd->frame = aligned_alloc(page_frame_alignment, page_size);
+	if(fd->frame == NULL || fd->frame == ((void*)(-1)))
 	{
-		fd->frame = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_POPULATE, -1, -1);
-		if(fd->frame == NULL || fd->frame == ((void*)(-1)))
-		{
-			free(fd);
-			return NULL;
-		}
+		free(fd);
+		return NULL;
 	}
-	else
-	{
-		fd->frame = aligned_alloc(os_page_size, page_size);
-		if(fd->frame == NULL || fd->frame == ((void*)(-1)))
-		{
-			free(fd);
-			return NULL;
-		}
-		memory_set(fd->frame, 0, page_size);
-	}
+	memory_set(fd->frame, 0, page_size);
 
 	fd->has_valid_page_id = 0;
 	fd->has_valid_frame_contents = 0;
@@ -53,14 +38,11 @@ frame_desc* new_frame_desc(uint32_t page_size, pthread_mutex_t* bufferpool_lock)
 	return fd;
 }
 
-void delete_frame_desc(frame_desc* fd, uint32_t page_size)
+void delete_frame_desc(frame_desc* fd)
 {
 	deinitialize_rwlock(&(fd->frame_lock));
 
-	if(page_size >= os_page_size)
-		munmap(fd->frame, page_size);
-	else
-		free(fd->frame);
+	free(fd->frame);
 
 	free(fd);
 }
