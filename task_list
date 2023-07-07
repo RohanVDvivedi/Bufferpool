@@ -1,1 +1,0 @@
- * test bufferpool with 64 pages, 12 threads and 24 buffers, and in all 256 tasks
