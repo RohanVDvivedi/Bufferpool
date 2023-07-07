@@ -30,6 +30,9 @@ int remove_frame_desc(bufferpool* bf, frame_desc* fd)
 // hence we can simply pass a stack allocated reference to this smaller struct to find the request frame_desc from the corresponding map
 // this is an optimization allowing us to use lesser instantaneous stack space, since frame_desc is a huge struct
 
+// For instance on my 64 bit x86_64 machine sizeof(frame_desc) yields 320 bytes, while a frame_desc_mapping yields just 16 bytes in size
+// hence a major improvement on stack space usage, (also no need to initialize all of the frame_desc struct to 0)
+
 frame_desc* find_frame_desc_by_page_id(bufferpool* bf, uint64_t page_id)
 {
 	return (frame_desc*) find_equals_in_hashmap(&(bf->page_id_to_frame_desc), &((const frame_desc_mapping){.page_id = page_id}));
