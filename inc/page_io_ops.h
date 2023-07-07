@@ -1,7 +1,10 @@
 #ifndef PAGE_IO_OPS_H
 #define PAGE_IO_OPS_H
 
-// page_io_ops is a structure accepted by the bufferpool, it is interface how to read, write pages to underlying storage
+// page_io_ops is a structure accepted by the bufferpool, it is interface that defines how to read, write pages to underlying storage
+// it also instructs and makes the bufferpool aware about
+//  * page_size of each of the page
+//  * page_frame_alignement, the alignment requirements for storing any page in memory or to perform IO
 
 typedef struct page_io_ops page_io_ops;
 struct page_io_ops
