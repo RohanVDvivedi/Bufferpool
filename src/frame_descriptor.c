@@ -1,7 +1,6 @@
 #include<frame_descriptor.h>
 
 #include<stdlib.h>
-#include<sys/mman.h>
 
 frame_desc* new_frame_desc(uint32_t page_size, uint64_t page_frame_alignment, pthread_mutex_t* bufferpool_lock)
 {
