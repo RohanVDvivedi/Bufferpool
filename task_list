@@ -1,5 +1,3 @@
- * page_size and page_frame_alignement will be part of page_io_ops function, no need to get os_page_size
-
  * build a stub class to hold uint64_t page_id and void* frame, to find any frame descriptor
 
  * test bufferpool with 64 pages, 12 threads and 24 buffers, and in all 256 tasks
