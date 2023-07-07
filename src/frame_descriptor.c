@@ -1,5 +1,6 @@
 #include<frame_descriptor.h>
 
+#include<stddef.h>
 #include<stdlib.h>
 
 #include<cutlery_stds.h>
