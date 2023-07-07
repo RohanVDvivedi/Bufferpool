@@ -14,6 +14,7 @@
 #define BLOCK_FILE_FLAGS 0
 
 #define PAGE_SIZE 512
+#define PAGE_FRAME_ALIGNMENT 512
 
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_FRAMES_IN_BUFFER_POOL 6
@@ -34,7 +35,7 @@
 bufferpool bpm;
 
 int always_can_be_flushed_to_disk(void* flush_test_handle, uint64_t page_id, const void* frame);
-page_io_ops get_block_file_page_io_ops(block_file* bfile);
+page_io_ops get_block_file_page_io_ops(block_file* bfile, uint64_t page_size, uint64_t page_frame_alignment);
 
 int io_task_params[COUNT_OF_IO_TASKS];
 void* io_task_execute(int* io_t_p);
@@ -52,7 +53,7 @@ int main(int argc, char **argv)
 
 	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
 
-	initialize_bufferpool(&bpm, PAGE_SIZE, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile), always_can_be_flushed_to_disk, NULL, FLUSH_EVERY_X_MILLISECONDS);
+	initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, NULL, FLUSH_EVERY_X_MILLISECONDS);
 
 	printf("writing 0s to all the pages of the heapfile\n");
 	for(uint64_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
