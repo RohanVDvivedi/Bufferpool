@@ -17,7 +17,7 @@ int update_page_id_for_frame_desc(bufferpool* bf, frame_desc* fd, uint64_t new_p
 	int removed = remove_from_hashmap(&(bf->page_id_to_frame_desc), fd);
 	if(!removed)
 		return 0;
-	fd->page_id = new_page_id;
+	fd->map.page_id = new_page_id;
 	return insert_in_hashmap(&(bf->page_id_to_frame_desc), fd);
 }
 
@@ -26,14 +26,17 @@ int remove_frame_desc(bufferpool* bf, frame_desc* fd)
 	return remove_from_hashmap(&(bf->page_id_to_frame_desc), fd) && remove_from_hashmap(&(bf->frame_ptr_to_frame_desc), fd);
 }
 
+// for the below 2 functions, we know that the frame_descriptor_mapping struct is at an offset 0 in frame_desc, with attribute name map,
+// hence we can simply pass a stack allocated reference to this smaller struct to find the request frame_desc from the corresponding map
+
 frame_desc* find_frame_desc_by_page_id(bufferpool* bf, uint64_t page_id)
 {
-	return (frame_desc*) find_equals_in_hashmap(&(bf->page_id_to_frame_desc), &((const frame_desc){.page_id = page_id}));
+	return (frame_desc*) find_equals_in_hashmap(&(bf->page_id_to_frame_desc), &((const frame_desc_mapping){.page_id = page_id}));
 }
 
 frame_desc* find_frame_desc_by_frame_ptr(bufferpool* bf, void* frame)
 {
-	return (frame_desc*) find_equals_in_hashmap(&(bf->frame_ptr_to_frame_desc), &((const frame_desc){.frame = frame}));
+	return (frame_desc*) find_equals_in_hashmap(&(bf->frame_ptr_to_frame_desc), &((const frame_desc_mapping){.frame = frame}));
 }
 
 int insert_frame_desc_in_lru_lists(bufferpool* bf, frame_desc* fd)

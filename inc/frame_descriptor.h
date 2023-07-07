@@ -9,14 +9,22 @@
 #include<linkedlist.h>
 #include<bst.h>
 
+// below struct is always suppossed to be embedded inside the frame_desc
+typedef struct frame_desc_mapping frame_desc_mapping;
+
 typedef struct frame_desc frame_desc;
 struct frame_desc
 {
-	// page id of a valid frame
-	uint64_t page_id;
+	struct frame_desc_mapping
+	{
+		// page id of a valid frame
+		uint64_t page_id;
 
-	// memory contents of a valid frame pointed to by page_id
-	void* frame;
+		// memory contents of a valid frame pointed to by page_id
+		void* frame;
+	} map;
+	// map stores the unique mapping pair of page_id <-> frame (considering both of them are valid)
+	// map MUST ALWAYS BE THE FIRST ATTRIBUTE IN THE frame_desc i.e. at offset 0 in the struct
 
 	// the page_id and frame hold valid values only if the is_valid_* bit is set
 	// once a page has_valid_page_id, it never becomes invalid, only its page_id changes

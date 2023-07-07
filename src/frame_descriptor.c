@@ -2,6 +2,11 @@
 
 #include<stdlib.h>
 
+#include<cutlery_stds.h>
+
+// Note: map MUST ALWAYS BE THE FIRST ATTRIBUTE IN THE frame_desc i.e. at offset 0 in the struct
+fail_build_on(offsetof(frame_desc, map) != 0)
+
 frame_desc* new_frame_desc(uint32_t page_size, uint64_t page_frame_alignment, pthread_mutex_t* bufferpool_lock)
 {
 	frame_desc* fd = malloc(sizeof(frame_desc));
@@ -10,15 +15,15 @@ frame_desc* new_frame_desc(uint32_t page_size, uint64_t page_frame_alignment, pt
 		return NULL;
 
 	// since we are setting is_valid to 0, below 2 attributes are meaning less
-	fd->page_id = 0;
+	fd->map.page_id = 0;
 
-	fd->frame = aligned_alloc(page_frame_alignment, page_size);
-	if(fd->frame == NULL || fd->frame == ((void*)(-1)))
+	fd->map.frame = aligned_alloc(page_frame_alignment, page_size);
+	if(fd->map.frame == NULL)
 	{
 		free(fd);
 		return NULL;
 	}
-	memory_set(fd->frame, 0, page_size);
+	memory_set(fd->map.frame, 0, page_size);
 
 	fd->has_valid_page_id = 0;
 	fd->has_valid_frame_contents = 0;
@@ -41,7 +46,7 @@ void delete_frame_desc(frame_desc* fd)
 {
 	deinitialize_rwlock(&(fd->frame_lock));
 
-	free(fd->frame);
+	free(fd->map.frame);
 
 	free(fd);
 }
@@ -62,7 +67,7 @@ int is_frame_desc_locked_or_waiting_to_be_locked(frame_desc* fd)
 void print_frame_desc(frame_desc* fd)
 {
 	printf("frame:");
-	printf("\t%" PRIu64 " (valid = %d) -> %p (valid = %d)\n", fd->page_id, fd->has_valid_page_id, fd->frame, fd->has_valid_frame_contents);
+	printf("\t%" PRIu64 " (valid = %d) -> %p (valid = %d)\n", fd->map.page_id, fd->has_valid_page_id, fd->map.frame, fd->has_valid_frame_contents);
 	printf("\tis_dirty = %d\n", fd->is_dirty);
 	printf("\tIO\n\t\tis_under_read_IO = %d\n\t\tis_under_write_IO = %d\n", fd->is_under_read_IO, fd->is_under_write_IO);
 	printf("\tlocks\n\t\treader = %d\n\t\twriter = %d\n", is_read_locked(&(fd->frame_lock)), is_write_locked(&(fd->frame_lock)) );

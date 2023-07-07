@@ -34,7 +34,7 @@ void deinitialize_flush_params(flush_params* fp)
 void* write_io_job(void* flush_params_vp)
 {
 	flush_params* fp = (flush_params*) flush_params_vp;
-	fp->write_success = fp->bf->page_io_functions.write_page(fp->bf->page_io_functions.page_io_ops_handle, fp->fd->frame, fp->fd->page_id, fp->bf->page_io_functions.page_size);
+	fp->write_success = fp->bf->page_io_functions.write_page(fp->bf->page_io_functions.page_io_ops_handle, fp->fd->map.frame, fp->fd->map.page_id, fp->bf->page_io_functions.page_size);
 	return NULL;
 }
 
@@ -84,7 +84,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 	{
 		// here the frame_desc, must have valid page_id and valid frame_contents
 		// we only check for the frame_desc being is_dirty, is not write_locked and is_under_write_IO == 0
-		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && !is_write_locked(&(fd->frame_lock)) && !fd->is_under_write_IO && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
+		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && !is_write_locked(&(fd->frame_lock)) && !fd->is_under_write_IO && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
 		{
 			// read lock them, and mark them being under write IO
 			remove_frame_desc_from_lru_lists(bf, fd);

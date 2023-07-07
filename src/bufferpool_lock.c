@@ -91,7 +91,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 
 			// here we already know that the page is not referenced by any one and is dirty
 			// we only need to check that it can_be_flushed_to_disk, inorder to flush it
-			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, to_check->page_id, to_check->frame))
+			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, to_check->map.page_id, to_check->map.frame))
 			{
 				fd_to_flush = to_check;
 				break;
@@ -108,7 +108,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			fd_to_flush->is_under_write_IO = 1;
 
 			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd_to_flush->frame, fd_to_flush->page_id, bf->page_io_functions.page_size);
+			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd_to_flush->map.frame, fd_to_flush->map.page_id, bf->page_io_functions.page_size);
 			if(io_success)
 				io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 			pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -147,7 +147,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 {
 	// this is an error, the parameter fd is invalid and does not formform to the requirements
 	if( (is_frame_desc_locked_or_waiting_to_be_locked(fd)) ||
-		(fd->has_valid_page_id && fd->has_valid_frame_contents && ((fd->page_id == page_id) || fd->is_dirty))
+		(fd->has_valid_page_id && fd->has_valid_frame_contents && ((fd->map.page_id == page_id) || fd->is_dirty))
 		)
 	{
 		// This situation must never occur
@@ -162,7 +162,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	if(!fd->has_valid_page_id)
 	{
 		fd->has_valid_page_id = 1;
-		fd->page_id = page_id;
+		fd->map.page_id = page_id;
 		insert_frame_desc(bf, fd);
 	}
 	else
@@ -182,7 +182,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	{
 		// the writers_count is incremented hence we can release the lock while we set the page to all zeros
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		memory_set(fd->frame, 0, bf->page_io_functions.page_size);
+		memory_set(fd->map.frame, 0, bf->page_io_functions.page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		// here we knowingly make the page dirty, since wrote 0s for the to_be_overwritten page
@@ -191,7 +191,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	else
 	{
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		io_success = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_io_functions.page_size);
+		io_success = bf->page_io_functions.read_page(bf->page_io_functions.page_io_ops_handle, fd->map.frame, fd->map.page_id, bf->page_io_functions.page_size);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 	}
 
@@ -290,7 +290,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-	return (fd != NULL) ? fd->frame : NULL;
+	return (fd != NULL) ? fd->map.frame : NULL;
 }
 
 void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary, int to_be_overwritten)
@@ -355,7 +355,7 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-	return (fd != NULL) ? fd->frame : NULL;
+	return (fd != NULL) ? fd->map.frame : NULL;
 }
 
 int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
@@ -446,12 +446,12 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	fd->is_dirty = fd->is_dirty || was_modified;
 
 	// if force flush is set then, flush the page to disk with its read lock held
-	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
+	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
 	{
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_io_functions.page_size);
+		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->map.frame, fd->map.page_id, bf->page_io_functions.page_size);
 		if(io_success)
 			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -540,7 +540,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		goto EXIT;
 
 	// Note: the page is dirty if it was already dirty or was_modified by the last writer
-	if(force_flush && (fd->is_dirty || was_modified) && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->page_id, fd->frame))
+	if(force_flush && (fd->is_dirty || was_modified) && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
 	{
 		// we will effectively downgrade to the reader lock just to flush the page
 		result = downgrade_lock(&(fd->frame_lock));
@@ -555,7 +555,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		fd->is_under_write_IO = 1;
 
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->frame, fd->page_id, bf->page_io_functions.page_size);
+		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->map.frame, fd->map.page_id, bf->page_io_functions.page_size);
 		if(io_success)
 			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
