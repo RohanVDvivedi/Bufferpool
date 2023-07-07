@@ -28,6 +28,7 @@ int remove_frame_desc(bufferpool* bf, frame_desc* fd)
 
 // for the below 2 functions, we know that the frame_descriptor_mapping struct is at an offset 0 in frame_desc, with attribute name map,
 // hence we can simply pass a stack allocated reference to this smaller struct to find the request frame_desc from the corresponding map
+// this is an optimization allowing us to use lesser instantaneous stack space, since frame_desc is a huge struct
 
 frame_desc* find_frame_desc_by_page_id(bufferpool* bf, uint64_t page_id)
 {
