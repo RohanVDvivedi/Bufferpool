@@ -1,4 +1,4 @@
- * get page size of OS by using a system call to align the frame descriptor's buffer's allocation
+ * page_size and page_frame_alignement will be part of page_io_ops function, no need to get os_page_size
 
  * build a stub class to hold uint64_t page_id and void* frame, to find any frame descriptor
 
