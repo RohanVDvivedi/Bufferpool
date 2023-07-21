@@ -1,1 +1,2 @@
  * fail initializing bufferpool if creating its executor fails
+ * allow limiting the number of buffers to be flushed on periodic flush jobs
