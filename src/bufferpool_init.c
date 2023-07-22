@@ -194,7 +194,7 @@ void modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_mi
 		bf->flush_every_X_milliseconds = flush_every_X_milliseconds_new;
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		initialize_promise(&(bf->periodic_flush_job_completion));
-		submit_job(bf->cached_threadpool_executor, periodic_flush_job, bf, &(bf->periodic_flush_job_completion), 0);
+		submit_job(bf->cached_threadpool_executor, periodic_flush_job, bf, &(bf->periodic_flush_job_completion), NULL, 0);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 	}
 	else if(bf->flush_every_X_milliseconds != 0 && flush_every_X_milliseconds_new == 0)
