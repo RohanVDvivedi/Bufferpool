@@ -638,7 +638,7 @@ void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_ne
 
 	async_prefetch_page_params* appp = malloc(sizeof(async_prefetch_page_params));
 	(*appp) = (async_prefetch_page_params){bf, page_id, evict_dirty_if_necessary, wait_for_any_ongoing_flushes_if_necessary};
-	submit_job(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, async_prefetch_page_job_on_cancellation_callback, 0);
+	submit_job_executor(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, async_prefetch_page_job_on_cancellation_callback, 0);
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 

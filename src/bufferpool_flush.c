@@ -101,7 +101,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 
 	// submit all the flush_job_params
 	for(uint64_t i = 0; i < flush_job_params_count; i++)
-		submit_job(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), NULL, 0);
+		submit_job_executor(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), NULL, 0);
 
 	// wait for all of them to finish
 	for(uint64_t i = 0; i < flush_job_params_count; i++)
