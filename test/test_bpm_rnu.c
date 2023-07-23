@@ -103,11 +103,11 @@ int main(int argc, char **argv)
 	for(int i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		int* io_t_p = &(io_task_params[i]);
-		submit_job(exe, (void*(*)(void*))io_task_execute, io_t_p, NULL, NULL, 0);
+		submit_job_executor(exe, (void*(*)(void*))io_task_execute, io_t_p, NULL, NULL, 0);
 	}
 
 	shutdown_executor(exe, 0);
-	wait_for_all_threads_to_complete(exe);
+	wait_for_all_executor_workers_to_complete(exe);
 	printf("Waiting for tasks to finish\n\n");
 
 	delete_executor(exe);
