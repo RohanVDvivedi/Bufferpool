@@ -13,6 +13,19 @@
 
 #include<page_io_ops.h>
 
+typedef struct periodic_flush_job_status periodic_flush_job_status;
+struct periodic_flush_job_status
+{
+	// number of dirty frames to flush every period
+	uint64_t frames_to_flush;
+
+	// the period_in_milliseconds, for flushing the frames_to_flush number of dirty frames
+	uint64_t period_in_milliseconds;
+
+	// if both the values are 0, then this implies stop the periodic_flush_job
+	// else if only one of them is 0, then this implies the parameter with 0 value must be unchanged
+};
+
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
