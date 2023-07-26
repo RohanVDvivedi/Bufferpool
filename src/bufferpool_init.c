@@ -269,47 +269,32 @@ int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status s
 		goto EXIT;
 
 	// operate on the status now
-
-	EXIT:;
-	if(bf->has_internal_lock)
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	return modify_success;
-}
-
-int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds_new)
-{
-	int modify_success = 0;
-
-	if(bf->has_internal_lock)
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	if(bf->flush_every_X_milliseconds == 0 && flush_every_X_milliseconds_new == 0)
+	if(!is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && !is_periodic_flush_job_running(status))
 	{
-		// do nothing
+		// do nothing, for a modification from not running to not running
 		modify_success = 1;
 	}
-	else if(bf->flush_every_X_milliseconds == 0 && flush_every_X_milliseconds_new != 0)
+	else if(!is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && is_periodic_flush_job_running(status))
 	{
 		// periodic_flush_job is not running, we now will start it
-		bf->flush_every_X_milliseconds = flush_every_X_milliseconds_new;
+		bf->current_periodic_flush_job_status = status;
 		modify_success = 1;
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		initialize_promise(&(bf->periodic_flush_job_completion));
 		// if we could not submit the new job,to turn on the periodic flush job then exit with failure
 		if(!submit_job_executor(bf->cached_threadpool_executor, periodic_flush_job, bf, &(bf->periodic_flush_job_completion), NULL, 0))
 		{
-			bf->flush_every_X_milliseconds = 0;
+			bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
 			modify_success = 0;
 		}
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 	}
-	else if(bf->flush_every_X_milliseconds != 0 && flush_every_X_milliseconds_new == 0)
+	else if(is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && !is_periodic_flush_job_running(status))
 	{
 		// periodic_flush_job is running, we now will stop it and wait for it to stop on promise (periodic_flush_job_completion)
-		bf->flush_every_X_milliseconds = 0;
+		bf->flush_every_X_milliseconds = STOP_PERIODIC_FLUSH_JOB_STATUS;
 		modify_success = 1;
-		pthread_cond_signal(&(bf->flush_every_X_milliseconds_update));
+		pthread_cond_signal(&(bf->periodic_flush_job_status_update));
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		get_promised_result(&(bf->periodic_flush_job_completion));
 		deinitialize_promise(&(bf->periodic_flush_job_completion));
@@ -317,12 +302,13 @@ int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_mil
 	}
 	else // if none of them are 0
 	{
-		// update the flush_every_X_milliseconds and wake up thread that may be waiting, to notify for an update
-		bf->flush_every_X_milliseconds = flush_every_X_milliseconds_new;
+		// update the new status and wake up thread that may be waiting for an update
+		bf->current_periodic_flush_job_status = status;
 		modify_success = 1;
-		pthread_cond_signal(&(bf->flush_every_X_milliseconds_update));
+		pthread_cond_signal(&(bf->periodic_flush_job_status_update));
 	}
 
+	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
