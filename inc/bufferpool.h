@@ -134,7 +134,7 @@ uint64_t get_total_frame_desc_count(bufferpool* bf);
 void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
 // change flush_every_X_milliseconds
-void modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds);
+int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds);
 
 // flushes all pages that are dirty and are not write locked and are not currently being flushed
 void flush_all_possible_dirty_pages(bufferpool* bf);
