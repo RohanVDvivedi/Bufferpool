@@ -99,7 +99,7 @@ struct bufferpool
 	promise periodic_flush_job_completion;
 };
 
-int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds);
+int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, periodic_flush_job_status status);
 
 void deinitialize_bufferpool(bufferpool* bf);
 
@@ -143,12 +143,12 @@ void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_ne
 // change max frame count for the bufferpool
 uint64_t get_max_frame_desc_count(bufferpool* bf);
 uint64_t get_total_frame_desc_count(bufferpool* bf);
-
-// modify_max_frame_desc_count, fails if the new max_frame_desc_count = 0, you can not have such a bufferpool
 int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
 // change flush_every_X_milliseconds
-int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds);
+periodic_flush_job_status get_periodic_flush_job_status(bufferpool* bf);
+int is_periodic_flush_job_running(periodic_flush_job_status status);
+int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status);
 
 // flushes all pages that are dirty and are not write locked and are not currently being flushed
 void flush_all_possible_dirty_pages(bufferpool* bf);
