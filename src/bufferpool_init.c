@@ -244,7 +244,7 @@ periodic_flush_job_status get_periodic_flush_job_status(bufferpool* bf)
 int is_periodic_flush_job_running(periodic_flush_job_status status)
 {
 	// a periodic flush job is running, if the status does not equal STOP_PERIODIC_FLUSH_JOB_STATUS
-	return (status != STOP_PERIODIC_FLUSH_JOB_STATUS);
+	return (status.frames_to_flush != STOP_PERIODIC_FLUSH_JOB_STATUS.frames_to_flush) || (status.period_in_milliseconds != STOP_PERIODIC_FLUSH_JOB_STATUS.period_in_milliseconds);
 }
 
 int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status)
@@ -254,9 +254,9 @@ int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status s
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	if(status != STOP_PERIODIC_FLUSH_JOB_STATUS)
+	if(is_periodic_flush_job_running(status))
 	{
-		// for a status (new status to be updated to) is not a STOP_PERIODIC_FLUSH_JOB_STATUS
+		// for a status (new status to be updated to) that is running i.e. is not a STOP_PERIODIC_FLUSH_JOB_STATUS
 		// then the 0 attributes of the status, implies they are to be left unchanged from their previous value
 		if(status.frames_to_flush == 0)
 			status.frames_to_flush = bf->current_periodic_flush_job_status.frames_to_flush;
@@ -292,7 +292,7 @@ int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status s
 	else if(is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && !is_periodic_flush_job_running(status))
 	{
 		// periodic_flush_job is running, we now will stop it and wait for it to stop on promise (periodic_flush_job_completion)
-		bf->flush_every_X_milliseconds = STOP_PERIODIC_FLUSH_JOB_STATUS;
+		bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
 		modify_success = 1;
 		pthread_cond_signal(&(bf->periodic_flush_job_status_update));
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
