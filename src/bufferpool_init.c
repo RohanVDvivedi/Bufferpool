@@ -228,6 +228,22 @@ int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 	return modify_success;
 }
 
+periodic_flush_job_status get_periodic_flush_job_status(bufferpool* bf)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	periodic_flush_job_status result = bf->current_periodic_flush_job_status;
+
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
+}
+
+int is_periodic_flush_job_running(periodic_flush_job_status status);
+int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status);
+
 int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds_new)
 {
 	int modify_success = 0;
