@@ -131,7 +131,9 @@ void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_ne
 // change max frame count for the bufferpool
 uint64_t get_max_frame_desc_count(bufferpool* bf);
 uint64_t get_total_frame_desc_count(bufferpool* bf);
-void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
+
+// modify_max_frame_desc_count, fails if the new max_frame_desc_count = 0, you can not have such a bufferpool
+int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
 // change flush_every_X_milliseconds
 int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds);

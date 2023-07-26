@@ -176,12 +176,19 @@ uint64_t get_total_frame_desc_count(bufferpool* bf)
 	return result;
 }
 
-void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
+int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 {
+	int modify_success = 0;
+
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
+	// fail if max_frame_desc_count you are trying to set is 0
+	if(max_frame_desc_count == 0)
+		goto EXIT;
+
 	bf->max_frame_desc_count = max_frame_desc_count;
+	modify_success = 1;
 
 	// resize both the hashmap to fit the new max_frame_desc_count
 	resize_hashmap(&(bf->page_id_to_frame_desc), HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count));
@@ -210,8 +217,11 @@ void modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
+	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return modify_success;
 }
 
 int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds_new)
