@@ -17,7 +17,7 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 	if(max_frame_desc_count == 0 || page_io_functions.read_page == NULL || page_io_functions.page_size == 0)
 		return 0;
 
-	// initialization fails if one of the parameter is 0, and the other one if non-0
+	// initialization fails if one of the parameter is 0, and the other one is non-0
 	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_milliseconds)))
 		return 0;
 
@@ -247,7 +247,35 @@ int is_periodic_flush_job_running(periodic_flush_job_status status)
 	return (status != STOP_PERIODIC_FLUSH_JOB_STATUS);
 }
 
-int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status);
+int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status)
+{
+	int modify_success = 0;
+
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	if(status != STOP_PERIODIC_FLUSH_JOB_STATUS)
+	{
+		// for a status (new status to be updated to) is not a STOP_PERIODIC_FLUSH_JOB_STATUS
+		// then the 0 attributes of the status, implies they are to be left unchanged from their previous value
+		if(status.frames_to_flush == 0)
+			status.frames_to_flush = bf->current_periodic_flush_job_status.frames_to_flush;
+		if(status.period_in_milliseconds == 0)
+			status.period_in_milliseconds = bf->current_periodic_flush_job_status.period_in_milliseconds;
+	}
+
+	// new status' validation fails if one of the parameter is 0, and the other one is non-0
+	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_milliseconds)))
+		goto EXIT;
+
+	// operate on the status now
+
+	EXIT:;
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return modify_success;
+}
 
 int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds_new)
 {
