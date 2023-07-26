@@ -1,2 +1,2 @@
  * fail initializing bufferpool if creating its executor fails
- * allow limiting the number of buffers to be flushed on periodic flush jobs
+ * allow limiting the number of buffers to be flushed on periodic flush jobs using a periodic_flush_job_status struct
