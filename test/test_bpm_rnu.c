@@ -53,7 +53,11 @@ int main(int argc, char **argv)
 
 	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
 
-	initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, NULL, FLUSH_EVERY_X_MILLISECONDS);
+	if(!initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, NULL, FLUSH_EVERY_X_MILLISECONDS))
+	{
+		printf("failed to initialize bufferpool\n");
+		return -1;
+	}
 
 	printf("writing 0s to all the pages of the heapfile\n");
 	for(uint64_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
