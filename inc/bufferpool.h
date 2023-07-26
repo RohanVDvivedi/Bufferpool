@@ -87,14 +87,13 @@ struct bufferpool
 	// this executor should be used for handling various internal parallel io tasks in the bufferpool
 	executor* cached_threadpool_executor;
 
-	// below parameters are only for periodic flush job
+	// below bufferpool attributes are only for periodic flush job
 
-	// flush occurs every X milliseconds
-	// set this value to 0, to not avail this facility
-	uint64_t flush_every_X_milliseconds;
+	// current status and parameter that the current periodic flush job is running with
+	periodic_flush_job_status current_periodic_flush_job_status;
 
-	// all updates to flush_every_X_milliseconds, must be posted here
-	pthread_cond_t flush_every_X_milliseconds_update;
+	// all updates to periodic flush job status paramneters, must be posted here, if the job is already running
+	pthread_cond_t periodic_flush_job_status_update;
 
 	// wait on this promise to wait until the job completes
 	promise periodic_flush_job_completion;
