@@ -241,7 +241,12 @@ periodic_flush_job_status get_periodic_flush_job_status(bufferpool* bf)
 	return result;
 }
 
-int is_periodic_flush_job_running(periodic_flush_job_status status);
+int is_periodic_flush_job_running(periodic_flush_job_status status)
+{
+	// a periodic flush job is running, if the status does not equal STOP_PERIODIC_FLUSH_JOB_STATUS
+	return (status != STOP_PERIODIC_FLUSH_JOB_STATUS);
+}
+
 int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status);
 
 int modify_flush_every_X_milliseconds(bufferpool* bf, uint64_t flush_every_X_milliseconds_new)
