@@ -75,11 +75,11 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
 
-	pthread_cond_init(&(bf->flush_every_X_milliseconds_update), NULL);
+	pthread_cond_init(&(bf->periodic_flush_job_status_update), NULL);
 
-	if(!modify_flush_every_X_milliseconds(bf, status))
+	if(!modify_periodic_flush_job_status(bf, status))
 	{
-		pthread_cond_destroy(&(bf->flush_every_X_milliseconds_update));
+		pthread_cond_destroy(&(bf->periodic_flush_job_status_update));
 		pthread_cond_destroy(&(bf->waiting_for_any_ongoing_flush_to_finish));
 		deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 		deinitialize_hashmap(&(bf->page_id_to_frame_desc));
@@ -96,11 +96,11 @@ void deinitialize_bufferpool(bufferpool* bf)
 	// first task is to shutdown the periodic flush job
 	if(!bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
-	modify_flush_every_X_milliseconds(bf, 0);
+	modify_periodic_flush_job_status(bf, STOP_PERIODIC_FLUSH_JOB_STATUS);
 	if(!bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-	pthread_cond_destroy(&(bf->flush_every_X_milliseconds_update));
+	pthread_cond_destroy(&(bf->periodic_flush_job_status_update));
 
 	shutdown_executor(bf->cached_threadpool_executor, 0);
 	wait_for_all_executor_workers_to_complete(bf->cached_threadpool_executor);
