@@ -1,0 +1,4 @@
+ * make modify calls thread safe
+   * use a condition variable to wait on for the periodic job to exit
+   * wake this condition variable even if starting this periodic job fails
+   * check if you can do this with the promise provided, if so promise must be initialized and deinitialized under the global lock
