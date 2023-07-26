@@ -12,6 +12,11 @@ void* periodic_flush_job(void* bf_p);
 
 int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds)
 {
+	// validate basic parameters first
+	// max_frame_desc_count can not be 0, read_page must exist (else this buffer pool is useless) and page_size must not be 0
+	if(max_frame_desc_count == 0 || page_io_functions.read_page == NULL || page_io_functions.page_size == 0)
+		return 0;
+
 	bf->has_internal_lock = (external_lock == NULL);
 	if(bf->has_internal_lock)
 		pthread_mutex_init(&(bf->internal_lock), NULL);
