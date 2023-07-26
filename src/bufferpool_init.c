@@ -10,7 +10,7 @@
 
 void* periodic_flush_job(void* bf_p);
 
-void initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds)
+int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds)
 {
 	bf->has_internal_lock = (external_lock == NULL);
 	if(bf->has_internal_lock)
@@ -22,9 +22,20 @@ void initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthrea
 
 	bf->total_frame_desc_count = 0;
 
-	initialize_hashmap(&(bf->page_id_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count), hash_frame_desc_by_page_id, compare_frame_desc_by_page_id, offsetof(frame_desc, embed_node_page_id_to_frame_desc));
+	if(!initialize_hashmap(&(bf->page_id_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count), hash_frame_desc_by_page_id, compare_frame_desc_by_page_id, offsetof(frame_desc, embed_node_page_id_to_frame_desc)))
+	{
+		if(bf->has_internal_lock)
+			pthread_mutex_destroy(&(bf->internal_lock));
+		return 0;
+	}
 
-	initialize_hashmap(&(bf->frame_ptr_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count), hash_frame_desc_by_frame_ptr, compare_frame_desc_by_frame_ptr, offsetof(frame_desc, embed_node_frame_ptr_to_frame_desc));
+	if(!initialize_hashmap(&(bf->frame_ptr_to_frame_desc), ELEMENTS_AS_RED_BLACK_BST, HASHTABLE_BUCKET_CAPACITY(bf->max_frame_desc_count), hash_frame_desc_by_frame_ptr, compare_frame_desc_by_frame_ptr, offsetof(frame_desc, embed_node_frame_ptr_to_frame_desc)))
+	{
+		deinitialize_hashmap(&(bf->page_id_to_frame_desc));
+		if(bf->has_internal_lock)
+			pthread_mutex_destroy(&(bf->internal_lock));
+		return 0;
+	}
 
 	initialize_linkedlist(&(bf->invalid_frame_descs_list), offsetof(frame_desc, embed_node_lru_lists));
 
@@ -43,13 +54,23 @@ void initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthrea
 
 	pthread_cond_init(&(bf->waiting_for_any_ongoing_flush_to_finish), NULL);
 
-	bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL);
+	if(NULL == (bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL)))
+	{
+		pthread_cond_destroy(&(bf->waiting_for_any_ongoing_flush_to_finish));
+		deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
+		deinitialize_hashmap(&(bf->page_id_to_frame_desc));
+		if(bf->has_internal_lock)
+			pthread_mutex_destroy(&(bf->internal_lock));
+		return 0;
+	}
 
 	bf->flush_every_X_milliseconds = 0;
 
 	pthread_cond_init(&(bf->flush_every_X_milliseconds_update), NULL);
 
 	modify_flush_every_X_milliseconds(bf, flush_every_X_milliseconds);
+
+	return 1;
 }
 
 void deinitialize_bufferpool(bufferpool* bf)
