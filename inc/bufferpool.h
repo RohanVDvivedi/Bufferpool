@@ -26,6 +26,8 @@ struct periodic_flush_job_status
 	// else if only one of them is 0, then this implies the parameter with 0 value must be unchanged
 };
 
+#define STOP_PERIODIC_FLUSH_JOB_STATUS ((periodic_flush_job_status){})
+
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {

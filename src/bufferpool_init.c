@@ -10,11 +10,15 @@
 
 void* periodic_flush_job(void* bf_p);
 
-int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, uint64_t flush_every_X_milliseconds)
+int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, periodic_flush_job_status status)
 {
 	// validate basic parameters first
 	// max_frame_desc_count can not be 0, read_page must exist (else this buffer pool is useless) and page_size must not be 0
 	if(max_frame_desc_count == 0 || page_io_functions.read_page == NULL || page_io_functions.page_size == 0)
+		return 0;
+
+	// initialization fails if one of the parameter is 0, and the other one if non-0
+	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_milliseconds)))
 		return 0;
 
 	bf->has_internal_lock = (external_lock == NULL);
@@ -69,11 +73,11 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 		return 0;
 	}
 
-	bf->flush_every_X_milliseconds = 0;
+	bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
 
 	pthread_cond_init(&(bf->flush_every_X_milliseconds_update), NULL);
 
-	if(!modify_flush_every_X_milliseconds(bf, flush_every_X_milliseconds))
+	if(!modify_flush_every_X_milliseconds(bf, status))
 	{
 		pthread_cond_destroy(&(bf->flush_every_X_milliseconds_update));
 		pthread_cond_destroy(&(bf->waiting_for_any_ongoing_flush_to_finish));
