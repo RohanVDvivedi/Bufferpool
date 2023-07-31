@@ -300,7 +300,7 @@ int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status s
 		deinitialize_promise(&(bf->periodic_flush_job_completion));
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 	}
-	else // if none of them are 0
+	else // just update the parameters
 	{
 		// update the new status and wake up thread that may be waiting for an update
 		bf->current_periodic_flush_job_status = status;
