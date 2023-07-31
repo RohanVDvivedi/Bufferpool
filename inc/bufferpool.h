@@ -97,8 +97,12 @@ struct bufferpool
 	// all updates to periodic flush job status paramneters, must be posted here, if the job is already running
 	pthread_cond_t periodic_flush_job_status_update;
 
-	// wait on this promise to wait until the job completes
-	promise periodic_flush_job_completion;
+	// flag to specify if the periodic flush job is running
+	int is_periodic_flush_job_running : 1;
+
+	// wait on this condition variable for the periodic flush job to complete
+	// i.e. wait for transition of is_periodic_flush_job_running from 1 to 0
+	pthread_cond_t periodic_flush_job_complete_wait;
 };
 
 int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame), void* flush_test_handle, periodic_flush_job_status status);

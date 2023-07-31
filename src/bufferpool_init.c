@@ -77,8 +77,13 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	pthread_cond_init(&(bf->periodic_flush_job_status_update), NULL);
 
+	bf->is_periodic_flush_job_running = 0;
+
+	pthread_cond_init(&(bf->periodic_flush_job_complete_wait), NULL);
+
 	if(!modify_periodic_flush_job_status(bf, status))
 	{
+		pthread_cond_destroy(&(bf->periodic_flush_job_complete_wait));
 		pthread_cond_destroy(&(bf->periodic_flush_job_status_update));
 		pthread_cond_destroy(&(bf->waiting_for_any_ongoing_flush_to_finish));
 		deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
@@ -100,6 +105,7 @@ void deinitialize_bufferpool(bufferpool* bf)
 	if(!bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
+	pthread_cond_destroy(&(bf->periodic_flush_job_complete_wait));
 	pthread_cond_destroy(&(bf->periodic_flush_job_status_update));
 
 	shutdown_executor(bf->cached_threadpool_executor, 0);
