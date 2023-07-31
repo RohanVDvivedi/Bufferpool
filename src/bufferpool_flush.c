@@ -230,5 +230,11 @@ void* periodic_flush_job(void* bf_p)
 	if(flush_job_params_capacity != 0)
 		free(flush_job_params);
 
+	// set is_periodic_flush_job_running to false and broadcast to anyone waiting for it
+	pthread_mutex_lock(get_bufferpool_lock(bf));
+	bf->is_periodic_flush_job_running = 0;
+	pthread_cond_broadcast(&(bf->periodic_flush_job_complete_wait));
+	pthread_mutex_unlock(get_bufferpool_lock(bf));
+
 	return NULL;
 }

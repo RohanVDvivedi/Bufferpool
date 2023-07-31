@@ -81,7 +81,14 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	pthread_cond_init(&(bf->periodic_flush_job_complete_wait), NULL);
 
-	if(!modify_periodic_flush_job_status(bf, status))
+	// if external lock is required then take the lock and proceed to modify the periodic flush job with the new status params
+	if(!bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+	int success_modifying_job_params = modify_periodic_flush_job_status(bf, status);
+	if(!bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	if(!success_modifying_job_params)
 	{
 		pthread_cond_destroy(&(bf->periodic_flush_job_complete_wait));
 		pthread_cond_destroy(&(bf->periodic_flush_job_status_update));
@@ -260,6 +267,13 @@ int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status s
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
+	// there is a small period when a periodic flush job is stopped
+	// when the status says stopped, but actually the job is still running
+	// in this case we wait for this state to complete (cease to exist)
+	// this is indeterministic state and no thread modifying the status is allowed to exist here
+	while(!is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && bf->is_periodic_flush_job_running == 1)
+		pthread_cond_wait(&(bf->periodic_flush_job_complete_wait), get_bufferpool_lock(bf));
+
 	if(is_periodic_flush_job_running(status))
 	{
 		// for a status (new status to be updated to) that is running i.e. is not a STOP_PERIODIC_FLUSH_JOB_STATUS
@@ -284,27 +298,35 @@ int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status s
 	{
 		// periodic_flush_job is not running, we now will start it
 		bf->current_periodic_flush_job_status = status;
+		bf->is_periodic_flush_job_running = 1; // we pre mark it as running, this is the only place where it gets set
 		modify_success = 1;
+
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		initialize_promise(&(bf->periodic_flush_job_completion));
-		// if we could not submit the new job,to turn on the periodic flush job then exit with failure
-		if(!submit_job_executor(bf->cached_threadpool_executor, periodic_flush_job, bf, &(bf->periodic_flush_job_completion), NULL, 0))
+
+		// if we could not submit the new job, to turn on the periodic flush job then exit with failure
+		if(!submit_job_executor(bf->cached_threadpool_executor, periodic_flush_job, bf, NULL, NULL, 0))
 		{
+			pthread_mutex_lock(get_bufferpool_lock(bf));
 			bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
+
+			// we also wake up all the threads waiting for the periodic job to complete
+			bf->is_periodic_flush_job_running = 0;
+			pthread_cond_broadcast(&(bf->periodic_flush_job_complete_wait));
+
 			modify_success = 0;
 		}
-		pthread_mutex_lock(get_bufferpool_lock(bf));
+		else
+			pthread_mutex_lock(get_bufferpool_lock(bf));
 	}
+	// the below case can be implemented just as the else, but it is here to justify the 4 distinct cases that we have
 	else if(is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && !is_periodic_flush_job_running(status))
 	{
-		// periodic_flush_job is running, we now will stop it and wait for it to stop on promise (periodic_flush_job_completion)
+		// periodic_flush_job is running, we now will reset the status to stop it, and wake it up
 		bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
 		modify_success = 1;
 		pthread_cond_signal(&(bf->periodic_flush_job_status_update));
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		get_promised_result(&(bf->periodic_flush_job_completion));
-		deinitialize_promise(&(bf->periodic_flush_job_completion));
-		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+		// see how here we can get away, without actually waiting for the periodic flush job to complete
 	}
 	else // just update the parameters
 	{
