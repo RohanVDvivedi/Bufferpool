@@ -311,7 +311,7 @@ void read_print(uint64_t page_id)
 		void* frame = acquire_page_with_writer_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY, 0);
 		if(frame == NULL)
 		{
-			printf("(%ld) *** failed *** to acquire write lock on %" PRIu64 "\n", pthread_self(), page_id);
+			printf("(%ld) *** failed *** to acquire write lock (to read) on %" PRIu64 "\n", pthread_self(), page_id);
 			return;
 		}
 		else
@@ -332,7 +332,7 @@ void read_print_upgrade_write_print(uint64_t page_id)
 	void* frame = acquire_page_with_reader_lock(&bpm, page_id, EVICT_DIRTY_IF_NECESSARY, WAIT_FOR_ANY_ONGOING_FLUSHES_IF_NECESSARY);
 	if(frame == NULL)
 	{
-		printf("(%ld) *** failed *** to acquire read lock on %" PRIu64 "\n", pthread_self(), page_id);
+		printf("(%ld) *** failed *** to acquire read lock (to be upgraded) on %" PRIu64 "\n", pthread_self(), page_id);
 		return;
 	}
 	else
