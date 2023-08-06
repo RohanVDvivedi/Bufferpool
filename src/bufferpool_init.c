@@ -103,6 +103,16 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 	return 1;
 }
 
+static void on_remove_all_from_page_id_to_frame_desc_hashmap_delete_frame_from_bufferpool(void* _bf, const void* _fd)
+{
+	bufferpool* bf = _bf;
+	frame_desc* fd = (frame_desc*) _fd;
+	// this fd is already being removed from bf->page_id_to_frame_desc
+	// so we only need to remove it from bf->frame_ptr_to_frame_desc
+	remove_from_hashmap(&(bf->frame_ptr_to_frame_desc), fd);
+	delete_frame_desc(fd);
+}
+
 void deinitialize_bufferpool(bufferpool* bf)
 {
 	// first task is to shutdown the periodic flush job
@@ -146,19 +156,7 @@ void deinitialize_bufferpool(bufferpool* bf)
 		delete_frame_desc(fd);
 	}
 
-	linkedlist locked_or_waited_frame_descs;
-	initialize_linkedlist(&locked_or_waited_frame_descs, offsetof(frame_desc, embed_node_lru_lists));
-
-	for(fd = (frame_desc*) get_first_of_in_hashmap(&(bf->page_id_to_frame_desc), FIRST_OF_HASHMAP); fd != NULL; fd = (frame_desc*) get_next_of_in_hashmap(&(bf->page_id_to_frame_desc), fd, ANY_IN_HASHMAP))
-		insert_head_in_linkedlist(&locked_or_waited_frame_descs, fd);
-
-	while(!is_empty_linkedlist(&locked_or_waited_frame_descs))
-	{
-		fd = (frame_desc*) get_head_of_linkedlist(&locked_or_waited_frame_descs);
-		remove_head_from_linkedlist(&locked_or_waited_frame_descs);
-		remove_frame_desc(bf, fd);
-		delete_frame_desc(fd);
-	}
+	remove_all_from_hashmap(&(bf->page_id_to_frame_desc), &((notifier_interface){NULL, on_remove_all_from_page_id_to_frame_desc_hashmap_delete_frame_from_bufferpool}));
 
 	deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 	deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
