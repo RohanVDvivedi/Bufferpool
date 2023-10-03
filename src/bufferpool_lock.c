@@ -145,7 +145,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 // return of 0 is an error, 1 implies success, on success you will be holding write lock on the frame
 static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int to_be_overwritten_by_user)
 {
-	// this is an error, the parameter fd is invalid and does not formform to the requirements
+	// this is an error, the parameter fd is invalid and does not conform to the requirements
 	if( (is_frame_desc_locked_or_waiting_to_be_locked(fd)) ||
 		(fd->has_valid_page_id && fd->has_valid_frame_contents && ((fd->map.page_id == page_id) || fd->is_dirty))
 		)
