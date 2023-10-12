@@ -3,4 +3,3 @@
    * this will allow not writing a free page onto disk, saving write io
    * such a page will directly be put in clean_frame_descs_lru_list, and will get evicted in future, without its contents going onto the disk
    * this flag if true, doesn't care about the values of was_modified and force_flush parameters
- * run can_be_flushed_to_disk and logic to set/reset the was_modified bit if the lock operation on the page is successfull, i.e. after downgrade lock
