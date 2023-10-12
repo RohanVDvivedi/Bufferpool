@@ -70,6 +70,7 @@ struct bufferpool
 	page_io_ops page_io_functions;
 
 	// a page gets flushed to disk only if it passes this test
+	// this function will be called with the bufferpool's global lock and the frame lock on the page held
 	void* flush_test_handle;
 	int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame);
 
