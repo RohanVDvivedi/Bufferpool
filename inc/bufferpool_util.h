@@ -31,4 +31,12 @@ int insert_frame_desc_in_lru_lists(bufferpool* bf, frame_desc* fd);
 // remove frame_desc from all the three lru lists
 int remove_frame_desc_from_lru_lists(bufferpool* bf, frame_desc* fd);
 
+/*
+** a page that is either locked or if there are any threads waiting to lock a thread must never exist in lru_lists,
+** i.e. a successfull call to lock the page must be followed by remove_frame_desc_from_lru_lists OR the other way around
+**
+** only pages that have no threads referencing them (not locked and not waited on) must be in lru_lists
+** this ensures that when we pick a frame_desc from lru lists, with global lock held, we can do anything with it, delete it re assign it any other page on the disk etc.
+*/
+
 #endif
