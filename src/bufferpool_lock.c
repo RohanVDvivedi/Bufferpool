@@ -540,7 +540,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		goto EXIT;
 
 	// Note: the page is dirty if it was already dirty or was_modified by the last writer
-	if(force_flush && (fd->is_dirty || was_modified) && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
+	if(force_flush && (fd->is_dirty || was_modified))
 	{
 		// we will effectively downgrade to the reader lock just to flush the page
 		result = downgrade_lock(&(fd->frame_lock));
@@ -552,23 +552,29 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		// set the dirty bit, if modified
 		fd->is_dirty = fd->is_dirty || was_modified;
 
-		fd->is_under_write_IO = 1;
-
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-		int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->map.frame, fd->map.page_id, bf->page_io_functions.page_size);
-		if(io_success)
-			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-		// after a force flush the page is no longer dirty
-		if(io_success)
+		// check that the page can be flushed to disk only after successfully downgrading lock, this ensures that the caller actually held writer lock, while calling this function
+		if(fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
 		{
-			fd->is_dirty = 0;
-			result |= WAS_FORCE_FLUSHED;
+			fd->is_under_write_IO = 1;
+
+			// safe to write page to the disk, since we have read lock on it
+			pthread_mutex_unlock(get_bufferpool_lock(bf));
+			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd->map.frame, fd->map.page_id, bf->page_io_functions.page_size);
+			if(io_success)
+				io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+			pthread_mutex_lock(get_bufferpool_lock(bf));
+
+			// after a force flush the page is no longer dirty
+			if(io_success)
+			{
+				fd->is_dirty = 0;
+				result |= WAS_FORCE_FLUSHED;
+			}
+
+			fd->is_under_write_IO = 0;
 		}
 
 		// release reader lock
-		fd->is_under_write_IO = 0;
 		read_unlock(&(fd->frame_lock));
 	}
 	else
