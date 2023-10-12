@@ -84,16 +84,32 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 	{
 		// here the frame_desc, must have valid page_id and valid frame_contents
 		// we only check for the frame_desc being is_dirty, is not write_locked and is_under_write_IO == 0
-		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && !is_write_locked(&(fd->frame_lock)) && !fd->is_under_write_IO && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
+		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && !is_write_locked(&(fd->frame_lock)) && !fd->is_under_write_IO)
 		{
-			// read lock them, and mark them being under write IO
-			remove_frame_desc_from_lru_lists(bf, fd);
+			// since the page is not write locked, so a NON_BLOCKING READ_PREFERRING lock must return with success instantaneously
+			// since here we are iterating over the internal hashmap of the bufferpool (), we cannot afford to release the global mutex (while we wait on rwlock internal condition variables), before iteration completes
+			int read_locked = read_lock(&(fd->frame_lock), READ_PREFERRING, NON_BLOCKING);
 
-			read_lock(&(fd->frame_lock), READ_PREFERRING, NON_BLOCKING);
-			fd->is_under_write_IO = 1;
+			// this must never happen
+			if(!read_locked)
+				continue;
 
-			// now create a flush job params for each one of them
-			initialize_flush_params(&(flush_job_params[flush_job_params_count++]), bf, fd);
+			// check if the page can be flushed to disk only, while we have a read lock on it
+			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
+			{
+				// since we read locked it, we remove it from the lru_lists, so that it is not evicted
+				remove_frame_desc_from_lru_lists(bf, fd);
+
+				fd->is_under_write_IO = 1;
+
+				// now create a flush job params for each one of them
+				initialize_flush_params(&(flush_job_params[flush_job_params_count++]), bf, fd);
+			}
+			else
+				// this case implies, we are not allowed to flush the page to disk
+				// and the equivalent effect is the page not being locked at all (after the execution of below line)
+				// since we did not remone it from lru lists, until after we are sure that we are allowed to do write IO on it
+				read_unlock(&(fd->frame_lock));
 		}
 	}
 
