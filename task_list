@@ -1,3 +1,5 @@
+
+* THINK IF YOU WANT IT
  * allow to force_reset_was_modified flag while releasing read or write lock on a page OR while downgrading from a writer lock
    * add comment that this flag is to be used for a free page, when you do not want to persist it to disk, because the page has been freed
    * this will allow not writing a free page onto disk, saving write io
