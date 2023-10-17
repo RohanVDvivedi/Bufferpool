@@ -231,6 +231,14 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	}
 }
 
+// this function can be used to wait for an available frame
+// the wait_for_frame_in_milliseconds must be grater than 0, before calling this function, else it will lead to infinite loop in calling function
+// wait_for_frame_in_millisecons will be updated with the remaining time you can wait for
+void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_milliseconds)
+{
+
+}
+
 void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
 {
 	if(bf->has_internal_lock)
@@ -275,7 +283,12 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 					bf->thread_count_waiting_for_any_ongoing_flush_to_finish--;
 					continue;
 				}
-				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit, returning to the user with no lock
+				else if(wait_for_frame_in_milliseconds > 0)
+				{
+					wait_for_an_available_frame(bf, &wait_for_frame_in_milliseconds);
+					continue;
+				}
+				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit OR if the user can not want to wait for a frame, returning to the user with no lock
 				else
 					goto EXIT;
 			}
@@ -342,7 +355,12 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 					bf->thread_count_waiting_for_any_ongoing_flush_to_finish--;
 					continue;
 				}
-				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit, returning to the user with no lock
+				else if(wait_for_frame_in_milliseconds > 0)
+				{
+					wait_for_an_available_frame(bf, &wait_for_frame_in_milliseconds);
+					continue;
+				}
+				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit OR if the user can not want to wait for a frame, returning to the user with no lock
 				else
 					goto EXIT;
 			}
