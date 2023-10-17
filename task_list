@@ -1,7 +1,1 @@
-
-* THINK IF YOU WANT IT
- * allow to force_reset_was_modified flag while releasing read or write lock on a page OR while downgrading from a writer lock
-   * add comment that this flag is to be used for a free page, when you do not want to persist it to disk, because the page has been freed
-   * this will allow not writing a free page onto disk, saving write io
-   * such a page will directly be put in clean_frame_descs_lru_list, and will get evicted in future, without its contents going onto the disk
-   * this flag if true, doesn't care about the values of was_modified and force_flush parameters
+ * allow waiting for a eviction_victim_page, with a timeout
