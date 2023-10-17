@@ -59,15 +59,8 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 	bf->flush_test_handle = flush_test_handle;
 	bf->can_be_flushed_to_disk = can_be_flushed_to_disk;
 
-	bf->count_of_ongoing_flushes = 0;
-
-	bf->thread_count_waiting_for_any_ongoing_flush_to_finish = 0;
-
-	pthread_cond_init(&(bf->waiting_for_any_ongoing_flush_to_finish), NULL);
-
 	if(NULL == (bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL)))
 	{
-		pthread_cond_destroy(&(bf->waiting_for_any_ongoing_flush_to_finish));
 		deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 		deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 		if(bf->has_internal_lock)
@@ -94,7 +87,6 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 	{
 		pthread_cond_destroy(&(bf->periodic_flush_job_complete_wait));
 		pthread_cond_destroy(&(bf->periodic_flush_job_status_update));
-		pthread_cond_destroy(&(bf->waiting_for_any_ongoing_flush_to_finish));
 		deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 		deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 		if(bf->has_internal_lock)
@@ -130,8 +122,6 @@ void deinitialize_bufferpool(bufferpool* bf)
 	shutdown_executor(bf->cached_threadpool_executor, 0);
 	wait_for_all_executor_workers_to_complete(bf->cached_threadpool_executor);
 	delete_executor(bf->cached_threadpool_executor);
-
-	pthread_cond_destroy(&(bf->waiting_for_any_ongoing_flush_to_finish));
 
 	frame_desc* fd = NULL;
 

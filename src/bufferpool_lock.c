@@ -272,7 +272,7 @@ void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_mil
 		(*wait_for_frame_in_milliseconds) -= millisecond_elapsed;
 }
 
-void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
+void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -306,22 +306,12 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 		{
 			if(nothing_evictable)
 			{
-				// if nothing_evictable, and the user is fine with wanting for any ongoing flushes, then we wait once
-				// flushing is a long process of writing dirty pages to disk, this involved locking a lot of dirty pages (even unused ones) with a read lock, making them unevictable
-				// so we offer th users to wait if such a situation arises
-				if(wait_for_any_ongoing_flushes_if_necessary && bf->count_of_ongoing_flushes)
-				{
-					bf->thread_count_waiting_for_any_ongoing_flush_to_finish++;
-					pthread_cond_wait(&(bf->waiting_for_any_ongoing_flush_to_finish), get_bufferpool_lock(bf));
-					bf->thread_count_waiting_for_any_ongoing_flush_to_finish--;
-					continue;
-				}
-				else if(wait_for_frame_in_milliseconds > 0)
+				if(wait_for_frame_in_milliseconds > 0)
 				{
 					wait_for_an_available_frame(bf, &wait_for_frame_in_milliseconds);
 					continue;
 				}
-				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit OR if the user can not want to wait for a frame, returning to the user with no lock
+				// else if the user can not want to wait for a frame, return to the user with no lock
 				else
 					goto EXIT;
 			}
@@ -344,7 +334,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 	return (fd != NULL) ? fd->map.frame : NULL;
 }
 
-void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary, int to_be_overwritten)
+void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int to_be_overwritten)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -378,22 +368,12 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 		{
 			if(nothing_evictable)
 			{
-				// if nothing_evictable, and the user is fine with wanting for any ongoing flushes, then we wait once
-				// flushing is a long process of writing dirty pages to disk, this involved locking a lot of dirty pages (even unused ones) with a read lock, making them unevictable
-				// so we offer th users to wait if such a situation arises
-				if(wait_for_any_ongoing_flushes_if_necessary && bf->count_of_ongoing_flushes)
-				{
-					bf->thread_count_waiting_for_any_ongoing_flush_to_finish++;
-					pthread_cond_wait(&(bf->waiting_for_any_ongoing_flush_to_finish), get_bufferpool_lock(bf));
-					bf->thread_count_waiting_for_any_ongoing_flush_to_finish--;
-					continue;
-				}
-				else if(wait_for_frame_in_milliseconds > 0)
+				if(wait_for_frame_in_milliseconds > 0)
 				{
 					wait_for_an_available_frame(bf, &wait_for_frame_in_milliseconds);
 					continue;
 				}
-				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit OR if the user can not want to wait for a frame, returning to the user with no lock
+				// else if the user can not want to wait for a frame, return to the user with no lock
 				else
 					goto EXIT;
 			}
@@ -414,7 +394,7 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 	return (fd != NULL) ? fd->map.frame : NULL;
 }
 
-int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
+int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -451,19 +431,8 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary
 		{
 			if(nothing_evictable)
 			{
-				// if nothing_evictable, and the user is fine with wanting for any ongoing flushes, then we wait once
-				// flushing is a long process of writing dirty pages to disk, this involved locking a lot of dirty pages (even unused ones) with a read lock, making them unevictable
-				// so we offer th users to wait if such a situation arises
-				if(wait_for_any_ongoing_flushes_if_necessary && bf->count_of_ongoing_flushes)
-				{
-					bf->thread_count_waiting_for_any_ongoing_flush_to_finish++;
-					pthread_cond_wait(&(bf->waiting_for_any_ongoing_flush_to_finish), get_bufferpool_lock(bf));
-					bf->thread_count_waiting_for_any_ongoing_flush_to_finish--;
-					continue;
-				}
-				// else if the user does not want to wait for flushes OR if there are no ongoing flushes then we are free to exit, returning to the user with no lock
-				else
-					goto EXIT;
+				// nothing is evictable, or no frame available, and since we cannot wait inside a prefetch, all we can do is return
+				goto EXIT;
 			}
 			else
 				continue;
@@ -669,7 +638,6 @@ struct async_prefetch_page_params
 	bufferpool* bf;
 	uint64_t page_id;
 	int evict_dirty_if_necessary : 1;
-	int wait_for_any_ongoing_flushes_if_necessary : 1;
 };
 
 static void* async_prefetch_page_job_func(void* appp_p)
@@ -682,7 +650,7 @@ static void* async_prefetch_page_job_func(void* appp_p)
 	if(!appp.bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(appp.bf));
 
-	prefetch_page(appp.bf, appp.page_id, appp.evict_dirty_if_necessary, appp.wait_for_any_ongoing_flushes_if_necessary);
+	prefetch_page(appp.bf, appp.page_id, appp.evict_dirty_if_necessary);
 
 	if(!appp.bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(appp.bf));
@@ -695,7 +663,7 @@ static void async_prefetch_page_job_on_cancellation_callback(void* appp_p)
 	free(appp_p);
 }
 
-void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
+void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -704,7 +672,7 @@ void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_ne
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 	async_prefetch_page_params* appp = malloc(sizeof(async_prefetch_page_params));
-	(*appp) = (async_prefetch_page_params){bf, page_id, evict_dirty_if_necessary, wait_for_any_ongoing_flushes_if_necessary};
+	(*appp) = (async_prefetch_page_params){bf, page_id, evict_dirty_if_necessary};
 	submit_job_executor(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, async_prefetch_page_job_on_cancellation_callback, 0);
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));

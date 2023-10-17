@@ -77,17 +77,6 @@ struct bufferpool
 	void* flush_test_handle;
 	int (*can_be_flushed_to_disk)(void* flush_test_handle, uint64_t page_id, const void* frame);
 
-	// below attributes allow user threads to wait for any of the flush to finish
-
-	// number of ongoing calls to flush_all_possible_dirty_pages() by the users + periodic_flushes by the bufferpool
-	uint64_t count_of_ongoing_flushes;
-
-	// number of thread count waiting for waiting_for_ongoing_flushes
-	uint64_t thread_count_waiting_for_any_ongoing_flush_to_finish;
-
-	// this is the condition variable, where threads wait for any ongoing flush to finish
-	pthread_cond_t waiting_for_any_ongoing_flush_to_finish;
-
 	//
 
 	// this executor should be used for handling various internal parallel io tasks in the bufferpool
@@ -121,10 +110,10 @@ void deinitialize_bufferpool(bufferpool* bf);
 // wait_for_frame_in_milliseconds == 0, if you do not want to wait
 
 // for the below 6 functions a NULL or 0 implies a failure
-void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary);
+void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary);
 int release_reader_lock_on_page(bufferpool* bf, void* frame);
 
-void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary, int to_be_overwritten);
+void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int to_be_overwritten);
 int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, int force_flush);
 
 int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_modified, int force_flush);
@@ -148,10 +137,10 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 // this is a synchronous call to prefetch a page into memory, without taking any locks on it
 // return value suggests if the page was brought in memory
 // after this call you still need call acquire_page_with_*_lock, to get the page with lock on it
-int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary);
+int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary);
 
 // asynchronous version of prefetch page
-void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary);
+void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary);
 
 // change max frame count for the bufferpool
 uint64_t get_max_frame_desc_count(bufferpool* bf);
