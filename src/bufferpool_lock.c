@@ -36,7 +36,7 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 			insert_frame_desc_in_lru_lists(bf, fd);
 
 			// wake up for any one who is waiting for a frame
-			pthread_cond_signal(bf->wait_for_frame, get_bufferpool_lock(bf));
+			pthread_cond_signal(&(bf->wait_for_frame));
 		}
 	}
 
@@ -231,7 +231,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 	}
 }
 
-void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
+void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -298,7 +298,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, int evict_
 	return (fd != NULL) ? fd->map.frame : NULL;
 }
 
-void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary, int to_be_overwritten)
+void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary, int to_be_overwritten)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -388,7 +388,7 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary
 				insert_frame_desc_in_lru_lists(bf, fd);
 
 				// wake up for any one who is waiting for a frame
-				pthread_cond_signal(bf->wait_for_frame, get_bufferpool_lock(bf));
+				pthread_cond_signal(&(bf->wait_for_frame));
 			}
 
 			goto EXIT;

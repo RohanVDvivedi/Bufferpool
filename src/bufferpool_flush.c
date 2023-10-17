@@ -70,7 +70,7 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 			insert_frame_desc_in_lru_lists(bf, fd);
 
 			// wake up for any one who is waiting for a frame
-			pthread_cond_signal(bf->wait_for_frame, get_bufferpool_lock(bf));
+			pthread_cond_signal(&(bf->wait_for_frame));
 		}
 	}
 

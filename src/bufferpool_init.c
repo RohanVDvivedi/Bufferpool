@@ -227,7 +227,7 @@ int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 	if(bf->total_frame_desc_count < bf->max_frame_desc_count)
 	{
 		// wake up for all who are waiting for a frame
-		pthread_cond_broadcast(bf->wait_for_frame, get_bufferpool_lock(bf));
+		pthread_cond_broadcast(&(bf->wait_for_frame));
 	}
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
