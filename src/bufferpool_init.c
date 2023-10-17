@@ -222,6 +222,14 @@ int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 		bf->total_frame_desc_count--;
 	}
 
+	// if the total_frame_desc_count is lesser than max_frame_desc_count
+	// there are frame that can be allocated and initialized, so we wake up all the threads that are waiting for availability of a frame to acquire a lock on
+	if(bf->total_frame_desc_count < bf->max_frame_desc_count)
+	{
+		// wake up for all who are waiting for a frame
+		pthread_cond_broadcast(bf->wait_for_frame, get_bufferpool_lock(bf));
+	}
+
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 	// once the lock is released, we delete all the invalid frame descriptors

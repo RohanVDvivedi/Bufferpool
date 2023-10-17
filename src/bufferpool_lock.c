@@ -32,7 +32,12 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 			return 1;
 		}
 		else // if the frame is not being waited on or locked by anyone and if we are not suppossed to discard it, then insert it in lru lists
+		{
 			insert_frame_desc_in_lru_lists(bf, fd);
+
+			// wake up for any one who is waiting for a frame
+			pthread_cond_signal(bf->wait_for_frame, get_bufferpool_lock(bf));
+		}
 	}
 
 	return 0;
@@ -379,7 +384,12 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary
 			remove_frame_desc_from_lru_lists(bf, fd);
 
 			if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+			{
 				insert_frame_desc_in_lru_lists(bf, fd);
+
+				// wake up for any one who is waiting for a frame
+				pthread_cond_signal(bf->wait_for_frame, get_bufferpool_lock(bf));
+			}
 
 			goto EXIT;
 		}
