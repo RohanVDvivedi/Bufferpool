@@ -219,10 +219,10 @@ void* periodic_flush_job(void* bf_p)
 		{
 			struct timespec now;
 			clock_gettime(CLOCK_REALTIME, &now);
-			struct timespec diff = {.tv_sec = (bf->current_periodic_flush_job_status.period_in_milliseconds / 1000ULL), .tv_nsec = (bf->current_periodic_flush_job_status.period_in_milliseconds % 1000ULL) * 1000000ULL};
+			struct timespec diff = {.tv_sec = (bf->current_periodic_flush_job_status.period_in_milliseconds / 1000LL), .tv_nsec = (bf->current_periodic_flush_job_status.period_in_milliseconds % 1000LL) * 1000000LL};
 			struct timespec stop_at = {.tv_sec = now.tv_sec + diff.tv_sec, .tv_nsec = now.tv_nsec + diff.tv_nsec};
-			stop_at.tv_sec += stop_at.tv_nsec / 1000000000ULL;
-			stop_at.tv_nsec = stop_at.tv_nsec % 1000000000ULL;
+			stop_at.tv_sec += stop_at.tv_nsec / 1000000000LL;
+			stop_at.tv_nsec = stop_at.tv_nsec % 1000000000LL;
 			if(ETIMEDOUT == pthread_cond_timedwait(&(bf->periodic_flush_job_status_update), get_bufferpool_lock(bf), &stop_at))
 				break;
 		}

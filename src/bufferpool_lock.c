@@ -247,7 +247,29 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 // wait_for_frame_in_millisecons will be updated with the remaining time you can wait for
 void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_milliseconds)
 {
+	// get current time
+	struct timespec now;
+	clock_gettime(CLOCK_REALTIME, &now);
 
+	// compute the time to stop at
+	struct timespec diff = {.tv_sec = ((*wait_for_frame_in_milliseconds) / 1000LL), .tv_nsec = ((*wait_for_frame_in_milliseconds) % 1000LL) * 1000000LL};
+	struct timespec stop_at = {.tv_sec = now.tv_sec + diff.tv_sec, .tv_nsec = now.tv_nsec + diff.tv_nsec};
+	stop_at.tv_sec += stop_at.tv_nsec / 1000000000LL;
+	stop_at.tv_nsec = stop_at.tv_nsec % 1000000000LL;
+
+	// wait until atmost stop_at
+	pthread_cond_timedwait(&(bf->periodic_flush_job_status_update), get_bufferpool_lock(bf), &stop_at);
+
+	// compute the current time after wait is over
+	struct timespec then;
+	clock_gettime(CLOCK_REALTIME, &then);
+
+	uint64_t millisecond_elapsed = (then.tv_sec - now.tv_sec) * 1000LL + ((then.tv_sec - now.tv_sec) / 1000000LL);
+
+	if(millisecond_elapsed > (*wait_for_frame_in_milliseconds))
+		(*wait_for_frame_in_milliseconds) = 0;
+	else
+		(*wait_for_frame_in_milliseconds) -= millisecond_elapsed;
 }
 
 void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int wait_for_any_ongoing_flushes_if_necessary)
