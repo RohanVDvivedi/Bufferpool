@@ -67,7 +67,12 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 		if(_new_frame_desc == NULL)	// if the new call failed, then reverse the incremented counter
 			bf->total_frame_desc_count--;
 		else // this means we just created a new frame_desc, that can be evicted
+		{
 			insert_head_in_linkedlist(&(bf->invalid_frame_descs_list), _new_frame_desc);
+
+			// here we do not need to wake up, any thread waiting for wait_for_frame
+			// since we created a frame_desc, we should be the first one to be allowed to use it
+		}
 
 		// here even a failure to allocate a frame_desc does not mean nothing_evictable, i.e. to refrain the lock
 		// because while we were trying to allocate a new frame_desc,
