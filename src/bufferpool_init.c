@@ -52,6 +52,8 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	initialize_linkedlist(&(bf->dirty_frame_descs_lru_list), offsetof(frame_desc, embed_node_lru_lists));
 
+	pthread_cond_init(&(bf->wait_for_frame), NULL);
+
 	bf->page_io_functions = page_io_functions;
 
 	bf->flush_test_handle = flush_test_handle;

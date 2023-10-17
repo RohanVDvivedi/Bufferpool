@@ -66,6 +66,9 @@ struct bufferpool
 	// these frame descriptors need to be flushed before evicted, hence mjst pass can_be_flushed_to_disk(fd->page_id, fd->frame) check
 	linkedlist dirty_frame_descs_lru_list;
 
+	// condition variable to wait on, for a frame to be available for a page
+	pthread_cond_t wait_for_frame;
+
 	// methods that allow you to read/writes pages to-from secondsa
 	page_io_ops page_io_functions;
 
