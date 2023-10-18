@@ -258,7 +258,7 @@ void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_mil
 	stop_at.tv_nsec = stop_at.tv_nsec % 1000000000LL;
 
 	// wait until atmost stop_at
-	pthread_cond_timedwait(&(bf->periodic_flush_job_status_update), get_bufferpool_lock(bf), &stop_at);
+	pthread_cond_timedwait(&(bf->wait_for_frame), get_bufferpool_lock(bf), &stop_at);
 
 	// compute the current time after wait is over
 	struct timespec then;
