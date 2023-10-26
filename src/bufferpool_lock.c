@@ -103,10 +103,10 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 
 			// here we already know that the page is not referenced by any one and is dirty
 
-			// we only need to check that it can_be_flushed_to_disk, inorder to flush it, and we already hve read_lock on it, which is necessary to do this
+			// we only need to check that it can_be_flushed_to_disk, inorder to flush it, and we already have read_lock on it, which is necessary to do this (or to even check if it can_be_flushed_to_disk)
 			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, fd_to_flush->map.page_id, fd_to_flush->map.frame))
 			{
-				// we alreadh have read locked it, so we can start the write IO
+				// we already have read locked it, so we can start the write IO
 				fd_to_flush->is_under_write_IO = 1;
 
 				pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -115,7 +115,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 					io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 				pthread_mutex_lock(get_bufferpool_lock(bf));
 
-				// clear dirty but if write IO was a success
+				// clear dirty only if write IO was a success
 				if(io_success)
 					fd_to_flush->is_dirty = 0;
 
