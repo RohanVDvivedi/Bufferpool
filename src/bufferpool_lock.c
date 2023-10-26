@@ -89,59 +89,59 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 	// here we need to check that the frame satisfies bf->can_be_flushed_to_disk(fd->page_id, fd->frame)
 	if(evict_dirty_if_necessary && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
 	{
-		// we need to flush a frame_desc, before we can use anything from this list
-		frame_desc* fd_to_flush = NULL;
-
 		frame_desc* original_head = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
 		do
 		{
-			frame_desc* to_check = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+			// pick to test head, if it can be flushed
+			frame_desc* fd_to_flush = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list));
+
+			// remove it from LRU, to grab a read lock on it
 			remove_head_from_linkedlist(&(bf->dirty_frame_descs_lru_list));
-			insert_tail_in_linkedlist(&(bf->dirty_frame_descs_lru_list), to_check);
-
-			// here we already know that the page is not referenced by any one and is dirty
-			// we only need to check that it can_be_flushed_to_disk, inorder to flush it
-			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, to_check->map.page_id, to_check->map.frame))
-			{
-				fd_to_flush = to_check;
-				break;
-			}
-		}while(get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)) != original_head);
-
-		if(fd_to_flush != NULL)
-		{
-			// before we grab a lock, we need to remove it from lru lists
-			remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_flush);
 
 			// the fd_to_flush is neither locked nor is any one waiting to get lock on it, so we can grab a read lock instantly, without any checks
 			read_lock(&(fd_to_flush->frame_lock), READ_PREFERRING, NON_BLOCKING);
-			fd_to_flush->is_under_write_IO = 1;
 
-			pthread_mutex_unlock(get_bufferpool_lock(bf));
-			int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd_to_flush->map.frame, fd_to_flush->map.page_id, bf->page_io_functions.page_size);
-			if(io_success)
-				io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
-			pthread_mutex_lock(get_bufferpool_lock(bf));
+			// here we already know that the page is not referenced by any one and is dirty
 
-			// clear dirty but if write IO was a success
-			if(io_success)
-				fd_to_flush->is_dirty = 0;
+			// we only need to check that it can_be_flushed_to_disk, inorder to flush it, and we already hve read_lock on it, which is necessary to do this
+			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, fd_to_flush->map.page_id, fd_to_flush->map.frame))
+			{
+				// we alreadh have read locked it, so we can start the write IO
+				fd_to_flush->is_under_write_IO = 1;
 
-			// release read lock
-			fd_to_flush->is_under_write_IO = 0;
+				pthread_mutex_unlock(get_bufferpool_lock(bf));
+				int io_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd_to_flush->map.frame, fd_to_flush->map.page_id, bf->page_io_functions.page_size);
+				if(io_success)
+					io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+				pthread_mutex_lock(get_bufferpool_lock(bf));
+
+				// clear dirty but if write IO was a success
+				if(io_success)
+					fd_to_flush->is_dirty = 0;
+
+				// release read lock
+				fd_to_flush->is_under_write_IO = 0;
+				read_unlock(&(fd_to_flush->frame_lock));
+
+				// this is neccessary to insert the fd_to_flush back into the lru list (possibly clean lru list, if no one came waiting for locking it)
+				handle_frame_desc_if_not_referenced(bf, fd_to_flush);
+
+				// here even an io_success == 0 does not mean nothing_evictable i.e. to refrain the lock
+				// because while we were flushing the page some other thread wanting the same page,
+				// might have performed IO and brought it in bufferpool, making eviction unnecessary
+
+				// as you have guessed, we released the global lock atleast once in this if condition, so our iteration on the dirty_frame_descs_lru_list has been invalidated, all we can do now it return NULL with (*nothing_evictable) = 0
+
+				return NULL;
+			}
+
+			// read unlock and put the fd_to_flush at the back of the dirty_frame_descs_lru_list
 			read_unlock(&(fd_to_flush->frame_lock));
+			insert_tail_in_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_flush);
 
-			// this is neccessary to insert the fd_to_flush back into the lru list
-			handle_frame_desc_if_not_referenced(bf, fd_to_flush);
+		}while(get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)) != original_head);
 
-			// here even an io_success == 0 does not mean nothing_evictable i.e. to refrain the lock
-			// because while we were flushing the page some other thread wanting the same page,
-			// might have performed IO and brought it in bufferpool, making eviction unnecessary
-
-			return NULL;
-		}
-
-		// we did not find anything worthy of flushing in dirty_frame_descs_lru_list
+		// end of this loop implies, we did not find anything worthy of flushing in dirty_frame_descs_lru_list
 	}
 
 	// this situation means nothing_evictable, because no frame_desc can be evicted, and hence this request may possibly not be fulfilled
