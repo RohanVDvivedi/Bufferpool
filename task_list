@@ -1,1 +1,4 @@
+ * check after initialize_*, init_*, get_new_* and malloc function calls return NULL or failure but never kill the process, handle theri failures gracefully
+ * check for executor submit_job function, and handle its failure
+
  * Build a DiskPoolPager project, that manages a bitmap of the size of a page, while leaving some bytes for log_seq_nr, and that can allocate and free pages, and extend the api of the bufferpool through it.
