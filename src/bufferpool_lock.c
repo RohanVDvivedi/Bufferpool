@@ -672,12 +672,18 @@ void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_ne
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 	async_prefetch_page_params* appp = malloc(sizeof(async_prefetch_page_params));
-	if(appp != NULL)
+	if(appp == NULL)
+		goto UNLOCKED_EXIT;
+
+	(*appp) = (async_prefetch_page_params){bf, page_id, evict_dirty_if_necessary};
+	if(!submit_job_executor(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, async_prefetch_page_job_on_cancellation_callback, 0))
 	{
-		(*appp) = (async_prefetch_page_params){bf, page_id, evict_dirty_if_necessary};
-		submit_job_executor(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, async_prefetch_page_job_on_cancellation_callback, 0);
+		free(appp);
+		goto UNLOCKED_EXIT;
 	}
 
+	// if malloc fails or submit)job fails, we come here to get the lock again and exit
+	UNLOCKED_EXIT:;
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
 	if(bf->has_internal_lock)
