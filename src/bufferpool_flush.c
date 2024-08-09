@@ -12,7 +12,8 @@ struct flush_params
 
 	promise completion;
 
-	int write_success;
+	int write_job_submission_success; // flag if write job was successfully submitted to the thread pool
+	int write_success; // flag if write job was successfull
 };
 
 void initialize_flush_params(flush_params* fp, bufferpool* bf, frame_desc* fd)
@@ -20,6 +21,7 @@ void initialize_flush_params(flush_params* fp, bufferpool* bf, frame_desc* fd)
 	fp->fd = fd;
 	fp->bf = bf;
 	initialize_promise(&(fp->completion));
+	fp->write_job_submission_success = 0;
 	fp->write_success = 0;
 }
 
@@ -28,6 +30,7 @@ void deinitialize_flush_params(flush_params* fp)
 	fp->fd = NULL;
 	fp->bf = NULL;
 	deinitialize_promise(&(fp->completion));
+	fp->write_job_submission_success = 0;
 	fp->write_success = 0;
 }
 
@@ -119,14 +122,26 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 
 	// submit all the flush_job_params
 	for(uint64_t i = 0; i < flush_job_params_count; i++)
-		submit_job_executor(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), NULL, 0);
+		flush_job_params[i].write_job_submission_success = submit_job_executor(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), NULL, 0);
+
+	// this flag will be set if there is atleast 1 write_io_job succeeded
+	int flag_atleast_1_write_io_job_succeeded = 0;
 
 	// wait for all of them to finish
 	for(uint64_t i = 0; i < flush_job_params_count; i++)
-		get_promised_result(&(flush_job_params[i].completion));
+	{
+		// wait for completion of each of this write_io_job-s, if it succeeded job submission previously
+		if(flush_job_params[i].write_job_submission_success)
+		{
+			get_promised_result(&(flush_job_params[i].completion));
 
-	// after that flush all the writes
-	int flush_success = (flush_job_params_count == 0) || bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+			// set this flag if this write_io_job succeeded
+			flag_atleast_1_write_io_job_succeeded = flag_atleast_1_write_io_job_succeeded || flush_job_params[i].write_success;
+		}
+	}
+
+	// after that flush all the writes, we flush only if there is atleast 1 write_io_job that succeeded
+	int flush_success = (!flag_atleast_1_write_io_job_succeeded) || bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
@@ -140,7 +155,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 		read_unlock(&(fd->frame_lock));
 
 		// if both flush and write were successfull then clear it's dirty bit
-		if(flush_success && flush_job_params[i].write_success)
+		if(flush_job_params[i].write_job_submission_success && flush_job_params[i].write_success && flush_success)
 			fd->is_dirty = 0;
 
 		// this call is necesary, to destroy the frame_desc, or add it to lru lists, once it is clean
