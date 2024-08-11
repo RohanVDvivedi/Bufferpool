@@ -187,10 +187,10 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 
 	int io_success = 1;
 
-	// there could be a thread waiting for a frame for asay page_id = 3
+	// there could be a thread waiting for a frame for say page_id = 3
 	// if we are bringing a page with page_id = 3, onto a frame, then that thread must not keep waiting and instead just wait while we perform the io
 	// so here we need to wake up all the threads waiting for wait_for_frame, of which there is a possibility of some of them requiring the same page as this one
-	// after this call, all such threads threads (demanding the same page_id) will wait on getting the lock of this frame, instead of wait_for_frame condition variable
+	// after this call, all such threads (demanding the same page_id) will wait on getting the lock of this frame, instead of wait_for_frame condition variable
 	pthread_cond_broadcast(&(bf->wait_for_frame));
 
 	// avoid read IO, if the page is going to be overwritten
