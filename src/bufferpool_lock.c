@@ -294,6 +294,12 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 				goto EXIT;
 			else
 			{
+				// Explanation to why we are entering this else condition and why we do, what we are doing here
+				// This condition comes up, when the page was under read IO from disk (to newly bring it to bufferpool), while we attempted to get read_lock on it's frame
+				// But soon after this read IO failed, we got the read_lock, and as we see expect it's has_valid_frame_contents = 0
+				// now all we can do is read_unlock the frame, and put it back into LRU lists (precisely invalid_frame_descs_list)
+				// and continue, to try the same trick again (because, we released the bufferpool's global mutex while getting the read_lock)
+
 				// else unlock read lock on the frame and if possible return it to the lru lists
 				read_unlock(&(fd->frame_lock));
 				handle_frame_desc_if_not_referenced(bf, fd);
@@ -356,6 +362,12 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 				goto EXIT;
 			else
 			{
+				// Explanation to why we are entering this else condition and why we do, what we are doing here
+				// This condition comes up, when the page was under read IO from disk (to newly bring it to bufferpool), while we attempted to get write_lock on it's frame
+				// But soon after this read IO failed, we got the read_lock, and as we see expect it's has_valid_frame_contents = 0
+				// now all we can do is write_unlock the frame, and put it back into LRU lists (precisely invalid_frame_descs_list)
+				// and continue, to try the same trick again (because, we released the bufferpool's global mutex while getting the write_lock)
+
 				// else unlock read lock on the frame and if possible return it to the lru lists
 				write_unlock(&(fd->frame_lock));
 				handle_frame_desc_if_not_referenced(bf, fd);
