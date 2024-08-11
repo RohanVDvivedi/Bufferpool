@@ -44,9 +44,10 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 }
 
 // it will not remove the frame_desc from the lists
-static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpool* bf, int evict_dirty_if_necessary, int* nothing_evictable)
+static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpool* bf, int evict_dirty_if_necessary, int* nothing_evictable, int* write_io_for_eviction_failed)
 {
 	(*nothing_evictable) = 0;
+	(*write_io_for_eviction_failed) = 0;
 
 	// if there is any frame_desc in invalid_frame_descs_list, then return it's head
 	if(!is_empty_linkedlist(&(bf->invalid_frame_descs_list)))
@@ -131,6 +132,10 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 				// might have performed IO and brought it in bufferpool, making eviction unnecessary
 
 				// as you have guessed, we released the global lock atleast once in this if condition, so our iteration on the dirty_frame_descs_lru_list has been invalidated, all we can do now it return NULL with (*nothing_evictable) = 0
+
+				// if the io_success is not set, i.e. write io on dirty frame failed, then notify about it to the caller by setting the flag write_io_for_eviction_failed
+				if(!io_success)
+					(*write_io_for_eviction_failed) = 1;
 
 				return NULL;
 			}
@@ -307,11 +312,15 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 			}
 		}
 
+		// if any of the below two flags get set, it represents some from of error
+		int write_io_for_eviction_failed = 0;
 		int nothing_evictable = 0;
-		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable);
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable, &write_io_for_eviction_failed);
 		if(fd == NULL)
 		{
-			if(nothing_evictable)
+			if(write_io_for_eviction_failed)
+				goto EXIT;
+			else if(nothing_evictable)
 			{
 				if(wait_for_frame_in_milliseconds > 0)
 				{
@@ -375,11 +384,15 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 			}
 		}
 
+		// if any of the below two flags get set, it represents some from of error
+		int write_io_for_eviction_failed = 0;
 		int nothing_evictable = 0;
-		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable);
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable, &write_io_for_eviction_failed);
 		if(fd == NULL)
 		{
-			if(nothing_evictable)
+			if(write_io_for_eviction_failed)
+				goto EXIT;
+			else if(nothing_evictable)
 			{
 				if(wait_for_frame_in_milliseconds > 0)
 				{
@@ -438,11 +451,15 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary
 			goto EXIT;
 		}
 
+		// if any of the below two flags get set, it represents some from of error
+		int write_io_for_eviction_failed = 0;
 		int nothing_evictable = 0;
-		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable);
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable, &write_io_for_eviction_failed);
 		if(fd == NULL)
 		{
-			if(nothing_evictable)
+			if(write_io_for_eviction_failed)
+				goto EXIT;
+			else if(nothing_evictable)
 			{
 				// nothing is evictable, or no frame available, and since we cannot wait inside a prefetch, all we can do is return
 				goto EXIT;
