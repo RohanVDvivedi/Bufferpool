@@ -1,7 +1,3 @@
 
- * BUG
-  * if evict_dirty_if_necessary is set, and the disk io to clean a dirty page, always keeps failing (in function get_frame_desc_to_evict_from_invalid_frames_OR_LRUs), then the requester goes into infinite loop consuming 100% CPU
-  * fix: limit the number of iterations to lets say 128, for while(1) loops and break out, and fail the acquire_page_with_*_lock function
-  * fix: keep a io_failed counter, and pass it to both the functions get_valid_frame_contents_on_frame_for_page_id and get_frame_desc_to_evict_from_invalid_frames_OR_LRUs, and exit from the while(1), if it crosses a threshold
 
  * Build a DiskPoolPager project, that manages a bitmap of the size of a page, while leaving some bytes for log_seq_nr, and that can allocate and free pages, and extend the api of the bufferpool through it.
