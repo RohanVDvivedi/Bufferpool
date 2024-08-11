@@ -165,7 +165,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 		return 0;
 	}
 
-	// remove fd from the lru lists, since we are going to update its valid bit, while we do it, it must not eixst in lru lists
+	// remove fd from the lru lists, since we are going to update its valid bit, while we do it, it must not exist in lru lists
 	remove_frame_desc_from_lru_lists(bf, fd);
 
 	// make has_valid_page_id = 1, and put page_id on the frame_desc
