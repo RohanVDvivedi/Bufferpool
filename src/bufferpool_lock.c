@@ -199,6 +199,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 		// the writers_count is incremented hence we can release the lock while we set the page to all zeros
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 		memory_set(fd->map.frame, 0, bf->page_io_functions.page_size);
+		io_success = 1; // customary, as we successfully brought right valid contents for this page to the frame
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 		// here we knowingly make the page dirty, since wrote 0s for the to_be_overwritten page
