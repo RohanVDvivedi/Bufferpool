@@ -1,3 +1,7 @@
-
+ * ARIES support
+   * Aries requires maintaining a dirty page table, consisting of only the dirty frames, and for each of these dirty frames we only need page_id and recLSN
+     * recLSN is the LSN of the first log record that made that page/frame dirty
+   * find a mechanism to maintain this dirty page table outside bufferpool without much hazzle, and changes to Bufferpool
+   * making a callback on (was_modified bit = 1) inside release_writer_lock_on_page and downgrade_writer_lock_to_reader_lock, is not a solution, as the user may have made multiple changes to the page, and made multiple WAL log records while for the period for which, they had the lock.
 
  * Build a DiskPoolPager project, that manages a bitmap of the size of a page, while leaving some bytes for log_seq_nr, and that can allocate and free pages, and extend the api of the bufferpool through it.
