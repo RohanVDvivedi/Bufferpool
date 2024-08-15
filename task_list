@@ -7,5 +7,10 @@
      * user on making a page dirty (if the page is currently not in dirty_page_table), adds is to dirty page table, and note down its recLSN
      * while buffer pool provides the cleanup callback, (called when a dirty page is successfully written to disk), that can be used to remove that page from the dirty_page_table
      * this clean up call back is called with global lock and atleast a read_lock on the frame contents
+     * integrate it with can_be_flushed_to_disk, add a callback stating was_flushed_to_disk, taking the same parameters, acting with the same locks global lock and the reader lock on the frame
+     * change flush_test_handle to flush_callback_handle
+     * add a comment that the user may not release lock on the global lock, inside any of these functions, can_be_flushed_to_disk and was_flushed_to_disk 
+
+ * if a user requests a page to overwrite, then we may not make it dirty after giving them a zeros containing frame
 
  * Build a DiskPoolPager project, that manages a bitmap of the size of a page, while leaving some bytes for log_seq_nr, and that can allocate and free pages, and extend the api of the bufferpool through it.
