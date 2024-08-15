@@ -3,5 +3,9 @@
      * recLSN is the LSN of the first log record that made that page/frame dirty
    * find a mechanism to maintain this dirty page table outside bufferpool without much hazzle, and changes to Bufferpool
    * making a callback on (was_modified bit = 1) inside release_writer_lock_on_page and downgrade_writer_lock_to_reader_lock, is not a solution, as the user may have made multiple changes to the page, and made multiple WAL log records while for the period for which, they had the lock.
+   * POSSIBLE_SOLUTION
+     * user on making a page dirty (if the page is currently not in dirty_page_table), adds is to dirty page table, and note down its recLSN
+     * while buffer pool provides the cleanup callback, (called when a dirty page is successfully written to disk), that can be used to remove that page from the dirty_page_table
+     * this clean up call back is called with global lock and atleast a read_lock on the frame contents
 
  * Build a DiskPoolPager project, that manages a bitmap of the size of a page, while leaving some bytes for log_seq_nr, and that can allocate and free pages, and extend the api of the bufferpool through it.
