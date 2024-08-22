@@ -100,7 +100,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 				continue;
 
 			// check if the page can be flushed to disk only, while we have a read lock on it
-			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
+			if(bf->can_be_flushed_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame))
 			{
 				// since we read locked it, we remove it from the lru_lists, so that it is not evicted
 				remove_frame_desc_from_lru_lists(bf, fd);
@@ -150,13 +150,16 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 	{
 		frame_desc* fd = flush_job_params[i].fd;
 
+		// if both flush and write were successfull then clear it's dirty bit
+		if(flush_job_params[i].write_job_submission_success && flush_job_params[i].write_success && flush_success)
+		{
+			fd->is_dirty = 0;
+			bf->was_flushed_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame);
+		}
+
 		// release reader lock, and clear write IO bit
 		fd->is_under_write_IO = 0;
 		read_unlock(&(fd->frame_lock));
-
-		// if both flush and write were successfull then clear it's dirty bit
-		if(flush_job_params[i].write_job_submission_success && flush_job_params[i].write_success && flush_success)
-			fd->is_dirty = 0;
 
 		// this call is necesary, to destroy the frame_desc, or add it to lru lists, once it is clean
 		handle_frame_desc_if_not_referenced(bf, fd);

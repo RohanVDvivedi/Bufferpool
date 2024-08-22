@@ -105,7 +105,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			// here we already know that the page is not referenced by any one and is dirty
 
 			// we only need to check that it can_be_flushed_to_disk, inorder to flush it, and we already have read_lock on it, which is necessary to do this (or to even check if it can_be_flushed_to_disk)
-			if(bf->can_be_flushed_to_disk(bf->flush_test_handle, fd_to_flush->map.page_id, fd_to_flush->map.frame))
+			if(bf->can_be_flushed_to_disk(bf->flush_callback_handle, fd_to_flush->map.page_id, fd_to_flush->map.frame))
 			{
 				// we already have read locked it, so we can start the write IO
 				fd_to_flush->is_under_write_IO = 1;
@@ -116,9 +116,12 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 					io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 				pthread_mutex_lock(get_bufferpool_lock(bf));
 
-				// clear dirty only if write IO was a success
+				// clear dirty bit only if write IO was a success, and then call the was_flushed_to_disk callback
 				if(io_success)
+				{
 					fd_to_flush->is_dirty = 0;
+					bf->was_flushed_to_disk(bf->flush_callback_handle, fd_to_flush->map.page_id, fd_to_flush->map.frame);
+				}
 
 				// release read lock
 				fd_to_flush->is_under_write_IO = 0;
@@ -506,7 +509,7 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	fd->is_dirty = fd->is_dirty || was_modified;
 
 	// if force flush is set then, flush the page to disk with its read lock held
-	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
+	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame))
 	{
 		fd->is_under_write_IO = 1;
 
@@ -516,10 +519,11 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 			io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		// after a force flush the page is nolonger dirty
+		// after a force flush the page is nolonger dirty, and so clear the dirty bit and then call the was_flushed_to_disk callback function
 		if(io_success)
 		{
 			fd->is_dirty = 0;
+			bf->was_flushed_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame);
 			result |= WAS_FORCE_FLUSHED;
 		}
 
@@ -613,7 +617,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		fd->is_dirty = fd->is_dirty || was_modified;
 
 		// check that the page can be flushed to disk only after successfully downgrading lock, this ensures that the caller actually held writer lock, while calling this function
-		if(fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_test_handle, fd->map.page_id, fd->map.frame))
+		if(fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame))
 		{
 			fd->is_under_write_IO = 1;
 
@@ -624,10 +628,11 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 				io_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 
-			// after a force flush the page is no longer dirty
+			// after a force flush the page is no longer dirty, so clear the dirty bit and then call the was_flushed_to_disk callback
 			if(io_success)
 			{
 				fd->is_dirty = 0;
+				bf->was_flushed_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame);
 				result |= WAS_FORCE_FLUSHED;
 			}
 
