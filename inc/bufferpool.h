@@ -77,6 +77,8 @@ struct bufferpool
 	// and once a dirty page is successfully, flushed to disk, then was_flushed_to_disk callback is called
 	// USAGE -> can be used to mark a page as not dirty, in the dirty page table
 	// Both of these functions will be called with the bufferpool's global lock and the frame lock on the page held
+	// a can_be_flushed_to_disk callback may not be followed by a was_flushed_to_disk callback, as the write IO may fail,
+	// Also global lock may be released in between the 2 callbacks, hence any state, between the calls protected by the global lock may not be trusted
 	void* flush_callback_handle;
 	int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame);
 	void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame);
