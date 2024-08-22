@@ -210,8 +210,11 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 		io_success = 1; // customary, as we successfully brought right valid contents for this page to the frame
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		// here we knowingly make the page dirty, since wrote 0s for the to_be_overwritten page
-		fd->is_dirty = 1;
+		// design decision:
+		// we do not make the page dirty, here, since in reality, the frame does not have the new contents,
+		// it is just that it will be overwritten so the user just doesn't care for the contents on the frame, so we rewrite it with zeros
+		// 		*here we knowingly make the page dirty, since wrote 0s for the to_be_overwritten page
+		// 		fd->is_dirty = 1;
 	}
 	else
 	{
