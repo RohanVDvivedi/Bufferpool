@@ -76,6 +76,7 @@ struct bufferpool
 	// USAGE -> can be used to flush pages only when the WAL log record matching their pageLSN is flushed to disk
 	// and once a dirty page is successfully, flushed to disk, then was_flushed_to_disk callback is called
 	// USAGE -> can be used to mark a page as not dirty, in the dirty page table
+	// USAGE -> was_flushed_to_disk callback is called atomically with clearing the dirty bit of the page frame
 	// Both of these functions will be called with the bufferpool's global lock and atleast a reader lock on the frame of the page, held
 	// a can_be_flushed_to_disk callback may not be followed by a was_flushed_to_disk callback, as the write IO may fail,
 	// Also global lock may be released in between the 2 callbacks, hence any state, between the calls protected by the global lock may not be trusted

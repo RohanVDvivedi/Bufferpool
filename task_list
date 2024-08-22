@@ -1,5 +1,7 @@
 
  * Build a DiskPoolPager project, that manages a bitmap of the size of a page, while leaving some bytes for log_seq_nr, and that can allocate and free pages, and extend the api of the bufferpool through it.
 
-  * ARIES support
+ * Dirty page table management for supporting ARIES
    * you can use was_flushed_to_disk to remove page from the dirty page table, and any subsequent write to the page with write lock held, to reinsert it into the dirty page table.
+   * you must ensure that both of your callbacks may not acquire or release the global lock, was_flushed_to_disk callbacl will occur with global lock and atleast a reader lock on the frame held
+   * was_flushed_to_disk callback is called atomically with clearing the dirty bit of the page frame
