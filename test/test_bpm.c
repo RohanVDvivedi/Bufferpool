@@ -53,6 +53,7 @@ bufferpool bpm;
 io_task io_tasks[COUNT_OF_IO_TASKS];
 
 int always_can_be_flushed_to_disk(void* flush_test_handle, uint64_t page_id, const void* frame);
+void nop_was_flushed_to_disk(void* flush_callback_handle, uint64_t page_id, const void* frame);
 page_io_ops get_block_file_page_io_ops(block_file* bfile, uint64_t page_size, uint64_t page_frame_alignment);
 
 void* io_task_execute(io_task* io_t_p);
@@ -70,7 +71,7 @@ int main(int argc, char **argv)
 
 	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
 
-	if(!initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, NULL, PERIODIC_FLUSH_JOB_STATUS))
+	if(!initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, nop_was_flushed_to_disk, NULL, PERIODIC_FLUSH_JOB_STATUS))
 	{
 		printf("failed to initialize bufferpool\n");
 		return -1;

@@ -41,7 +41,12 @@ page_io_ops get_block_file_page_io_ops(block_file* bfile, uint64_t page_size, ui
 				};
 }
 
-int always_can_be_flushed_to_disk(void* flush_test_handle, uint64_t page_id, const void* frame)
+int always_can_be_flushed_to_disk(void* flush_callback_handle, uint64_t page_id, const void* frame)
 {
 	return 1;
+}
+
+void nop_was_flushed_to_disk(void* flush_callback_handle, uint64_t page_id, const void* frame)
+{
+	return ;
 }
