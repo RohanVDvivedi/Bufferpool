@@ -213,6 +213,7 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 		// design decision:
 		// we do not make the page dirty, here, since in reality, the frame does not have the new contents,
 		// it is just that it will be overwritten so the user just doesn't care for the contents on the frame, so we rewrite it with zeros
+		// prior comments and code are preserved for future review
 		// 		*here we knowingly make the page dirty, since wrote 0s for the to_be_overwritten page
 		// 		fd->is_dirty = 1;
 	}
