@@ -1,2 +1,4 @@
-
+ * implement a function notify_modification_for_write_locked_page(bufferpool* bf, void* frame);
+   * this function may be called only if you have a write lock on the page
+   * this function will mark the page as dirty, if it wasn't already dirty
  * Build a DiskPoolPager project, that manages a bitmap of the size of a page, while leaving some bytes for log_seq_nr, and that can allocate and free pages, and extend the api of the bufferpool through it.
