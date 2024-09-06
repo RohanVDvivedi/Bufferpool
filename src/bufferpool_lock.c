@@ -691,6 +691,7 @@ int notify_modification_for_write_locked_page(bufferpool* bf, void* frame)
 	// if the user already has a write lock on the page, then the fd->is_under_read_IO and fd->is_under_write_IO are bound to be 0s
 	// so set the dirty bit
 	fd->is_dirty = 1;
+	result = 1;
 
 	EXIT:;
 	if(bf->has_internal_lock)
