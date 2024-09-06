@@ -284,7 +284,7 @@ void write_print_UNSAFE(uint64_t page_id, void* frame)
 	}
 	sprintf(frame, PAGE_DATA_FORMAT, page_id, ++value_read);
 	#ifdef NOTIFY_MODIFICATIONS
-		notify_modifications_for_write_locked_page(&bpm, frame);
+		notify_modification_for_write_locked_page(&bpm, frame);
 	#endif
 	printf("(%ld) after writing page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 }
