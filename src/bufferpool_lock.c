@@ -674,6 +674,31 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 	return result;
 }
 
+int notify_modification_for_write_locked_page(bufferpool* bf, void* frame)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	int result = 0;
+
+	// first, fetch frame_desc by frame ptr, and ensure that it is write locked
+	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
+	if(fd == NULL || !is_write_locked(&(fd->frame_lock)))
+		goto EXIT;
+
+	// we arrive here only if the fd exists and is write locked
+
+	// if the user already has a write lock on the page, then the fd->is_under_read_IO and fd->is_under_write_IO are bound to be 0s
+	// so set the dirty bit
+	fd->is_dirty = 1;
+
+	EXIT:;
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
+}
+
 //-------------------------------------------------------------------------------
 // JUGAAD for making prefetch_page() into an asynchronous call
 

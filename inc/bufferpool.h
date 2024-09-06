@@ -136,11 +136,16 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 		                  -> This can be used, if you are sure that the page had not been used or allocated prior to this call
 		                  -> this flag is a NO-OP if the page is already in bufferpool
 
-		was_modified -> this bit must be set by you, if the page was dirtied/modified by the user, dirty_bit = dirty_bit || was_modified
+		was_modified -> this bit must be set by the user, if the page was dirtied/modified by the user, dirty_bit = dirty_bit || was_modified
 
 		force_flush -> this is a suggestion to writing and flushing the page to disk, while releasing writer lock
 		            -> this is done only if the page is dirty and can_be_flushed_to_disk(page_id, frame) returns true
 */
+
+// the below function must be called, only with a write lock on the page held
+// as the above api infers, you must keep the was_modified bit around while having a write lock on the page to notify the bufferpool of the page modification
+// to avoid this you may call the below function, after any modification, it will simply set the dirty_bit, and eliminates the need for you to maintain the was_modified bit
+int notify_modification_for_write_locked_page(bufferpool* bf, void* frame);
 
 // this is a synchronous call to prefetch a page into memory, without taking any locks on it
 // return value suggests if the page was brought in memory
