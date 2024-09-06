@@ -28,6 +28,7 @@
 #define WAIT_FOR_FRAME_TIMEOUT 600
 #define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
 #define EVICT_DIRTY_IF_NECESSARY 1
+#define NOTIFY_MODIFICATIONS
 
 // workload to test
 //#define MODERATE_READS_WRITES_WORKLOAD
@@ -282,6 +283,9 @@ void write_print_UNSAFE(uint64_t page_id, void* frame)
 		}
 	}
 	sprintf(frame, PAGE_DATA_FORMAT, page_id, ++value_read);
+	#ifdef NOTIFY_MODIFICATIONS
+		notify_modifications_for_write_locked_page(&bpm, frame);
+	#endif
 	printf("(%ld) after writing page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 }
 
@@ -320,6 +324,7 @@ void read_print(uint64_t page_id)
 
 		read_print_UNSAFE(page_id, frame);
 
+		// never set was_modified bit here
 		int res = release_writer_lock_on_page(&bpm, frame, 0, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 		if(!res)
 			printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
@@ -358,8 +363,13 @@ void read_print_upgrade_write_print(uint64_t page_id)
 		printf("(%ld) success in upgrading read lock to write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	write_print_UNSAFE(page_id, frame);
+	#ifdef NOTIFY_MODIFICATIONS // we are notifying the modificaions so no need of was_modified bit
+		int was_modified = 0;
+	#elif
+		int was_modified = 1;
+	#endif
 
-	res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	res = release_writer_lock_on_page(&bpm, frame, was_modified, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	if(!res)
 		printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 	else
@@ -378,8 +388,13 @@ void write_print(uint64_t page_id)
 		printf("(%ld) success in acquiring write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	write_print_UNSAFE(page_id, frame);
+	#ifdef NOTIFY_MODIFICATIONS // we are notifying the modificaions so no need of was_modified bit
+		int was_modified = 0;
+	#elif
+		int was_modified = 1;
+	#endif
 
-	int res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	int res = release_writer_lock_on_page(&bpm, frame, was_modified, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	if(!res)
 		printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 	else
@@ -398,13 +413,18 @@ void write_print_downgrade_read_print(uint64_t page_id)
 		printf("(%ld) success in acquiring write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
 	write_print_UNSAFE(page_id, frame);
+	#ifdef NOTIFY_MODIFICATIONS // we are notifying the modificaions so no need of was_modified bit
+		int was_modified = 0;
+	#elif
+		int was_modified = 1;
+	#endif
 
-	int res = downgrade_writer_lock_to_reader_lock(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	int res = downgrade_writer_lock_to_reader_lock(&bpm, frame, was_modified, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 	if(!res)
 	{
 		printf("(%ld) *** failed *** to downgrade write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
-		res = release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		res = release_writer_lock_on_page(&bpm, frame, was_modified, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
 		if(!res)
 			printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 		else
