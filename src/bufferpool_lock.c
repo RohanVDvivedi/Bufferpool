@@ -99,6 +99,9 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			// remove it from LRU, to grab a read lock on it
 			remove_head_from_linkedlist(&(bf->dirty_frame_descs_lru_list));
 
+			// the page frame fd_to_flush was in LRU hence it is neither locked nor waited to be locked by any one
+			// this also ensures that it's is_under_read_IO and is_under_write_IO bits are both 0s.
+
 			// the fd_to_flush is neither locked nor is any one waiting to get lock on it, so we can grab a read lock instantly, without any checks
 			read_lock(&(fd_to_flush->frame_lock), READ_PREFERRING, NON_BLOCKING);
 
@@ -157,8 +160,9 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 	return NULL;
 }
 
-// fd must pass is_frame_desc_locked_or_waiting_to_be_locked() and must not be dirty i.e. its (is_dirty == 0)
-// and fd must not have the correct contents on its frame
+// fd must not pass is_frame_desc_locked_or_waiting_to_be_locked() and
+// must not be dirty i.e. its (is_dirty == 0)
+// and fd must not have the correct required contents on its frame i.e. if we require the page_id page, then the fd to read into muts not have contents of page_id page
 // i.e. fd must come directly from invalid_frame_desc_list or clean_frame_desc_lru_list
 // return of 0 is an error, 1 implies success, on success you will be holding write lock on the frame
 static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_desc* fd, uint64_t page_id, int to_be_overwritten_by_user)
