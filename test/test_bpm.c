@@ -365,7 +365,7 @@ void read_print_upgrade_write_print(uint64_t page_id)
 	write_print_UNSAFE(page_id, frame);
 	#ifdef NOTIFY_MODIFICATIONS // we are notifying the modificaions so no need of was_modified bit
 		int was_modified = 0;
-	#elif
+	#else
 		int was_modified = 1;
 	#endif
 
@@ -390,7 +390,7 @@ void write_print(uint64_t page_id)
 	write_print_UNSAFE(page_id, frame);
 	#ifdef NOTIFY_MODIFICATIONS // we are notifying the modificaions so no need of was_modified bit
 		int was_modified = 0;
-	#elif
+	#else
 		int was_modified = 1;
 	#endif
 
@@ -415,7 +415,7 @@ void write_print_downgrade_read_print(uint64_t page_id)
 	write_print_UNSAFE(page_id, frame);
 	#ifdef NOTIFY_MODIFICATIONS // we are notifying the modificaions so no need of was_modified bit
 		int was_modified = 0;
-	#elif
+	#else
 		int was_modified = 1;
 	#endif
 
