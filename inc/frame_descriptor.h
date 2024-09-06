@@ -34,13 +34,17 @@ struct frame_desc
 	// if this bit is set only if the page_desc is valid, but the page frame has been modified, but it has not yet reached disk
 	int is_dirty : 1;
 
-	// page_desc with final page_id already set is being read from disk
-	// this thread doing the IO is also a writer, because it is writing to the frame
+	// page_desc with final page_id already set is being read from disk, need write_lock on the frame_lock to do this
+	// this thread doing the IO is also a writer, because it is writing to the frame, from the contents of the disk
 	int is_under_read_IO : 1;
 
-	// page_desc with final page_id is being written to disk
+	// page_desc with final page_id is being written to disk, need read_lock on the frame_lock to do this
 	// this thread doing the IO is also a reader, because it is reading the frame, to write it to the disk
 	int is_under_write_IO : 1;
+
+	// the above 2 bits, is_under_read_IO and is_under_write_IO will always be accompanies with a respective lock, as required by that operation
+	// hence is_frame_desc_locked_or_waiting_to_be_locked(fd) == 0, says that both of these bits are also 0s, i.e. unset
+	// a write lock by the user on the contents of the page frame (frame_lock), also ensures that no other thread is accessing the page and that its is_under_*_IO bits are 0
 
 	// lock that must be held while accessing the contents of the page
 	rwlock frame_lock;

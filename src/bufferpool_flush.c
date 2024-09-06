@@ -89,8 +89,8 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 	{
 		// here the frame_desc, must have valid page_id and valid frame_contents
 		// we only check for the frame_desc being is_dirty, is not write_locked and is_under_write_IO == 0
-		// here for some thread to perform a read_IO, the corresponding thread will require a write_lock on the frame, and since we arlready tested that, so the is_under_read_IO mus be 0
-		// also we never perform a read_IO on a dirty_page, this also ensures that is_under_read_IO bit must be 0
+		// here for some thread to perform a read_IO, the corresponding thread will require a write_lock on the frame, and since we arlready tested that, so the fd->is_under_read_IO mus be 0
+		// also we never perform a read_IO on a dirty_page, this also ensures that fd->is_under_read_IO bit must be 0
 		if(fd->has_valid_page_id && fd->has_valid_frame_contents && fd->is_dirty && !is_write_locked(&(fd->frame_lock)) && !fd->is_under_write_IO)
 		{
 			// since the page is not write locked, so a NON_BLOCKING READ_PREFERRING lock must return with success instantaneously

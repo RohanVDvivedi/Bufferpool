@@ -513,6 +513,7 @@ int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_mo
 	fd->is_dirty = fd->is_dirty || was_modified;
 
 	// if force flush is set then, flush the page to disk with its read lock held
+	// here the user of the page, just had the write_lock on the page, and hence fd->is_under_read_IO == 0 and fd->is_under_write_IO == 0, so we may not check them
 	if(force_flush && fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame))
 	{
 		fd->is_under_write_IO = 1;
@@ -621,6 +622,7 @@ int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, i
 		fd->is_dirty = fd->is_dirty || was_modified;
 
 		// check that the page can be flushed to disk only after successfully downgrading lock, this ensures that the caller actually held writer lock, while calling this function
+		// here the user of this page, just had the write_lock on the page, and hence fd->is_under_read_IO == 0 and fd->is_under_write_IO == 0, so we may not check them
 		if(fd->is_dirty && bf->can_be_flushed_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame))
 		{
 			fd->is_under_write_IO = 1;
