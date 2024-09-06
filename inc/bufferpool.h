@@ -145,6 +145,7 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 // the below function must be called, only with a write lock on the page held
 // as the above api infers, you must keep the was_modified bit around while having a write lock on the page to notify the bufferpool of the page modification
 // to avoid this you may call the below function, after any modification, it will simply set the dirty_bit, and eliminates the need for you to maintain the was_modified bit
+// NOTE : while you have a write lock on the page, after modifying thar page, you must either call this function atleast once OR set the was_modified bit in the next function call that takes this flag
 int notify_modification_for_write_locked_page(bufferpool* bf, void* frame);
 
 // this is a synchronous call to prefetch a page into memory, without taking any locks on it
