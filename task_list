@@ -1,4 +1,3 @@
- * add function to fetch the page_id for a locked page
  * (*future) mechanism to prioritize pages that will be evicted
    * proposed system
      * function pointer to get priority of a page from the page data and page_id
