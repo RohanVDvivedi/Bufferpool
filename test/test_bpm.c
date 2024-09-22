@@ -256,6 +256,11 @@ void* io_task_execute(io_task* io_t_p)
 
 void read_print_UNSAFE(uint64_t page_id, void* frame)
 {
+	if(page_id != get_page_id_for_locked_page(&bpm, frame))
+	{
+		printf("FATAL BUG : page_id does not match the page_id of the frame\n");
+		exit(-1);
+	}
 	printf("(%ld) reading page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 	uint64_t page_id_read = page_id;
 	uint64_t value_read = 0;
@@ -270,6 +275,11 @@ void read_print_UNSAFE(uint64_t page_id, void* frame)
 
 void write_print_UNSAFE(uint64_t page_id, void* frame)
 {
+	if(page_id != get_page_id_for_locked_page(&bpm, frame))
+	{
+		printf("FATAL BUG : page_id does not match the page_id of the frame\n");
+		exit(-1);
+	}
 	printf("(%ld) before writing page_id(%" PRIu64 ") -> %s\n", pthread_self(), page_id, ((const char*)frame));
 	uint64_t page_id_read = page_id;
 	uint64_t value_read = 0;
