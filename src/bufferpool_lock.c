@@ -700,6 +700,29 @@ int notify_modification_for_write_locked_page(bufferpool* bf, void* frame)
 	return result;
 }
 
+uint64_t get_page_id_for_locked_page(const bufferpool* bf, const void* frame)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	uint64_t result = 0;
+
+	// first, fetch frame_desc by frame ptr
+	frame_desc* fd = find_frame_desc_by_frame_ptr(bf, frame);
+	if(fd == NULL || (!is_read_locked(&(fd->frame_lock)) && !is_write_locked(&(fd->frame_lock))))
+		goto EXIT;
+
+	// we arrive here only if the fd exists and is locked by someone
+
+	result = fd->map.page_id;
+
+	EXIT:;
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	return result;
+}
+
 //-------------------------------------------------------------------------------
 // JUGAAD for making prefetch_page() into an asynchronous call
 

@@ -148,6 +148,10 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 // NOTE : while you have a write lock on the page, after modifying thar page, you must either call this function atleast once OR set the was_modified bit in the next function call that takes this flag
 int notify_modification_for_write_locked_page(bufferpool* bf, void* frame);
 
+// returns the page_id for a page that you have locked but have forgotten its page_id
+// NOTE : only to be called for a page, that you have a lock on (doesn't matter read lock or write lock)
+uint64_t get_page_id_for_locked_page(const bufferpool* bf, const void* frame);
+
 // this is a synchronous call to prefetch a page into memory, without taking any locks on it
 // return value suggests if the page was brought in memory
 // after this call you still need call acquire_page_with_*_lock, to get the page with lock on it
