@@ -700,7 +700,7 @@ int notify_modification_for_write_locked_page(bufferpool* bf, void* frame)
 	return result;
 }
 
-uint64_t get_page_id_for_locked_page(const bufferpool* bf, const void* frame)
+uint64_t get_page_id_for_locked_page(bufferpool* bf, void* frame)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
