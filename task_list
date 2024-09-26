@@ -4,4 +4,3 @@
      * only clean pages are maintained as a heap with least priority at the top
      * dirty pages will still not be preferred for eviction before clean andin valid pages, it will be left as a linked list behaving as LRU, hence cleaning up least recently used pages first
      * there will also be an age factor higher the age of the clean page, higher the age since it was last used, lower will be its priority
- * Build a DiskPoolPager project, that manages a bitmap of the size of a page, while leaving some bytes for log_seq_nr, and that can allocate and free pages, and extend the api of the bufferpool through it.
