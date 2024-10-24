@@ -281,7 +281,7 @@ void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_mic
 	struct timespec then;
 	clock_gettime(CLOCK_REALTIME, &then);
 
-	uint64_t microsecond_elapsed = (then.tv_sec - now.tv_sec) * 1000000LL + ((then.tv_nsec - now.tv_nsec) / 1000LL);
+	uint64_t microsecond_elapsed = ((int64_t)then.tv_sec - (int64_t)now.tv_sec) * 1000000LL + (((int64_t)then.tv_nsec - (int64_t)now.tv_nsec) / 1000LL);
 
 	if(microsecond_elapsed > (*wait_for_frame_in_microseconds))
 		(*wait_for_frame_in_microseconds) = 0;
