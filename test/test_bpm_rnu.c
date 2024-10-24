@@ -24,9 +24,9 @@
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
-#define PERIODIC_FLUSH_JOB_STATUS ((periodic_flush_job_status){.frames_to_flush = 2, .period_in_milliseconds = 30})
+#define PERIODIC_FLUSH_JOB_STATUS ((periodic_flush_job_status){.frames_to_flush = 2, .period_in_microseconds = 30000})
 
-#define WAIT_FOR_FRAME_TIMEOUT 300
+#define WAIT_FOR_FRAME_TIMEOUT 30000
 #define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
 #define EVICT_DIRTY_IF_NECESSARY 1
 
