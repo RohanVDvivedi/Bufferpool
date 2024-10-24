@@ -19,8 +19,8 @@ struct periodic_flush_job_status
 	// number of dirty frames to flush every period
 	uint64_t frames_to_flush;
 
-	// the period_in_milliseconds, for flushing the frames_to_flush number of dirty frames
-	uint64_t period_in_milliseconds;
+	// the period_in_microseconds, for flushing the frames_to_flush number of dirty frames
+	uint64_t period_in_microseconds;
 
 	// if both the values are 0, then this implies stop the periodic_flush_job
 	// else if only one of them is 0, then this implies the parameter with 0 value must be unchanged
@@ -114,14 +114,14 @@ void deinitialize_bufferpool(bufferpool* bf);
 // this is applicable for only the functions that support force_flush like, downgrade_writer_lock_to_reader_lock and release_writer_lock_on_page function
 #define WAS_FORCE_FLUSHED 0b10
 
-// wait_for_frame_in_milliseconds -> represents the time to wait, until a suitable frame is available for a page
-// wait_for_frame_in_milliseconds == 0, if you do not want to wait
+// wait_for_frame_in_microseconds -> represents the time to wait, until a suitable frame is available for a page
+// wait_for_frame_in_microseconds == 0, if you do not want to wait
 
 // for the below 6 functions a NULL or 0 implies a failure
-void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary);
+void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary);
 int release_reader_lock_on_page(bufferpool* bf, void* frame);
 
-void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int to_be_overwritten);
+void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary, int to_be_overwritten);
 int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, int force_flush);
 
 int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_modified, int force_flush);

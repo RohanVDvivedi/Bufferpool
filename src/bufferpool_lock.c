@@ -260,16 +260,16 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 }
 
 // this function can be used to wait for an available frame
-// the wait_for_frame_in_milliseconds must be grater than 0, before calling this function, else it will lead to infinite loop in calling function
+// the wait_for_frame_in_microseconds must be grater than 0, before calling this function, else it will lead to infinite loop in calling function
 // wait_for_frame_in_millisecons will be updated with the remaining time you can wait for
-void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_milliseconds)
+void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_microseconds)
 {
 	// get current time
 	struct timespec now;
 	clock_gettime(CLOCK_REALTIME, &now);
 
 	// compute the time to stop at
-	struct timespec diff = {.tv_sec = ((*wait_for_frame_in_milliseconds) / 1000LL), .tv_nsec = ((*wait_for_frame_in_milliseconds) % 1000LL) * 1000000LL};
+	struct timespec diff = {.tv_sec = ((*wait_for_frame_in_microseconds) / 1000000LL), .tv_nsec = ((*wait_for_frame_in_microseconds) % 1000000LL) * 1000LL};
 	struct timespec stop_at = {.tv_sec = now.tv_sec + diff.tv_sec, .tv_nsec = now.tv_nsec + diff.tv_nsec};
 	stop_at.tv_sec += stop_at.tv_nsec / 1000000000LL;
 	stop_at.tv_nsec = stop_at.tv_nsec % 1000000000LL;
@@ -281,15 +281,15 @@ void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_mil
 	struct timespec then;
 	clock_gettime(CLOCK_REALTIME, &then);
 
-	uint64_t millisecond_elapsed = (then.tv_sec - now.tv_sec) * 1000LL + ((then.tv_sec - now.tv_sec) / 1000000LL);
+	uint64_t microsecond_elapsed = (then.tv_sec - now.tv_sec) * 1000000LL + ((then.tv_nsec - now.tv_nsec) / 1000LL);
 
-	if(millisecond_elapsed > (*wait_for_frame_in_milliseconds))
-		(*wait_for_frame_in_milliseconds) = 0;
+	if(microsecond_elapsed > (*wait_for_frame_in_microseconds))
+		(*wait_for_frame_in_microseconds) = 0;
 	else
-		(*wait_for_frame_in_milliseconds) -= millisecond_elapsed;
+		(*wait_for_frame_in_microseconds) -= microsecond_elapsed;
 }
 
-void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary)
+void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -333,9 +333,9 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 				goto EXIT;
 			else if(nothing_evictable)
 			{
-				if(wait_for_frame_in_milliseconds > 0)
+				if(wait_for_frame_in_microseconds > 0)
 				{
-					wait_for_an_available_frame(bf, &wait_for_frame_in_milliseconds);
+					wait_for_an_available_frame(bf, &wait_for_frame_in_microseconds);
 					continue;
 				}
 				// else if the user can not want to wait for a frame, return to the user with no lock
@@ -361,7 +361,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 	return (fd != NULL) ? fd->map.frame : NULL;
 }
 
-void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_milliseconds, int evict_dirty_if_necessary, int to_be_overwritten)
+void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary, int to_be_overwritten)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -405,9 +405,9 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 				goto EXIT;
 			else if(nothing_evictable)
 			{
-				if(wait_for_frame_in_milliseconds > 0)
+				if(wait_for_frame_in_microseconds > 0)
 				{
-					wait_for_an_available_frame(bf, &wait_for_frame_in_milliseconds);
+					wait_for_an_available_frame(bf, &wait_for_frame_in_microseconds);
 					continue;
 				}
 				// else if the user can not want to wait for a frame, return to the user with no lock
