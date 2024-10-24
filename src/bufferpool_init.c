@@ -18,7 +18,7 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 		return 0;
 
 	// initialization fails if one of the parameter is 0, and the other one is non-0
-	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_milliseconds)))
+	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_microseconds)))
 		return 0;
 
 	bf->has_internal_lock = (external_lock == NULL);
@@ -256,7 +256,7 @@ periodic_flush_job_status get_periodic_flush_job_status(bufferpool* bf)
 int is_periodic_flush_job_running(periodic_flush_job_status status)
 {
 	// a periodic flush job is running, if the status does not equal STOP_PERIODIC_FLUSH_JOB_STATUS
-	return (status.frames_to_flush != STOP_PERIODIC_FLUSH_JOB_STATUS.frames_to_flush) || (status.period_in_milliseconds != STOP_PERIODIC_FLUSH_JOB_STATUS.period_in_milliseconds);
+	return (status.frames_to_flush != STOP_PERIODIC_FLUSH_JOB_STATUS.frames_to_flush) || (status.period_in_microseconds != STOP_PERIODIC_FLUSH_JOB_STATUS.period_in_microseconds);
 }
 
 int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status)
@@ -279,12 +279,12 @@ int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status s
 		// then the 0 attributes of the status, implies they are to be left unchanged from their previous value
 		if(status.frames_to_flush == 0)
 			status.frames_to_flush = bf->current_periodic_flush_job_status.frames_to_flush;
-		if(status.period_in_milliseconds == 0)
-			status.period_in_milliseconds = bf->current_periodic_flush_job_status.period_in_milliseconds;
+		if(status.period_in_microseconds == 0)
+			status.period_in_microseconds = bf->current_periodic_flush_job_status.period_in_microseconds;
 	}
 
 	// new status' validation fails if one of the parameter is 0, and the other one is non-0
-	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_milliseconds)))
+	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_microseconds)))
 		goto EXIT;
 
 	// operate on the status now
