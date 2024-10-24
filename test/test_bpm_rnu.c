@@ -41,6 +41,8 @@ page_io_ops get_block_file_page_io_ops(block_file* bfile, uint64_t page_size, ui
 int io_task_params[COUNT_OF_IO_TASKS];
 void* io_task_execute(int* io_t_p);
 
+void* test_lock_other_than_page_2(void* temp);
+
 int main(int argc, char **argv)
 {
 	printf("\n\ntest started\n\n");
@@ -134,33 +136,6 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void* test_lock_other_than_page_2(void* temp)
-{
-	uint64_t page_id = PAGES_IN_HEAP_FILE / 2;
-	void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, EVICT_DIRTY_IF_NECESSARY);
-	if(frame == NULL)
-	{
-		printf("(%d) *** failed *** to acquire read lock on %" PRIu64 "\n", param, page_id);
-		return NULL;
-	}
-	else
-		printf("(%d) success in acquiring read lock on %" PRIu64 "\n", param, page_id);
-
-	nanosleep(&((struct timespec){1,0}), NULL);
-
-	read_print_UNSAFE(param, page_id, frame);
-
-	nanosleep(&((struct timespec){1,0}), NULL);
-
-	int res = release_reader_lock_on_page(&bpm, frame);
-	if(!res)
-		printf("(%d) *** failed *** to release read lock on %" PRIu64 "\n", param, page_id);
-	else
-		printf("(%d) success in release read lock on %" PRIu64 "\n", param, page_id);
-
-	return NULL;
-}
-
 void read_print_UNSAFE(int param, uint64_t page_id, void* frame)
 {
 	printf("(%d) reading page_id(%" PRIu64 ") -> %s\n", param, page_id, ((const char*)frame));
@@ -192,7 +167,45 @@ void write_print_UNSAFE(int param, uint64_t page_id, void* frame)
 	sprintf(frame, PAGE_DATA_FORMAT, page_id, ++value_read);
 	printf("(%d) after writing page_id(%" PRIu64 ") -> %s\n", param, page_id, ((const char*)frame));
 }
-#include<errno.h>
+
+void* test_lock_other_than_page_2(void* temp)
+{
+	uint64_t page_id = PAGES_IN_HEAP_FILE / 2;
+	void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, EVICT_DIRTY_IF_NECESSARY);
+	if(frame == NULL)
+	{
+		printf("other *** failed *** to acquire read lock on %" PRIu64 "\n", page_id);
+		return NULL;
+	}
+	else
+		printf("other success in acquiring read lock on %" PRIu64 "\n", page_id);
+
+	nanosleep(&((struct timespec){1,0}), NULL);
+
+	{
+		printf("other reading page_id(%" PRIu64 ") -> %s\n", page_id, ((const char*)frame));
+		uint64_t page_id_read = page_id;
+		uint64_t value_read = 0;
+		if(((const char*)frame)[0] != '\0')
+			sscanf(frame, PAGE_DATA_FORMAT, &page_id_read, &value_read);
+		if(page_id != page_id_read)
+		{
+			printf("GOT WRONG PAGE LOCK\n\n");
+			exit(-1);
+		}
+	}
+
+	nanosleep(&((struct timespec){1,0}), NULL);
+
+	int res = release_reader_lock_on_page(&bpm, frame);
+	if(!res)
+		printf("other *** failed *** to release read lock on %" PRIu64 "\n", page_id);
+	else
+		printf("other success in release read lock on %" PRIu64 "\n", page_id);
+
+	return NULL;
+}
+
 void* io_task_execute(int* io_t_p)
 {
 	int param = (*io_t_p);
