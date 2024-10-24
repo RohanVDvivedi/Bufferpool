@@ -111,6 +111,8 @@ int main(int argc, char **argv)
 		submit_job_executor(exe, (void*(*)(void*))io_task_execute, io_t_p, NULL, NULL, 0);
 	}
 
+	submit_job_executor(exe, (void*(*)(void*))test_lock_other_than_page_2, NULL, NULL, NULL, 0);
+
 	shutdown_executor(exe, 0);
 	wait_for_all_executor_workers_to_complete(exe);
 	printf("Waiting for tasks to finish\n\n");
@@ -130,6 +132,33 @@ int main(int argc, char **argv)
 	printf("test completed\n\n\n");
 
 	return 0;
+}
+
+void* test_lock_other_than_page_2(void* temp)
+{
+	uint64_t page_id = PAGES_IN_HEAP_FILE / 2;
+	void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, EVICT_DIRTY_IF_NECESSARY);
+	if(frame == NULL)
+	{
+		printf("(%d) *** failed *** to acquire read lock on %" PRIu64 "\n", param, page_id);
+		return NULL;
+	}
+	else
+		printf("(%d) success in acquiring read lock on %" PRIu64 "\n", param, page_id);
+
+	nanosleep(&((struct timespec){1,0}), NULL);
+
+	read_print_UNSAFE(param, page_id, frame);
+
+	nanosleep(&((struct timespec){1,0}), NULL);
+
+	int res = release_reader_lock_on_page(&bpm, frame);
+	if(!res)
+		printf("(%d) *** failed *** to release read lock on %" PRIu64 "\n", param, page_id);
+	else
+		printf("(%d) success in release read lock on %" PRIu64 "\n", param, page_id);
+
+	return NULL;
 }
 
 void read_print_UNSAFE(int param, uint64_t page_id, void* frame)
