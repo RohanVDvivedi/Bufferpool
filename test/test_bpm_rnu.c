@@ -19,8 +19,8 @@
 #define PAGES_IN_HEAP_FILE 20
 #define MAX_FRAMES_IN_BUFFER_POOL 6
 
-#define FIXED_THREAD_POOL_SIZE 9
 #define COUNT_OF_IO_TASKS 9
+#define FIXED_THREAD_POOL_SIZE (COUNT_OF_IO_TASKS + 10)
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
