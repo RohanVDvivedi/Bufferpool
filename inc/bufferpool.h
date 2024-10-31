@@ -160,6 +160,11 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary
 // asynchronous version of prefetch page
 void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary);
 
+// wakes up all threads waiting for wait_for_frame
+// this should be done after a WAL flush, to tell all thread waiting for latch that now there could be available frame in bufferpool
+// as after a WAL flush, flushedLSN is incremented allowing dirty frames to be flushed to disk and then read with new data
+void wake_up_all_waiting_for_frame(bufferpool* bf);
+
 // change max frame count for the bufferpool
 uint64_t get_max_frame_desc_count(bufferpool* bf);
 uint64_t get_total_frame_desc_count(bufferpool* bf);

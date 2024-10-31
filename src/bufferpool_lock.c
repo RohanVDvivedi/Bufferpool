@@ -723,6 +723,17 @@ uint64_t get_page_id_for_locked_page(bufferpool* bf, void* frame)
 	return result;
 }
 
+void wake_up_all_waiting_for_frame(bufferpool* bf)
+{
+	if(bf->has_internal_lock)
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	pthread_cond_broadcast(&(bf->wait_for_frame));
+
+	if(bf->has_internal_lock)
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+}
+
 //-------------------------------------------------------------------------------
 // JUGAAD for making prefetch_page() into an asynchronous call
 
