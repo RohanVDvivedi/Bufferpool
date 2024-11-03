@@ -175,6 +175,10 @@ periodic_flush_job_status get_periodic_flush_job_status(bufferpool* bf);
 int is_periodic_flush_job_running(periodic_flush_job_status status);
 int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status);
 
+// you may call the below function to wait until the periodic flush job to stop, after you have called modify_periodic_flush_job_status(bf, STOP_PERIODIC_FLUSH_JOB_STATUS)
+// it will return 1, if the periodic flush job was in stopped state at the end of this function call's wait, i.e. the attempt to wait for the stop of the status was successfull
+int wait_for_periodic_flush_job_to_stop(bufferpool* bf);
+
 // flushes all pages that are dirty and are not write locked and are not currently being flushed
 void flush_all_possible_dirty_pages(bufferpool* bf);
 
