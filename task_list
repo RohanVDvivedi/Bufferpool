@@ -1,5 +1,3 @@
- * upon decrementing max_frame_description_count
-  * you can also discard clean frames along with the invalid ones
 
  * (*future) mechanism to prioritize pages that will be evicted
    * proposed system
