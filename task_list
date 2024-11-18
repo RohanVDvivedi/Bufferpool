@@ -1,3 +1,6 @@
+ * upon decrementing max_frame_description_count
+  * you can also discard clean frames along with the invalid ones
+
  * (*future) mechanism to prioritize pages that will be evicted
    * proposed system
      * function pointer to get priority of a page from the page data and page_id
