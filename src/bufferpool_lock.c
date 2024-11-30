@@ -742,7 +742,7 @@ struct async_prefetch_page_params
 {
 	bufferpool* bf;
 	uint64_t page_id;
-	int evict_dirty_if_necessary : 1;
+	int evict_dirty_if_necessary;
 };
 
 static void* async_prefetch_page_job_func(void* appp_p)

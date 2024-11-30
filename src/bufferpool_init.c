@@ -362,12 +362,12 @@ int wait_for_periodic_flush_job_to_stop(bufferpool* bf)
 	// here we wait for the short period when the status says the job is not running, but the actual job is runnign because it hasn't seen the state yet
 	while(!is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && bf->is_periodic_flush_job_running)
 		pthread_cond_wait(&(bf->periodic_flush_job_complete_wait), get_bufferpool_lock(bf));
-printf("%d %d\n", is_periodic_flush_job_running(bf->current_periodic_flush_job_status), bf->is_periodic_flush_job_running);
+
 	// we come out of the above loop only if
 	/*
-		1. status says it is running -> (here bf->is_periodic_flush_job_running == 1), but we can't wait, return value = 0, because the job is running after the wait
+		1. status says it is running -> (here bf->is_periodic_flush_job_running == true), but we can't wait, return value = 0, because the job is running after the wait
 		OR
-		2. status says it is not running, and the (bf->is_periodic_flush_job_running == 0), so we do not have to wait,  return value = 1
+		2. status says it is not running, and the (bf->is_periodic_flush_job_running == false), so we do not have to wait,  return value = 1
 	*/
 
 	int is_stopped = !(bf->is_periodic_flush_job_running);

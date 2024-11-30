@@ -28,19 +28,19 @@ struct frame_desc
 
 	// the page_id and frame hold valid values only if the is_valid_* bit is set
 	// once a page has_valid_page_id, it never becomes invalid, only its page_id changes
-	int has_valid_page_id : 1;
-	int has_valid_frame_contents : 1;
+	int has_valid_page_id;
+	int has_valid_frame_contents;
 
 	// if this bit is set only if the page_desc is valid, but the page frame has been modified, but it has not yet reached disk
-	int is_dirty : 1;
+	int is_dirty;
 
 	// page_desc with final page_id already set is being read from disk, need write_lock on the frame_lock to do this
 	// this thread doing the IO is also a writer, because it is writing to the frame, from the contents of the disk
-	int is_under_read_IO : 1;
+	int is_under_read_IO;
 
 	// page_desc with final page_id is being written to disk, need read_lock on the frame_lock to do this
 	// this thread doing the IO is also a reader, because it is reading the frame, to write it to the disk
-	int is_under_write_IO : 1;
+	int is_under_write_IO;
 
 	// the above 2 bits, is_under_read_IO and is_under_write_IO will always be accompanies with a respective lock, as required by that operation
 	// hence is_frame_desc_locked_or_waiting_to_be_locked(fd) == 0, says that both of these bits are also 0s, i.e. unset

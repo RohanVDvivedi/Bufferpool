@@ -32,7 +32,7 @@ typedef struct bufferpool bufferpool;
 struct bufferpool
 {
 	// if set to true, use internal global lock, else use external lock
-	int has_internal_lock : 1;
+	int has_internal_lock;
 	union
 	{
 		pthread_mutex_t* external_lock;
@@ -99,7 +99,7 @@ struct bufferpool
 	pthread_cond_t periodic_flush_job_status_update;
 
 	// flag to specify if the periodic flush job is running
-	int is_periodic_flush_job_running : 1;
+	int is_periodic_flush_job_running;
 
 	// wait on this condition variable for the periodic flush job to complete
 	// i.e. wait for transition of is_periodic_flush_job_running from 1 to 0
