@@ -365,9 +365,9 @@ int wait_for_periodic_flush_job_to_stop(bufferpool* bf)
 
 	// we come out of the above loop only if
 	/*
-		1. status says it is running -> (here bf->is_periodic_flush_job_running == true), but we can't wait, return value = 0, because the job is running after the wait
+		1. status says it is running -> (here bf->is_periodic_flush_job_running), but we can't wait, return value = 0, because the job is running after the wait
 		OR
-		2. status says it is not running, and the (bf->is_periodic_flush_job_running == false), so we do not have to wait,  return value = 1
+		2. status says it is not running, and the (NOT bf->is_periodic_flush_job_running), so we do not have to wait,  return value = 1
 	*/
 
 	int is_stopped = !(bf->is_periodic_flush_job_running);
