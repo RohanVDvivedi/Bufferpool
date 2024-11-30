@@ -15,7 +15,7 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 	if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
 	{
 		// for a frame to be discarded, it must either have invalid data, OR must be clean with valid data
-		if((fd->has_valid_frame_contents == 0 || fd->is_dirty == 0) && bf->total_frame_desc_count > bf->max_frame_desc_count)
+		if(( (!(fd->has_valid_frame_contents)) || (!(fd->is_dirty)) ) && bf->total_frame_desc_count > bf->max_frame_desc_count)
 		{
 			// decrement the total frame_desc count
 			bf->total_frame_desc_count--;
