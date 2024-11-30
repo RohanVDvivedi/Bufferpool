@@ -99,7 +99,7 @@ struct bufferpool
 	pthread_cond_t periodic_flush_job_status_update;
 
 	// flag to specify if the periodic flush job is running
-	int is_periodic_flush_job_running;
+	int is_periodic_flush_job_running : 1;
 
 	// wait on this condition variable for the periodic flush job to complete
 	// i.e. wait for transition of is_periodic_flush_job_running from 1 to 0
