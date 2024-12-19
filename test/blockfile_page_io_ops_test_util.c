@@ -26,6 +26,7 @@ static int write_page_to_block_file(const void* page_io_ops_handle, const void* 
 
 static int flush_all_pages_to_block_file(const void* page_io_ops_handle)
 {
+	printf("flush\n");
 	return flush_all_writes_to_block_file(((block_file*)(page_io_ops_handle)));
 }
 
