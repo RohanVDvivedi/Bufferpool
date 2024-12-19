@@ -58,6 +58,10 @@ struct frame_desc
 	bstnode embed_node_frame_ptr_to_frame_desc;
 
 	llnode embed_node_lru_lists;
+
+	// this node is only to be used by the local linkedlist variables while performing flush
+	// this allows us to use linkedlist to maintain/organize frames that need to be flushed without actually allocating anymore memory
+	llnode embed_node_flush_lists;
 };
 
 // get_new_frame_desc -> returns an empty frame_desc with all its attributes initialized and frame allocated

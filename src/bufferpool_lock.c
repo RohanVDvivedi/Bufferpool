@@ -93,7 +93,7 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 	{
 		// list of all frame descriptors picked to be cleaned from dirty_frame_descs_lru_list
 		linkedlist picked;
-		initialize_linkedlist(&picked, offsetof(frame_desc, embed_node_lru_lists));
+		initialize_linkedlist(&picked, offsetof(frame_desc, embed_node_flush_lists));
 
 		// loop to pick frame_descs to clean
 		{
@@ -152,9 +152,9 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 
 		// now perform write_IO on the picked frame_descs, and segregate them into write_successfull and write_failed linkedlists
 		linkedlist write_successfull;
-		initialize_linkedlist(&write_successfull, offsetof(frame_desc, embed_node_lru_lists));
+		initialize_linkedlist(&write_successfull, offsetof(frame_desc, embed_node_flush_lists));
 		linkedlist write_failed;
-		initialize_linkedlist(&write_failed, offsetof(frame_desc, embed_node_lru_lists));
+		initialize_linkedlist(&write_failed, offsetof(frame_desc, embed_node_flush_lists));
 
 		while(!is_empty_linkedlist(&picked))
 		{

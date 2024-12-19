@@ -39,6 +39,7 @@ frame_desc* new_frame_desc(uint32_t page_size, uint64_t page_frame_alignment, pt
 	initialize_bstnode(&(fd->embed_node_page_id_to_frame_desc));
 	initialize_bstnode(&(fd->embed_node_frame_ptr_to_frame_desc));
 	initialize_llnode(&(fd->embed_node_lru_lists));
+	initialize_llnode(&(fd->embed_node_flush_lists));
 
 	return fd;
 }
