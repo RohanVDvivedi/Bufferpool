@@ -107,8 +107,6 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			{
 				// pick to test head, if it can be flushed
 				frame_desc* fd_to_pick = (frame_desc*) get_head_of_linkedlist(&pick_from);
-
-				// remove it from LRU
 				remove_head_from_linkedlist(&pick_from);
 
 				/*
