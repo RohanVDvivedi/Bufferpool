@@ -1,3 +1,4 @@
+ * if evict_dirty_if_necessary bit is set in the parameter then attempt to clean all dirty frames from dirty_frame_descs_lru_list
 
  * (*future) mechanism to prioritize pages that will be evicted
    * proposed system
