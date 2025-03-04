@@ -91,9 +91,7 @@ install : uninstall all
 
 PUBLIC_HEADERS_TO_UNINSTALL=$(patsubst %.h, ${DOWNLOAD_DIR}/include/%.h, ${PUBLIC_HEADERS})
 
-# ** assumption is that all your public headers, libraries and binaries used 
-# ** will always have your project name in them
-# and this is how we figure out what to remove from the 
+# removes what was installed
 uninstall : 
 	${RM} ${PUBLIC_HEADERS_TO_UNINSTALL}
 	${RM} ${DOWNLOAD_DIR}/lib/${LIBRARY}
