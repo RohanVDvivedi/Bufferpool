@@ -21,6 +21,7 @@ It is an implementation of a Buffer Pool Manager library in C, used for accessin
 ## Setup instructions
 **Install dependencies :**
  * [Cutlery](https://github.com/RohanVDvivedi/Cutlery)
+ * [PosixUtils](https://github.com/RohanVDvivedi/PosixUtils)
  * [BoomPar](https://github.com/RohanVDvivedi/BoomPar)
  * [ReaderWriterLock](https://github.com/RohanVDvivedi/ReaderWriterLock)
 

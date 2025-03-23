@@ -2,6 +2,8 @@
 
 #include<bufferpool_util.h>
 
+#include<pthread_cond_utils.h>
+
 #include<stdlib.h>
 
 // if the frame_desc fd, is not not references by any one, then
@@ -327,31 +329,9 @@ static int get_valid_frame_contents_on_frame_for_page_id(bufferpool* bf, frame_d
 // this function can be used to wait for an available frame
 // the wait_for_frame_in_microseconds must be grater than 0, before calling this function, else it will lead to infinite loop in calling function
 // wait_for_frame_in_millisecons will be updated with the remaining time you can wait for
-void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_microseconds)
+static void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame_in_microseconds)
 {
-	// get current time
-	struct timespec now;
-	clock_gettime(CLOCK_REALTIME, &now);
-
-	// compute the time to stop at
-	struct timespec diff = {.tv_sec = ((*wait_for_frame_in_microseconds) / 1000000LL), .tv_nsec = ((*wait_for_frame_in_microseconds) % 1000000LL) * 1000LL};
-	struct timespec stop_at = {.tv_sec = now.tv_sec + diff.tv_sec, .tv_nsec = now.tv_nsec + diff.tv_nsec};
-	stop_at.tv_sec += stop_at.tv_nsec / 1000000000LL;
-	stop_at.tv_nsec = stop_at.tv_nsec % 1000000000LL;
-
-	// wait until atmost stop_at
-	pthread_cond_timedwait(&(bf->wait_for_frame), get_bufferpool_lock(bf), &stop_at);
-
-	// compute the current time after wait is over
-	struct timespec then;
-	clock_gettime(CLOCK_REALTIME, &then);
-
-	uint64_t microsecond_elapsed = ((int64_t)then.tv_sec - (int64_t)now.tv_sec) * 1000000LL + (((int64_t)then.tv_nsec - (int64_t)now.tv_nsec) / 1000LL);
-
-	if(microsecond_elapsed > (*wait_for_frame_in_microseconds))
-		(*wait_for_frame_in_microseconds) = 0;
-	else
-		(*wait_for_frame_in_microseconds) -= microsecond_elapsed;
+	pthread_cond_timedwait_for_microseconds(&(bf->wait_for_frame), get_bufferpool_lock(bf), wait_for_frame_in_microseconds);
 }
 
 void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary)

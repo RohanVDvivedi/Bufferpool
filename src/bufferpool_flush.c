@@ -207,6 +207,8 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 #include<time.h>
 #include<errno.h>
 
+#include<pthread_cond_utils.h>
+
 void* periodic_flush_job(void* bf_p)
 {
 	bufferpool* bf = bf_p;
@@ -228,13 +230,8 @@ void* periodic_flush_job(void* bf_p)
 
 		while(is_periodic_flush_job_running(bf->current_periodic_flush_job_status))
 		{
-			struct timespec now;
-			clock_gettime(CLOCK_REALTIME, &now);
-			struct timespec diff = {.tv_sec = (bf->current_periodic_flush_job_status.period_in_microseconds / 1000000LL), .tv_nsec = (bf->current_periodic_flush_job_status.period_in_microseconds % 1000000LL) * 1000LL};
-			struct timespec stop_at = {.tv_sec = now.tv_sec + diff.tv_sec, .tv_nsec = now.tv_nsec + diff.tv_nsec};
-			stop_at.tv_sec += stop_at.tv_nsec / 1000000000LL;
-			stop_at.tv_nsec = stop_at.tv_nsec % 1000000000LL;
-			if(ETIMEDOUT == pthread_cond_timedwait(&(bf->periodic_flush_job_status_update), get_bufferpool_lock(bf), &stop_at))
+			uint64_t period_in_microseconds = bf->current_periodic_flush_job_status.period_in_microseconds;
+			if(pthread_cond_timedwait_for_microseconds(&(bf->periodic_flush_job_status_update), get_bufferpool_lock(bf), &period_in_microseconds))
 				break;
 		}
 

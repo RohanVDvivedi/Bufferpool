@@ -4,6 +4,8 @@
 #include<frame_descriptor.h>
 #include<frame_descriptor_util.h>
 
+#include<pthread_cond_utils.h>
+
 #include<cutlery_math.h>
 #include<stdio.h>
 #define HASHTABLE_BUCKET_CAPACITY(max_frame_desc_count) (min((((max_frame_desc_count)/2)+8),(CY_UINT_MAX/32)))
@@ -52,7 +54,7 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	initialize_linkedlist(&(bf->dirty_frame_descs_lru_list), offsetof(frame_desc, embed_node_lru_lists));
 
-	pthread_cond_init(&(bf->wait_for_frame), NULL);
+	pthread_cond_init_with_monotonic_clock(&(bf->wait_for_frame));
 
 	bf->page_io_functions = page_io_functions;
 
@@ -71,11 +73,11 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
 
-	pthread_cond_init(&(bf->periodic_flush_job_status_update), NULL);
+	pthread_cond_init_with_monotonic_clock(&(bf->periodic_flush_job_status_update));
 
 	bf->is_periodic_flush_job_running = 0;
 
-	pthread_cond_init(&(bf->periodic_flush_job_complete_wait), NULL);
+	pthread_cond_init_with_monotonic_clock(&(bf->periodic_flush_job_complete_wait));
 
 	// if external lock is required then take the lock and proceed to modify the periodic flush job with the new status params
 	if(!bf->has_internal_lock)
