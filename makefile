@@ -77,22 +77,20 @@ clean :
 # INSTALLING and UNINSTALLING system wide
 # -----------------------------------------------------
 
-PUBLIC_HEADERS_TO_INSTALL=$(patsubst %.h, ${INC_DIR}/%.h, ${PUBLIC_HEADERS})
+PUBLIC_HEADERS_TO_INSTALL=$(patsubst %.h, ${INC_DIR}/${PROJECT_NAME}/%.h, ${PUBLIC_HEADERS})
 
 # install the library, from this directory to user environment path
 # you must uninstall current installation before making a new installation
 install : uninstall all
-	${MK} ${DOWNLOAD_DIR}/include
-	${CP} ${PUBLIC_HEADERS_TO_INSTALL} ${DOWNLOAD_DIR}/include
+	${MK} ${DOWNLOAD_DIR}/include/${PROJECT_NAME}
+	${CP} ${PUBLIC_HEADERS_TO_INSTALL} ${DOWNLOAD_DIR}/include/${PROJECT_NAME}
 	${MK} ${DOWNLOAD_DIR}/lib
 	${CP} ${LIB_DIR}/${LIBRARY} ${DOWNLOAD_DIR}/lib
 	#${MK} ${DOWNLOAD_DIR}/bin
 	#${CP} ${BIN_DIR}/${BINARY} ${DOWNLOAD_DIR}/bin
 
-PUBLIC_HEADERS_TO_UNINSTALL=$(patsubst %.h, ${DOWNLOAD_DIR}/include/%.h, ${PUBLIC_HEADERS})
-
 # removes what was installed
 uninstall : 
-	${RM} ${PUBLIC_HEADERS_TO_UNINSTALL}
+	${RM} -r ${DOWNLOAD_DIR}/include/${PROJECT_NAME}
 	${RM} ${DOWNLOAD_DIR}/lib/${LIBRARY}
 	#${RM} ${DOWNLOAD_DIR}/bin/${BINARY}

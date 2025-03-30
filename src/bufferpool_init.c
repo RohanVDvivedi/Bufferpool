@@ -1,12 +1,12 @@
-#include<bufferpool.h>
+#include<bufferpool/bufferpool.h>
 
-#include<bufferpool_util.h>
-#include<frame_descriptor.h>
-#include<frame_descriptor_util.h>
+#include<bufferpool/bufferpool_util.h>
+#include<bufferpool/frame_descriptor.h>
+#include<bufferpool/frame_descriptor_util.h>
 
-#include<pthread_cond_utils.h>
+#include<posixutils/pthread_cond_utils.h>
 
-#include<cutlery_math.h>
+#include<cutlery/cutlery_math.h>
 #include<stdio.h>
 #define HASHTABLE_BUCKET_CAPACITY(max_frame_desc_count) (min((((max_frame_desc_count)/2)+8),(CY_UINT_MAX/32)))
 

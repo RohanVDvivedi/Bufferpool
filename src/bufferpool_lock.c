@@ -1,8 +1,8 @@
-#include<bufferpool.h>
+#include<bufferpool/bufferpool.h>
 
-#include<bufferpool_util.h>
+#include<bufferpool/bufferpool_util.h>
 
-#include<pthread_cond_utils.h>
+#include<posixutils/pthread_cond_utils.h>
 
 #include<stdlib.h>
 

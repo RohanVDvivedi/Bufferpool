@@ -1,17 +1,17 @@
 #ifndef BUFFERPOOL_H
 #define BUFFERPOOL_H
 
-#include<hashmap.h>
-#include<linkedlist.h>
+#include<cutlery/hashmap.h>
+#include<cutlery/linkedlist.h>
 
-#include<executor.h>
-#include<promise.h>
+#include<boompar/executor.h>
+#include<boompar/promise.h>
 
 #include<pthread.h>
 
 #include<stdint.h>
 
-#include<page_io_ops.h>
+#include<bufferpool/page_io_ops.h>
 
 typedef struct periodic_flush_job_status periodic_flush_job_status;
 struct periodic_flush_job_status

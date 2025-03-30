@@ -1,6 +1,6 @@
-#include<frame_descriptor.h>
+#include<bufferpool/frame_descriptor.h>
 
-#include<cutlery_math.h>
+#include<cutlery/cutlery_math.h>
 
 cy_uint hash_frame_desc_by_page_id(const void* pd_p)
 {

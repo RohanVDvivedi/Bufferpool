@@ -1,7 +1,7 @@
-#include<bufferpool.h>
+#include<bufferpool/bufferpool.h>
 
-#include<bufferpool_util.h>
-#include<frame_descriptor.h>
+#include<bufferpool/bufferpool_util.h>
+#include<bufferpool/frame_descriptor.h>
 
 typedef struct flush_params flush_params;
 struct flush_params
@@ -207,7 +207,7 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 #include<time.h>
 #include<errno.h>
 
-#include<pthread_cond_utils.h>
+#include<posixutils/pthread_cond_utils.h>
 
 void* periodic_flush_job(void* bf_p)
 {

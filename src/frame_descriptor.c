@@ -1,9 +1,9 @@
-#include<frame_descriptor.h>
+#include<bufferpool/frame_descriptor.h>
 
 #include<stddef.h>
 #include<stdlib.h>
 
-#include<cutlery_stds.h>
+#include<cutlery/cutlery_stds.h>
 
 // Note: map MUST ALWAYS BE THE FIRST ATTRIBUTE IN THE frame_desc i.e. at offset 0 in the struct
 fail_build_on(offsetof(frame_desc, map) != 0)
