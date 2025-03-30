@@ -1,10 +1,10 @@
-#include<block_io.h>
+#include<blockio/block_io.h>
 
 #include<stdio.h>
 #include<stdint.h>
 #include<inttypes.h>
 
-#include<page_io_ops.h>
+#include<bufferpool/page_io_ops.h>
 
 static int read_page_from_block_file(const void* page_io_ops_handle, void* frame_dest, uint64_t page_id, uint32_t page_size)
 {
