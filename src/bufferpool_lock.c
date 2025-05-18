@@ -348,7 +348,12 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 		{
 			remove_frame_desc_from_lru_lists(bf, fd);
 
-			read_lock(&(fd->frame_lock), WRITE_PREFERRING, BLOCKING);
+			if(!read_lock(&(fd->frame_lock), WRITE_PREFERRING, BLOCKING)) // attempt to read_lock, and then enter only if lock not acquired, should not happen for a BLOCKING
+			{
+				handle_frame_desc_if_not_referenced(bf, fd);
+				fd = NULL; // NULL marked to signal frame lock not acquired
+				goto EXIT;
+			}
 
 			// once we have read lock on the frame, make sure that it has valid contents
 			if(fd->has_valid_frame_contents)
@@ -420,7 +425,12 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 		{
 			remove_frame_desc_from_lru_lists(bf, fd);
 
-			write_lock(&(fd->frame_lock), BLOCKING);
+			if(!write_lock(&(fd->frame_lock), BLOCKING)) // attempt to write_lock, and then enter only if lock not acquired, should not happen for BLOCKING a call
+			{
+				handle_frame_desc_if_not_referenced(bf, fd);
+				fd = NULL; // NULL marked to signal frame lock not acquired
+				goto EXIT;
+			}
 
 			// once we have write lock on the frame, make sure that it has valid contents
 			if(fd->has_valid_frame_contents)
