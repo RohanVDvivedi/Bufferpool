@@ -1,3 +1,5 @@
+ * convert all rwlock based *_lock(BLOCKING) calls to fixed amount of timeout_in_microseconds (preferrable 1 second or a user supplied value) calls, to avoid blocking a user thread indefinitely
+   * these calls must be checked that if they fail, we return 0 or NULL
 
  * (*future) mechanism to prioritize pages that will be evicted
    * proposed system
