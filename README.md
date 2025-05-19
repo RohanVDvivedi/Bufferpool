@@ -23,7 +23,7 @@ It is an implementation of a Buffer Pool Manager library in C, used for accessin
  * [Cutlery](https://github.com/RohanVDvivedi/Cutlery)
  * [PosixUtils](https://github.com/RohanVDvivedi/PosixUtils)
  * [BoomPar](https://github.com/RohanVDvivedi/BoomPar)
- * [ReaderWriterLock](https://github.com/RohanVDvivedi/ReaderWriterLock)
+ * [LockKing](https://github.com/RohanVDvivedi/LockKing)
 
 **Download source code :**
  * `git clone https://github.com/RohanVDvivedi/Bufferpool.git`
@@ -37,7 +37,7 @@ It is an implementation of a Buffer Pool Manager library in C, used for accessin
  * ***Once you have installed from source, you may discard the build by*** `make clean`
 
 ## Using The library
- * add `-lbufferpool -lrwlock -lboompar -lpthread -lcutlery` linker flag, while compiling your application
+ * add `-lbufferpool -llockking -lboompar -lpthread -lcutlery` linker flag, while compiling your application
  * do not forget to include appropriate public api headers as and when needed. this includes
    * `#include<bufferpool/bufferpool.h>` -> read this to get the gist of the API
    * `#include<bufferpool/page_io_ops.h>` -> defines the structure of read/write I/O callback function struct

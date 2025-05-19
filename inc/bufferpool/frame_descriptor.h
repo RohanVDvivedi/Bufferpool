@@ -3,7 +3,7 @@
 
 #include<stdint.h>
 
-#include<rwlock/rwlock.h>
+#include<lockking/rwlock.h>
 
 #include<cutlery/hashmap.h>
 #include<cutlery/linkedlist.h>
