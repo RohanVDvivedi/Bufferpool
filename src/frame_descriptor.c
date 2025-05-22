@@ -60,7 +60,7 @@ int is_frame_desc_under_IO(frame_desc* fd)
 
 int is_frame_desc_locked_or_waiting_to_be_locked(frame_desc* fd)
 {
-	return is_referenced(&(fd->frame_lock));
+	return is_rwlock_referenced(&(fd->frame_lock));
 }
 
 #include<stdio.h>
@@ -73,5 +73,5 @@ void print_frame_desc(frame_desc* fd)
 	printf("\tis_dirty = %d\n", fd->is_dirty);
 	printf("\tIO\n\t\tis_under_read_IO = %d\n\t\tis_under_write_IO = %d\n", fd->is_under_read_IO, fd->is_under_write_IO);
 	printf("\tlocks\n\t\treader = %d\n\t\twriter = %d\n", is_read_locked(&(fd->frame_lock)), is_write_locked(&(fd->frame_lock)) );
-	printf("\twaiters = %d\n\n", has_waiters(&(fd->frame_lock)));
+	printf("\twaiters = %d\n\n", has_rwlock_waiters(&(fd->frame_lock)));
 }
