@@ -115,7 +115,8 @@ void deinitialize_bufferpool(bufferpool* bf);
 #define WAS_FORCE_FLUSHED 0b10
 
 // wait_for_frame_in_microseconds -> represents the time to wait, until a suitable frame is available for a page
-// wait_for_frame_in_microseconds == 0, if you do not want to wait
+// wait_for_frame_in_microseconds == NON_BLOCKING OR 0, if you do not want to wait
+// wait_for_frame_in_microseconds == BLOCKING is NOT supported, I REPEAT BLOCKING VALUE IS NOT SUPPORTED HERE
 
 // for the below 6 functions a NULL or 0 implies a failure
 void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary);
