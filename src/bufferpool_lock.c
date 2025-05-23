@@ -836,7 +836,7 @@ void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_ne
 		goto UNLOCKED_EXIT;
 
 	(*appp) = (async_prefetch_page_params){bf, page_id, evict_dirty_if_necessary};
-	if(!submit_job_executor(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, async_prefetch_page_job_on_cancellation_callback, 0))
+	if(!submit_job_executor(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, async_prefetch_page_job_on_cancellation_callback, BLOCKING))
 	{
 		free(appp);
 		goto UNLOCKED_EXIT;

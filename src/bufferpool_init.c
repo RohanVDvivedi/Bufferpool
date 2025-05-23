@@ -317,7 +317,7 @@ int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status s
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 		// if we could not submit the new job, to turn on the periodic flush job then exit with failure
-		if(!submit_job_executor(bf->cached_threadpool_executor, periodic_flush_job, bf, NULL, NULL, 0))
+		if(!submit_job_executor(bf->cached_threadpool_executor, periodic_flush_job, bf, NULL, NULL, BLOCKING))
 		{
 			pthread_mutex_lock(get_bufferpool_lock(bf));
 			bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;

@@ -124,7 +124,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 
 	// submit all the flush_job_params
 	for(uint64_t i = 0; i < flush_job_params_count; i++)
-		flush_job_params[i].write_job_submission_success = submit_job_executor(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), NULL, 0);
+		flush_job_params[i].write_job_submission_success = submit_job_executor(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), NULL, BLOCKING);
 
 	// this flag will be set if there is atleast 1 write_io_job succeeded
 	int flag_atleast_1_write_io_job_succeeded = 0;
