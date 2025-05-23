@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 	for(uint32_t i = 0; i < COUNT_OF_IO_TASKS; i++)
 	{
 		io_task* io_t_p = &(io_tasks[i]);
-		submit_job_executor(exe, (void*(*)(void*))io_task_execute, io_t_p, NULL, NULL, 0);
+		submit_job_executor(exe, (void*(*)(void*))io_task_execute, io_t_p, NULL, NULL, BLOCKING);
 	}
 
 	shutdown_executor(exe, 0);
