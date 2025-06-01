@@ -6,6 +6,7 @@
 
 #include<boompar/executor.h>
 #include<boompar/promise.h>
+#include<boompar/periodic_job.h>
 
 #include<pthread.h>
 
@@ -83,7 +84,7 @@ struct bufferpool
 	uint64_t periodic_flush_job_params_capacity;
 };
 
-int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, periodic_flush_job_status status);
+int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, uint64_t periodic_job_period_in_microseconds, uint64_t periodic_job_frames_to_flush);
 
 void deinitialize_bufferpool(bufferpool* bf);
 

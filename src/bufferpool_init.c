@@ -10,7 +10,7 @@
 #include<stdio.h>
 #define HASHTABLE_BUCKET_CAPACITY(max_frame_desc_count) (min((((max_frame_desc_count)/2)+8),(CY_UINT_MAX/32)))
 
-void* periodic_flush_job(void* bf_p);
+void periodic_flush_job_function(void* bf_p);
 
 int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, uint64_t periodic_job_period_in_microseconds, uint64_t periodic_job_frames_to_flush)
 {
@@ -20,7 +20,7 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 		return 0;
 
 	// initialization fails if one of the parameter is 0, and the other one is non-0
-	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_microseconds)))
+	if(periodic_job_period_in_microseconds == BLOCKING || periodic_job_period_in_microseconds == NON_BLOCKING || periodic_job_frames_to_flush == 0)
 		return 0;
 
 	bf->has_internal_lock = (external_lock == NULL);
@@ -73,7 +73,7 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	bf->periodic_flush_job_params_capacity = periodic_job_period_in_microseconds;
 	bf->periodic_flush_job_params = NULL;
-	if(NULL == (bf->periodic_flush_job = new_periodic_job(periodic_flush_job, bf, periodic_job_period_in_microseconds)))
+	if(NULL == (bf->periodic_flush_job = new_periodic_job(periodic_flush_job_function, bf, periodic_job_period_in_microseconds)))
 	{
 		shutdown_executor(bf->cached_threadpool_executor, 1);
 		wait_for_all_executor_workers_to_complete(bf->cached_threadpool_executor);
@@ -245,7 +245,7 @@ int modify_periodic_flush_job_frame_count(bufferpool* bf, uint64_t frames_to_flu
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	bf->periodic_job_frames_to_flush = frames_to_flush;
+	bf->periodic_flush_job_params_capacity = frames_to_flush;
 
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -298,7 +298,7 @@ int resume_periodic_flush_job(bufferpool* bf)
 	return res;
 }
 
-int wait_for_periodic_flush_job_to_stop(bufferpool* bf)
+void wait_for_periodic_flush_job_to_stop(bufferpool* bf)
 {
 	if(!(bf->has_internal_lock))
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -308,8 +308,6 @@ int wait_for_periodic_flush_job_to_stop(bufferpool* bf)
 
 	if(!(bf->has_internal_lock))
 		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	return is_stopped;
 }
 
 void trigger_flush_all_possible_dirty_pages(bufferpool* bf)
@@ -321,6 +319,4 @@ void trigger_flush_all_possible_dirty_pages(bufferpool* bf)
 
 	if(!(bf->has_internal_lock))
 		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	return is_stopped;
 }

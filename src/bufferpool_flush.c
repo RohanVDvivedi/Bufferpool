@@ -80,7 +80,7 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 	return 0;
 }
 
-void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* flush_job_params, uint64_t flush_job_params_capacity)
+static void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* flush_job_params, uint64_t flush_job_params_capacity)
 {
 	// find out all the frame_descs that can be immediately flushed and put them in this array, to be used as parameters
 	uint64_t flush_job_params_count = 0;
@@ -176,7 +176,7 @@ void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* fl
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 }
 
-void flush_all_possible_dirty_pages(bufferpool* bf)
+void blockingly_flush_all_possible_dirty_pages(bufferpool* bf)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -204,66 +204,23 @@ void flush_all_possible_dirty_pages(bufferpool* bf)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 }
 
-#include<time.h>
-#include<errno.h>
-
-#include<posixutils/pthread_cond_utils.h>
-
-void* periodic_flush_job(void* bf_p)
+void periodic_flush_job_function(void* bf_p)
 {
 	bufferpool* bf = bf_p;
 
-	pthread_mutex_lock(get_bufferpool_lock(bf));
-	uint64_t flush_job_params_capacity = bf->current_periodic_flush_job_status.frames_to_flush;
+	thread_mutex_lock(get_bufferpool_lock(bf));
+
+		uint64_t flush_job_params_capacity = bf->periodic_job_frames_to_flush;
+
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-	flush_params* flush_job_params = malloc(sizeof(flush_params) * flush_job_params_capacity);
-	if(flush_job_params == NULL)
-		flush_job_params_capacity = 0;
+	bf->periodic_flush_job_params = realloc(bf->periodic_flush_job_params, sizeof(flush_params) * flush_job_params_capacity);
+	if(bf->periodic_flush_job_params == NULL)
+		return;
 
-	while(1)
-	{
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-		if(flush_job_params_capacity != 0)
-			flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, flush_job_params, flush_job_params_capacity);
-
-		while(is_periodic_flush_job_running(bf->current_periodic_flush_job_status))
-		{
-			uint64_t period_in_microseconds = bf->current_periodic_flush_job_status.period_in_microseconds;
-			if(pthread_cond_timedwait_for_microseconds(&(bf->periodic_flush_job_status_update), get_bufferpool_lock(bf), &period_in_microseconds))
-				break;
-		}
-
-		uint64_t flush_job_params_capacity_new = bf->current_periodic_flush_job_status.frames_to_flush;
-		int exit = !is_periodic_flush_job_running(bf->current_periodic_flush_job_status);
-
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-		if(exit)
-			break;
-
-		// if new capacity is not same as old capacity, then reallocate
-		if(flush_job_params_capacity != flush_job_params_capacity_new)
-		{
-			// if reallocation succeeds, update the flush_job_params and flush_job_params_capacity
-			void* flush_job_params_new = realloc(flush_job_params, sizeof(flush_params) * flush_job_params_capacity_new);
-			if(!(flush_job_params_new == NULL && flush_job_params_capacity_new != 0))
-			{
-				flush_job_params = flush_job_params_new;
-				flush_job_params_capacity = flush_job_params_capacity_new;
-			}
-		}
-	}
-
-	if(flush_job_params_capacity != 0)
-		free(flush_job_params);
-
-	// set is_periodic_flush_job_running to false and broadcast to anyone waiting for it
 	pthread_mutex_lock(get_bufferpool_lock(bf));
-	bf->is_periodic_flush_job_running = 0;
-	pthread_cond_broadcast(&(bf->periodic_flush_job_complete_wait));
-	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-	return NULL;
+		flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, bf->periodic_flush_job_params, flush_job_params_capacity);
+
+	pthread_mutex_unlock(get_bufferpool_lock(bf));
 }
