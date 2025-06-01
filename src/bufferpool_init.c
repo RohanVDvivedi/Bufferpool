@@ -311,3 +311,16 @@ int wait_for_periodic_flush_job_to_stop(bufferpool* bf)
 
 	return is_stopped;
 }
+
+void trigger_flush_all_possible_dirty_pages(bufferpool* bf)
+{
+	if(!(bf->has_internal_lock))
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	single_shot_periodic_job(bf->periodic_flush_job);
+
+	if(!(bf->has_internal_lock))
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	return is_stopped;
+}
