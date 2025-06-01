@@ -298,7 +298,7 @@ int resume_periodic_flush_job(bufferpool* bf)
 	return res;
 }
 
-void wait_for_periodic_flush_job_to_stop(bufferpool* bf)
+void wait_for_periodic_flush_job_to_pause(bufferpool* bf)
 {
 	if(!(bf->has_internal_lock))
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
