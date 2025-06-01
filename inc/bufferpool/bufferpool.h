@@ -13,21 +13,6 @@
 
 #include<bufferpool/page_io_ops.h>
 
-typedef struct periodic_flush_job_status periodic_flush_job_status;
-struct periodic_flush_job_status
-{
-	// number of dirty frames to flush every period
-	uint64_t frames_to_flush;
-
-	// the period_in_microseconds, for flushing the frames_to_flush number of dirty frames
-	uint64_t period_in_microseconds;
-
-	// if both the values are 0, then this implies stop the periodic_flush_job
-	// else if only one of them is 0, then this implies the parameter with 0 value must be unchanged
-};
-
-#define STOP_PERIODIC_FLUSH_JOB_STATUS ((periodic_flush_job_status){})
-
 typedef struct bufferpool bufferpool;
 struct bufferpool
 {
@@ -91,19 +76,11 @@ struct bufferpool
 	executor* cached_threadpool_executor;
 
 	// below bufferpool attributes are only for periodic flush job
+	periodic_job* periodic_flush_job;
 
-	// current status and parameter that the current periodic flush job is running with
-	periodic_flush_job_status current_periodic_flush_job_status;
-
-	// all updates to periodic flush job status paramneters, must be posted here, if the job is already running
-	pthread_cond_t periodic_flush_job_status_update;
-
-	// flag to specify if the periodic flush job is running
-	int is_periodic_flush_job_running : 1;
-
-	// wait on this condition variable for the periodic flush job to complete
-	// i.e. wait for transition of is_periodic_flush_job_running from 1 to 0
-	pthread_cond_t periodic_flush_job_complete_wait;
+	// below two attributes are of no use to you, they are internal to the periodic_flush_job, and are only accessed inside it
+	void* flush_job_params;
+	uint64_t flush_job_params_capacity;
 };
 
 int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, periodic_flush_job_status status);
@@ -170,16 +147,23 @@ uint64_t get_max_frame_desc_count(bufferpool* bf);
 uint64_t get_total_frame_desc_count(bufferpool* bf);
 int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
-// change flush_every_X_milliseconds
-periodic_flush_job_status get_periodic_flush_job_status(bufferpool* bf);
-int is_periodic_flush_job_running(periodic_flush_job_status status);
-int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status);
+// periodic flush job access functions
+int modify_periodic_flush_job_frame_count(bufferpool* bf, uint64_t frames_to_flush);
+int modify_periodic_flush_job_period(bufferpool* bf, uint64_t period_in_microseconds);
+int pause_periodic_flush_job(bufferpool* bf);
+int resume_periodic_flush_job(bufferpool* bf);
 
-// you may call the below function to wait until the periodic flush job to stop, after you have called modify_periodic_flush_job_status(bf, STOP_PERIODIC_FLUSH_JOB_STATUS)
-// it will return 1, if the periodic flush job was in stopped state at the end of this function call's wait, i.e. the attempt to wait for the stop of the status was successfull
-int wait_for_periodic_flush_job_to_stop(bufferpool* bf);
+// you may call the below function to wait until the periodic flush job to pause, after you have called pause_periodic_flush_job(bf)
+// remember to make sure that no one calls resume_periodic_flush_job(bf), in between this two calls, else you may wait indefinitely
+void wait_for_periodic_flush_job_to_pause(bufferpool* bf);
+
+// triggers the periodic fluh job immdeiately, it is a NO-OP if the job is already running
+// as you can expect it is an async event, without a call back
+void trigger_flush_all_possible_dirty_pages(bufferpool* bf);
 
 // flushes all pages that are dirty and are not write locked and are not currently being flushed
-void flush_all_possible_dirty_pages(bufferpool* bf);
+// this does exaclty as the function above but blockingly in your own user thread concurrently
+// this call may be concurrent with periodic_job itself, unless necessary call the above trigger_* function
+void blockingly_flush_all_possible_dirty_pages(bufferpool* bf);
 
 #endif
