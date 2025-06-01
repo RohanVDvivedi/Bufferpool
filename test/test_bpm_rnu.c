@@ -24,7 +24,8 @@
 
 #define PAGE_DATA_FORMAT "Hello World, This is page number %" PRIu64 " -> %" PRIu64 " writes completed...\n"
 
-#define PERIODIC_FLUSH_JOB_STATUS ((periodic_flush_job_status){.frames_to_flush = 2, .period_in_microseconds = 30000})
+#define PERIODIC_FLUSH_JOB_PERIOD 30000
+#define PERIODIC_FLUSH_JOB_FRAMES_TO_FLUSH 2
 
 #define WAIT_FOR_FRAME_TIMEOUT 30000
 #define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
@@ -56,7 +57,7 @@ int main(int argc, char **argv)
 
 	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
 
-	if(!initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, nop_was_flushed_to_disk, NULL, PERIODIC_FLUSH_JOB_STATUS))
+	if(!initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, nop_was_flushed_to_disk, NULL, PERIODIC_FLUSH_JOB_PERIOD, PERIODIC_FLUSH_JOB_FRAMES_TO_FLUSH))
 	{
 		printf("failed to initialize bufferpool\n");
 		return -1;
@@ -123,7 +124,7 @@ int main(int argc, char **argv)
 
 	// flush everything, this make initialization complete
 	printf("flushing everything\n");
-	flush_all_possible_dirty_pages(&bpm);
+	blockingly_flush_all_possible_dirty_pages(&bpm);
 
 	deinitialize_bufferpool(&bpm);
 
