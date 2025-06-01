@@ -12,15 +12,15 @@
 
 void periodic_flush_job_function(void* bf_p);
 
-int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, uint64_t periodic_job_period_in_microseconds, uint64_t periodic_job_frames_to_flush)
+int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, uint64_t periodic_flush_job_period_in_microseconds, uint64_t periodic_flush_job_frames_to_flush)
 {
 	// validate basic parameters first
 	// max_frame_desc_count can not be 0, read_page must exist (else this buffer pool is useless) and page_size must not be 0
 	if(max_frame_desc_count == 0 || page_io_functions.read_page == NULL || page_io_functions.page_size == 0)
 		return 0;
 
-	// initialization fails if one of the parameter is 0, and the other one is non-0
-	if(periodic_job_period_in_microseconds == BLOCKING || periodic_job_period_in_microseconds == NON_BLOCKING || periodic_job_frames_to_flush == 0)
+	// period must not BLOCKING or NON_BLOCKING and the frames to be flushed by the bufferpool in a periodic job must not be 0
+	if(periodic_flush_job_period_in_microseconds == BLOCKING || periodic_flush_job_period_in_microseconds == NON_BLOCKING || periodic_flush_job_frames_to_flush == 0)
 		return 0;
 
 	bf->has_internal_lock = (external_lock == NULL);
@@ -71,9 +71,9 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 		return 0;
 	}
 
-	bf->periodic_flush_job_params_capacity = periodic_job_period_in_microseconds;
+	bf->periodic_flush_job_params_capacity = periodic_flush_job_frames_to_flush;
 	bf->periodic_flush_job_params = NULL;
-	if(NULL == (bf->periodic_flush_job = new_periodic_job(periodic_flush_job_function, bf, periodic_job_period_in_microseconds)))
+	if(NULL == (bf->periodic_flush_job = new_periodic_job(periodic_flush_job_function, bf, periodic_flush_job_period_in_microseconds)))
 	{
 		shutdown_executor(bf->cached_threadpool_executor, 1);
 		wait_for_all_executor_workers_to_complete(bf->cached_threadpool_executor);
