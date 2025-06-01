@@ -79,8 +79,8 @@ struct bufferpool
 	periodic_job* periodic_flush_job;
 
 	// below two attributes are of no use to you, they are internal to the periodic_flush_job, and are only accessed inside it
-	void* flush_job_params;
-	uint64_t flush_job_params_capacity;
+	void* periodic_flush_job_params;
+	uint64_t periodic_flush_job_params_capacity;
 };
 
 int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, periodic_flush_job_status status);
@@ -149,6 +149,8 @@ int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 
 // periodic flush job access functions
 int modify_periodic_flush_job_frame_count(bufferpool* bf, uint64_t frames_to_flush);
+
+// the below 4 (yes 4 not 3) functions are executed with the global_lock released for internal purposes
 int modify_periodic_flush_job_period(bufferpool* bf, uint64_t period_in_microseconds);
 int pause_periodic_flush_job(bufferpool* bf);
 int resume_periodic_flush_job(bufferpool* bf);

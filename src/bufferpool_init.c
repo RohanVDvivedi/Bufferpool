@@ -12,7 +12,7 @@
 
 void* periodic_flush_job(void* bf_p);
 
-int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, periodic_flush_job_status status)
+int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, uint64_t periodic_job_period_in_microseconds, uint64_t periodic_job_frames_to_flush)
 {
 	// validate basic parameters first
 	// max_frame_desc_count can not be 0, read_page must exist (else this buffer pool is useless) and page_size must not be 0
@@ -71,31 +71,21 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 		return 0;
 	}
 
-	bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
-
-	pthread_cond_init_with_monotonic_clock(&(bf->periodic_flush_job_status_update));
-
-	bf->is_periodic_flush_job_running = 0;
-
-	pthread_cond_init_with_monotonic_clock(&(bf->periodic_flush_job_complete_wait));
-
-	// if external lock is required then take the lock and proceed to modify the periodic flush job with the new status params
-	if(!bf->has_internal_lock)
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-	int success_modifying_job_params = modify_periodic_flush_job_status(bf, status);
-	if(!bf->has_internal_lock)
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	if(!success_modifying_job_params)
+	bf->periodic_flush_job_params_capacity = periodic_job_period_in_microseconds;
+	bf->periodic_flush_job_params = NULL;
+	if(NULL == (bf->periodic_flush_job = new_periodic_job(periodic_flush_job, bf, periodic_job_period_in_microseconds)))
 	{
-		pthread_cond_destroy(&(bf->periodic_flush_job_complete_wait));
-		pthread_cond_destroy(&(bf->periodic_flush_job_status_update));
+		shutdown_executor(bf->cached_threadpool_executor, 1);
+		wait_for_all_executor_workers_to_complete(bf->cached_threadpool_executor);
+		delete_executor(bf->cached_threadpool_executor);
 		deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 		deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 		if(bf->has_internal_lock)
 			pthread_mutex_destroy(&(bf->internal_lock));
 		return 0;
 	}
+
+	resume_periodic_job(bf->periodic_flush_job);
 
 	return 1;
 }
@@ -112,15 +102,8 @@ static void on_remove_all_from_page_id_to_frame_desc_hashmap_delete_frame_from_b
 
 void deinitialize_bufferpool(bufferpool* bf)
 {
-	// first task is to shutdown the periodic flush job
-	if(!bf->has_internal_lock)
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-	modify_periodic_flush_job_status(bf, STOP_PERIODIC_FLUSH_JOB_STATUS);
-	if(!bf->has_internal_lock)
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	pthread_cond_destroy(&(bf->periodic_flush_job_complete_wait));
-	pthread_cond_destroy(&(bf->periodic_flush_job_status_update));
+	// this function does the shutdown of the periodic job
+	delete_periodic_job(bf->periodic_flush_job);
 
 	shutdown_executor(bf->cached_threadpool_executor, 0);
 	wait_for_all_executor_workers_to_complete(bf->cached_threadpool_executor);
@@ -254,128 +237,77 @@ int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count)
 	return modify_success;
 }
 
-periodic_flush_job_status get_periodic_flush_job_status(bufferpool* bf)
+int modify_periodic_flush_job_frame_count(bufferpool* bf, uint64_t frames_to_flush)
 {
-	if(bf->has_internal_lock)
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	periodic_flush_job_status result = bf->current_periodic_flush_job_status;
-
-	if(bf->has_internal_lock)
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	return result;
-}
-
-int is_periodic_flush_job_running(periodic_flush_job_status status)
-{
-	// a periodic flush job is running, if the status does not equal STOP_PERIODIC_FLUSH_JOB_STATUS
-	return (status.frames_to_flush != STOP_PERIODIC_FLUSH_JOB_STATUS.frames_to_flush) || (status.period_in_microseconds != STOP_PERIODIC_FLUSH_JOB_STATUS.period_in_microseconds);
-}
-
-int modify_periodic_flush_job_status(bufferpool* bf, periodic_flush_job_status status)
-{
-	int modify_success = 0;
+	if(frames_to_flush == 0)
+		return 0;
 
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	// there is a small period when a periodic flush job is stopped
-	// when the status says stopped, but actually the job is still running
-	// in this case we wait for this state to complete (cease to exist)
-	// this is indeterministic state and no thread modifying the status is allowed to exist here
-	while(!is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && bf->is_periodic_flush_job_running)
-		pthread_cond_wait(&(bf->periodic_flush_job_complete_wait), get_bufferpool_lock(bf));
+	bf->periodic_job_frames_to_flush = frames_to_flush;
 
-	if(is_periodic_flush_job_running(status))
-	{
-		// for a status (new status to be updated to) that is running i.e. is not a STOP_PERIODIC_FLUSH_JOB_STATUS
-		// then the 0 attributes of the status, implies they are to be left unchanged from their previous value
-		if(status.frames_to_flush == 0)
-			status.frames_to_flush = bf->current_periodic_flush_job_status.frames_to_flush;
-		if(status.period_in_microseconds == 0)
-			status.period_in_microseconds = bf->current_periodic_flush_job_status.period_in_microseconds;
-	}
-
-	// new status' validation fails if one of the parameter is 0, and the other one is non-0
-	if((!!(status.frames_to_flush)) ^ (!!(status.period_in_microseconds)))
-		goto EXIT;
-
-	// operate on the status now
-	if(!is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && !is_periodic_flush_job_running(status))
-	{
-		// do nothing, for a modification from not running to not running
-		modify_success = 1;
-	}
-	else if(!is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && is_periodic_flush_job_running(status))
-	{
-		// periodic_flush_job is not running, we now will start it
-		bf->current_periodic_flush_job_status = status;
-		bf->is_periodic_flush_job_running = 1; // we pre mark it as running, this is the only place where it gets set
-		modify_success = 1;
-
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-		// if we could not submit the new job, to turn on the periodic flush job then exit with failure
-		if(!submit_job_executor(bf->cached_threadpool_executor, periodic_flush_job, bf, NULL, NULL, BLOCKING))
-		{
-			pthread_mutex_lock(get_bufferpool_lock(bf));
-			bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
-
-			// we also wake up all the threads waiting for the periodic job to complete
-			bf->is_periodic_flush_job_running = 0;
-			pthread_cond_broadcast(&(bf->periodic_flush_job_complete_wait));
-
-			modify_success = 0;
-		}
-		else
-			pthread_mutex_lock(get_bufferpool_lock(bf));
-	}
-	// the below case can be implemented just as the else, but it is here to justify the 4 distinct cases that we have
-	else if(is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && !is_periodic_flush_job_running(status))
-	{
-		// periodic_flush_job is running, we now will reset the status to stop it, and wake it up
-		bf->current_periodic_flush_job_status = STOP_PERIODIC_FLUSH_JOB_STATUS;
-		modify_success = 1;
-		pthread_cond_signal(&(bf->periodic_flush_job_status_update));
-
-		// see how here we can get away, without actually waiting for the periodic flush job to complete
-	}
-	else // just update the parameters
-	{
-		// update the new status and wake up thread that may be waiting for an update
-		bf->current_periodic_flush_job_status = status;
-		modify_success = 1;
-		pthread_cond_signal(&(bf->periodic_flush_job_status_update));
-	}
-
-	EXIT:;
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-	return modify_success;
+	return 1;
+}
+
+int modify_periodic_flush_job_period(bufferpool* bf, uint64_t period_in_microseconds)
+{
+	int res = 0;
+
+	if(!(bf->has_internal_lock))
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	res = update_period_for_periodic_job(bf->periodic_flush_job, period_in_microseconds);
+
+	if(!(bf->has_internal_lock))
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	return res;
+}
+
+int pause_periodic_flush_job(bufferpool* bf)
+{
+	int res = 0;
+
+	if(!(bf->has_internal_lock))
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	res = pause_periodic_job(bf->periodic_flush_job);
+
+	if(!(bf->has_internal_lock))
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	return res;
+}
+
+int resume_periodic_flush_job(bufferpool* bf)
+{
+	int res = 0;
+
+	if(!(bf->has_internal_lock))
+		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	res = resume_periodic_job(bf->periodic_flush_job);
+
+	if(!(bf->has_internal_lock))
+		pthread_mutex_lock(get_bufferpool_lock(bf));
+
+	return res;
 }
 
 int wait_for_periodic_flush_job_to_stop(bufferpool* bf)
 {
-	if(bf->has_internal_lock)
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	// here we wait for the short period when the status says the job is not running, but the actual job is runnign because it hasn't seen the state yet
-	while(!is_periodic_flush_job_running(bf->current_periodic_flush_job_status) && bf->is_periodic_flush_job_running)
-		pthread_cond_wait(&(bf->periodic_flush_job_complete_wait), get_bufferpool_lock(bf));
-
-	// we come out of the above loop only if
-	/*
-		1. status says it is running -> (here bf->is_periodic_flush_job_running), but we can't wait, return value = 0, because the job is running after the wait
-		OR
-		2. status says it is not running, and the (NOT bf->is_periodic_flush_job_running), so we do not have to wait,  return value = 1
-	*/
-
-	int is_stopped = !(bf->is_periodic_flush_job_running);
-
-	if(bf->has_internal_lock)
+	if(!(bf->has_internal_lock))
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
+
+	// we are waiting here for only a pause not a shutdown
+	wait_for_pause_or_shutdown_of_periodic_job(bf->periodic_flush_job);
+
+	if(!(bf->has_internal_lock))
+		pthread_mutex_lock(get_bufferpool_lock(bf));
 
 	return is_stopped;
 }
