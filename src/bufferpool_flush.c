@@ -210,7 +210,7 @@ void periodic_flush_job_function(void* bf_p)
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		uint64_t flush_job_params_capacity = bf->periodic_job_frames_to_flush;
+		uint64_t flush_job_params_capacity = bf->periodic_flush_job_params_capacity;
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
