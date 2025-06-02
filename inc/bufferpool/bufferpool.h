@@ -151,7 +151,7 @@ int modify_max_frame_desc_count(bufferpool* bf, uint64_t max_frame_desc_count);
 // periodic flush job access functions
 int modify_periodic_flush_job_frame_count(bufferpool* bf, uint64_t frames_to_flush);
 
-// the below 5 (yes 5 not 3) functions are executed with the global_lock released for internal purposes
+// the below 5 (yes 5 not 3) functions, internally do release the external_lock (if used) for a short duration, even though they are not blocking functions
 int modify_periodic_flush_job_period(bufferpool* bf, uint64_t period_in_microseconds);
 int pause_periodic_flush_job(bufferpool* bf);
 int resume_periodic_flush_job(bufferpool* bf);
