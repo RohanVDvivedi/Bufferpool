@@ -255,47 +255,17 @@ int modify_periodic_flush_job_frame_count(bufferpool* bf, uint64_t frames_to_flu
 
 int modify_periodic_flush_job_period(bufferpool* bf, uint64_t period_in_microseconds)
 {
-	int res = 0;
-
-	if(!(bf->has_internal_lock))
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	res = update_period_for_periodic_job(bf->periodic_flush_job, period_in_microseconds);
-
-	if(!(bf->has_internal_lock))
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	return res;
+	return update_period_for_periodic_job(bf->periodic_flush_job, period_in_microseconds);
 }
 
 int pause_periodic_flush_job(bufferpool* bf)
 {
-	int res = 0;
-
-	if(!(bf->has_internal_lock))
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	res = pause_periodic_job(bf->periodic_flush_job);
-
-	if(!(bf->has_internal_lock))
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	return res;
+	return pause_periodic_job(bf->periodic_flush_job);
 }
 
 int resume_periodic_flush_job(bufferpool* bf)
 {
-	int res = 0;
-
-	if(!(bf->has_internal_lock))
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	res = resume_periodic_job(bf->periodic_flush_job);
-
-	if(!(bf->has_internal_lock))
-		pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	return res;
+	return resume_periodic_job(bf->periodic_flush_job);
 }
 
 void wait_for_periodic_flush_job_to_pause(bufferpool* bf)
@@ -312,11 +282,5 @@ void wait_for_periodic_flush_job_to_pause(bufferpool* bf)
 
 void trigger_flush_all_possible_dirty_pages(bufferpool* bf)
 {
-	if(!(bf->has_internal_lock))
-		pthread_mutex_unlock(get_bufferpool_lock(bf));
-
 	single_shot_periodic_job(bf->periodic_flush_job);
-
-	if(!(bf->has_internal_lock))
-		pthread_mutex_lock(get_bufferpool_lock(bf));
 }
