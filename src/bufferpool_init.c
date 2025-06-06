@@ -255,21 +255,26 @@ int modify_periodic_flush_job_frame_count(bufferpool* bf, uint64_t frames_to_flu
 
 int modify_periodic_flush_job_period(bufferpool* bf, uint64_t period_in_microseconds)
 {
+	// holding the get_bufferpool_lock(bf), here or not holding it, does not make much difference
 	return update_period_for_periodic_job(bf->periodic_flush_job, period_in_microseconds);
 }
 
 int pause_periodic_flush_job(bufferpool* bf)
 {
+	// holding the get_bufferpool_lock(bf), here or not holding it, does not make much difference
 	return pause_periodic_job(bf->periodic_flush_job);
 }
 
 int resume_periodic_flush_job(bufferpool* bf)
 {
+	// holding the get_bufferpool_lock(bf), here or not holding it, does not make much difference
 	return resume_periodic_job(bf->periodic_flush_job);
 }
 
 void wait_for_periodic_flush_job_to_pause(bufferpool* bf)
 {
+	// here if using external lock, we release it, to avoid deadlocks
+
 	if(!(bf->has_internal_lock))
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
@@ -282,5 +287,6 @@ void wait_for_periodic_flush_job_to_pause(bufferpool* bf)
 
 void trigger_flush_all_possible_dirty_pages(bufferpool* bf)
 {
+	// holding the get_bufferpool_lock(bf), here or not holding it, does not make much difference
 	single_shot_periodic_job(bf->periodic_flush_job);
 }
