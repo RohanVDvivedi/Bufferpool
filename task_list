@@ -2,8 +2,7 @@
    * these calls must be checked that if they fail, we return 0 or NULL
 
  * (*future) mechanism to prioritize pages that will be evicted
-   * proposed system
-     * function pointer to get priority of a page from the page data and page_id
-     * only clean pages are maintained as a heap with least priority at the top
-     * dirty pages will still not be preferred for eviction before clean and invalid pages, it will be left as a linkedlist behaving as as LRU, hence cleaning up least recently used pages first
-     * there will also be an age factor higher the age of the clean page, higher the age since it was last used, lower will be its priority
+   * inserting to clean pages lru also inserts into a skew or leftist pheap
+   * only if a priority function to get priority from page_id and page_pointer is specified
+   * make mechanism to avoid possibility to a page always sticking into the cache by implementing some form of decay
+   * remove and inserts to clean_frame_descs_lru_list, also triggers the same from this pheap
