@@ -139,6 +139,9 @@ void deinitialize_bufferpool(bufferpool* bf)
 	deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 	deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 
+	if(bf->periodic_flush_job_params)
+		free(bf->periodic_flush_job_params);
+
 	if(bf->has_internal_lock)
 		pthread_mutex_destroy(&(bf->internal_lock));
 }
