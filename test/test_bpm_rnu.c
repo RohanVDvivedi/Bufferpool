@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 	release_writer_lock_on_page(&bpm, frame_w_p, 1, 0);
 	release_reader_lock_on_page(&bpm, frame_r_p);
 
-	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS + 32, 0, NULL, NULL, NULL);
+	executor* exe = new_executor(FIXED_THREAD_COUNT_EXECUTOR, FIXED_THREAD_POOL_SIZE, COUNT_OF_IO_TASKS + 32, 0, NULL, NULL, NULL, 0);
 	printf("Executor service started to simulate multiple concurrent io of %d io tasks among %d threads\n\n", COUNT_OF_IO_TASKS, FIXED_THREAD_POOL_SIZE);
 
 	printf("Initializing IO tasks\n\n");
