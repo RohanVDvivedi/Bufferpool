@@ -19,5 +19,5 @@ cy_uint hash_frame_desc_by_frame_ptr(const void* pd_p)
 
 int compare_frame_desc_by_frame_ptr(const void* pd1_p, const void* pd2_p)
 {
-	return compare_numbers(((const frame_desc*)pd1_p)->map.frame, ((const frame_desc*)pd2_p)->map.frame);
+	return compare_numbers( (cy_uint)(((const frame_desc*)pd1_p)->map.frame), (cy_uint)(((const frame_desc*)pd2_p)->map.frame) );
 }
