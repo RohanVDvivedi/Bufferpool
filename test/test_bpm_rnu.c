@@ -29,7 +29,7 @@
 
 #define WAIT_FOR_FRAME_TIMEOUT 30000
 #define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
-#define EVICT_DIRTY_IF_NECESSARY 1
+#define ALLOWED_DIRTY_EVICTION_COUNT 100
 
 #define PAGE_ID_TO_READ_TEST UINT64_C(2)
 
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 	for(uint64_t i = 0; i < PAGES_IN_HEAP_FILE; i++)
 	{
 		printf("zeroing out page %" PRIu64 "\n\n", i);
-		void* frame = acquire_page_with_writer_lock(&bpm, i, WAIT_FOR_FRAME_TIMEOUT, EVICT_DIRTY_IF_NECESSARY, 1);
+		void* frame = acquire_page_with_writer_lock(&bpm, i, WAIT_FOR_FRAME_TIMEOUT, ALLOWED_DIRTY_EVICTION_COUNT, 1);
 		if(frame == NULL)
 		{
 			printf("error acquiring lock on page %" PRIu64 "\n\n", i);
@@ -172,7 +172,7 @@ void write_print_UNSAFE(int param, uint64_t page_id, void* frame)
 void* test_lock_other_than_page_2(void* temp)
 {
 	uint64_t page_id = PAGES_IN_HEAP_FILE / 2;
-	void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, EVICT_DIRTY_IF_NECESSARY);
+	void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, ALLOWED_DIRTY_EVICTION_COUNT);
 	if(frame == NULL)
 	{
 		printf("other *** failed *** to acquire read lock on %" PRIu64 "\n", page_id);
@@ -221,11 +221,11 @@ void* io_task_execute(int* io_t_p)
 	{
 		printf("(%d) asynchronously prefetching page %" PRIu64 "\n", param, PAGE_ID_TO_READ_TEST);
 
-		prefetch_page_async(&bpm, PAGE_ID_TO_READ_TEST, EVICT_DIRTY_IF_NECESSARY);
+		prefetch_page_async(&bpm, PAGE_ID_TO_READ_TEST, ALLOWED_DIRTY_EVICTION_COUNT);
 	}
 	else if(param == 1)
 	{
-		void* frame = acquire_page_with_writer_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, EVICT_DIRTY_IF_NECESSARY, 0);
+		void* frame = acquire_page_with_writer_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, ALLOWED_DIRTY_EVICTION_COUNT, 0);
 		if(frame == NULL)
 		{
 			printf("(%d) *** failed *** to acquire write lock on %" PRIu64 "\n", param, page_id);
@@ -270,7 +270,7 @@ void* io_task_execute(int* io_t_p)
 	}
 	else if(param % 2 == 0)
 	{
-		void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, EVICT_DIRTY_IF_NECESSARY);
+		void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, ALLOWED_DIRTY_EVICTION_COUNT);
 		if(frame == NULL)
 		{
 			printf("(%d) *** failed *** to acquire read lock on %" PRIu64 "\n", param, page_id);
@@ -293,7 +293,7 @@ void* io_task_execute(int* io_t_p)
 	}
 	else
 	{
-		void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, EVICT_DIRTY_IF_NECESSARY);
+		void* frame = acquire_page_with_reader_lock(&bpm, page_id, WAIT_FOR_FRAME_TIMEOUT, ALLOWED_DIRTY_EVICTION_COUNT);
 		if(frame == NULL)
 		{
 			printf("(%d) *** failed *** to acquire read lock on %" PRIu64 "\n", param, page_id);
