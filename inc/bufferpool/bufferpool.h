@@ -96,10 +96,10 @@ void deinitialize_bufferpool(bufferpool* bf);
 // wait_for_frame_in_microseconds == 0, if you do not want to wait
 
 // for the below 6 functions a NULL or 0 implies a failure
-void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary);
+void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, uint64_t allowed_dirty_eviction_count);
 int release_reader_lock_on_page(bufferpool* bf, void* frame);
 
-void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary, int to_be_overwritten);
+void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, uint64_t allowed_dirty_eviction_count, int to_be_overwritten);
 int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, int force_flush);
 
 int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_modified, int force_flush);
@@ -107,8 +107,8 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 
 /*
 	flags information :
-		evict_dirty_if_necessary -> This flags allows you to evict a dirty page if need arises, so that you can get your page
-		                         -> by default dirty page will not be evicted
+		allowed_dirty_eviction_count -> This counter tells ho many dirty pages are alloed to be evicted, so that you can get your page
+		                             -> 0 means, no dirty pages will not be evicted
 
 		to_be_overwritten -> If the page frame at page_id is not in bufferpool, even then the page is not read from disk
 		                  -> This can be used, if you are sure that the page had not been used or allocated prior to this call
@@ -133,10 +133,10 @@ uint64_t get_page_id_for_locked_page(bufferpool* bf, void* frame);
 // this is a synchronous call to prefetch a page into memory, without taking any locks on it
 // return value suggests if the page was brought in memory
 // after this call you still need call acquire_page_with_*_lock, to get the page with lock on it
-int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary);
+int prefetch_page(bufferpool* bf, uint64_t page_id, uint64_t allowed_dirty_eviction_count);
 
 // asynchronous version of prefetch page
-void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary);
+void prefetch_page_async(bufferpool* bf, uint64_t page_id, uint64_t allowed_dirty_eviction_count);
 
 // wakes up all threads waiting for wait_for_frame
 // this should be done after a WAL flush, to tell all thread waiting for latch that now there could be available frame in bufferpool

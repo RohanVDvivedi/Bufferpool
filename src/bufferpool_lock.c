@@ -46,7 +46,7 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 }
 
 // it will not remove the frame_desc from the lists
-static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpool* bf, int evict_dirty_if_necessary, int* nothing_evictable, int* write_io_for_eviction_failed)
+static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpool* bf, uint64_t* allowed_dirty_eviction_count, int* nothing_evictable, int* write_io_for_eviction_failed)
 {
 	(*nothing_evictable) = 0;
 	(*write_io_for_eviction_failed) = 0;
@@ -91,58 +91,54 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 	// if there is any frame_desc in dirty_frame_descs_lru_list, then attempt to write them to disk, i.e. cleaning them up
 	// we flush/write/clean not just 1 but as many unreferenced dirty pages to disk as possible, so that subsequent calls may not have to incur this cost
 	// here we need to check that the frame satisfies bf->can_be_flushed_to_disk(fd->page_id, fd->frame)
-	if(evict_dirty_if_necessary && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
+	if(((*allowed_dirty_eviction_count) > 0) && !is_empty_linkedlist(&(bf->dirty_frame_descs_lru_list)))
 	{
 		// list of all frame descriptors picked to be cleaned from dirty_frame_descs_lru_list
 		linkedlist picked;
 		initialize_linkedlist(&picked, offsetof(frame_desc, embed_node_flush_lists));
 
 		// loop to pick frame_descs to clean
+		for(frame_desc* fd_to_pick = (frame_desc*) get_head_of_linkedlist(&(bf->dirty_frame_descs_lru_list)); fd_to_pick != NULL && ((*allowed_dirty_eviction_count) > 0); )
 		{
-			// transfer all from bf->dirty_frame_descs_lru_list to picked_from (a local linked list to pick from), making bf->dirty_frame_descs_lru_list empty
-			linkedlist pick_from = bf->dirty_frame_descs_lru_list;
-			initialize_linkedlist(&(bf->dirty_frame_descs_lru_list), offsetof(frame_desc, embed_node_lru_lists));
+			/*
+				Here certain checks can be skipped
+				like we know for sure that this frame is not locked or waiting to be locked by any one
+				also it is surely not under read/write io
+				as it was in the lru lists
 
-			// pick one by one from picked_from
-			// and based on whether they can be cleaned or not, transfer them to bf->dirty_frame_descs_lru_list OR picked linkedlists
-			while(!is_empty_linkedlist(&pick_from))
+				we also need not check that the page has_valid_page_id or that the page has_valid_frame_contents,
+				the page frame is dirty, so this obviously is true
+			*/
+
+			// attempt to get a non-blocking read lock on it, this is easily achieved and surely successfull
+			if(!read_lock(&(fd_to_pick->frame_lock), READ_PREFERRING, NON_BLOCKING))
 			{
-				// pick to test head, if it can be flushed
-				frame_desc* fd_to_pick = (frame_desc*) get_head_of_linkedlist(&pick_from);
-				remove_head_from_linkedlist(&pick_from);
+				fd_to_pick = (frame_desc*) get_next_of_in_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_pick);
+				continue;
+			}
 
-				/*
-					Here certain checks can be skipped
-					like we know for sure that this frame is not locked or waiting to be locked by any one
-					also it is surely not under read/write io
-					as it was in the lru lists
+			// check if the frame_to_pick can be flushed to disk, we already have a read_lock on the frame necessary for this check
+			if(bf->can_be_flushed_to_disk(bf->flush_callback_handle, fd_to_pick->map.page_id, fd_to_pick->map.frame))
+			{
+				// cache the next frame we might have to check
+				frame_desc* fd_to_pick_next = (frame_desc*) get_next_of_in_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_pick);
 
-					we also need not check that the page has_valid_page_id or that the page has_valid_frame_contents,
-					the page frame is dirty, so this obviously is true
-				*/
+				// we already have read locked it, so we can set it for the write IO
+				fd_to_pick->is_under_write_IO = 1;
 
-				// attempt to get a non-blocking read lock on it, this is easily achieved and surely successfull
-				if(!read_lock(&(fd_to_pick->frame_lock), READ_PREFERRING, NON_BLOCKING))
-				{
-					insert_tail_in_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_pick);
-					continue;
-				}
+				// insert it to frame_descs picked for IO, and remove it from dirty_frame_descs_lru_list
+				insert_tail_in_linkedlist(&picked, fd_to_pick);
+				remove_from_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_pick);
 
-				// check if the frame_to_pick can be flushed to disk, we already have a read_lock on the frame necessary for this check
-				if(bf->can_be_flushed_to_disk(bf->flush_callback_handle, fd_to_pick->map.page_id, fd_to_pick->map.frame))
-				{
-					// we already have read locked it, so we can set it for the write IO
-					fd_to_pick->is_under_write_IO = 1;
-
-					// insert it to frame_descs picked for IO
-					insert_tail_in_linkedlist(&picked, fd_to_pick);
-				}
-				else // else read_unlock it, and send it back to leave it dirty as it was
-				{
-					read_unlock(&(fd_to_pick->frame_lock));
-					insert_tail_in_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_pick);
-					continue;
-				}
+				// decrement the counter, so that e can limit the number of dirty page frames that this call can clean up
+				(*allowed_dirty_eviction_count)--;
+				fd_to_pick = fd_to_pick_next;
+			}
+			else // else read_unlock it, and send it back to leave it dirty as it was
+			{
+				read_unlock(&(fd_to_pick->frame_lock));
+				fd_to_pick = (frame_desc*) get_next_of_in_linkedlist(&(bf->dirty_frame_descs_lru_list), fd_to_pick);
+				continue;
 			}
 		}
 
@@ -334,7 +330,7 @@ static void wait_for_an_available_frame(bufferpool* bf, uint64_t* wait_for_frame
 	pthread_cond_timedwait_for_microseconds(&(bf->wait_for_frame), get_bufferpool_lock(bf), wait_for_frame_in_microseconds);
 }
 
-void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary)
+void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, uint64_t allowed_dirty_eviction_count)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -376,7 +372,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 		// if any of the below two flags get set, it represents some from of error
 		int write_io_for_eviction_failed = 0;
 		int nothing_evictable = 0;
-		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable, &write_io_for_eviction_failed);
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, &allowed_dirty_eviction_count, &nothing_evictable, &write_io_for_eviction_failed);
 		if(fd == NULL)
 		{
 			if(write_io_for_eviction_failed)
@@ -411,7 +407,7 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 	return (fd != NULL) ? fd->map.frame : NULL;
 }
 
-void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, int evict_dirty_if_necessary, int to_be_overwritten)
+void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, uint64_t allowed_dirty_eviction_count, int to_be_overwritten)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -453,7 +449,7 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 		// if any of the below two flags get set, it represents some from of error
 		int write_io_for_eviction_failed = 0;
 		int nothing_evictable = 0;
-		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable, &write_io_for_eviction_failed);
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, &allowed_dirty_eviction_count, &nothing_evictable, &write_io_for_eviction_failed);
 		if(fd == NULL)
 		{
 			if(write_io_for_eviction_failed)
@@ -486,7 +482,7 @@ void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 	return (fd != NULL) ? fd->map.frame : NULL;
 }
 
-int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
+int prefetch_page(bufferpool* bf, uint64_t page_id, uint64_t allowed_dirty_eviction_count)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -520,7 +516,7 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary
 		// if any of the below two flags get set, it represents some from of error
 		int write_io_for_eviction_failed = 0;
 		int nothing_evictable = 0;
-		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, evict_dirty_if_necessary, &nothing_evictable, &write_io_for_eviction_failed);
+		fd = get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bf, &allowed_dirty_eviction_count, &nothing_evictable, &write_io_for_eviction_failed);
 		if(fd == NULL)
 		{
 			if(write_io_for_eviction_failed)
@@ -797,7 +793,7 @@ struct async_prefetch_page_params
 {
 	bufferpool* bf;
 	uint64_t page_id;
-	int evict_dirty_if_necessary;
+	uint64_t allowed_dirty_eviction_count;
 };
 
 static void* async_prefetch_page_job_func(void* appp_p)
@@ -810,7 +806,7 @@ static void* async_prefetch_page_job_func(void* appp_p)
 	if(!appp.bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(appp.bf));
 
-	prefetch_page(appp.bf, appp.page_id, appp.evict_dirty_if_necessary);
+	prefetch_page(appp.bf, appp.page_id, appp.allowed_dirty_eviction_count);
 
 	if(!appp.bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(appp.bf));
@@ -823,7 +819,7 @@ static void async_prefetch_page_job_on_cancellation_callback(void* appp_p)
 	free(appp_p);
 }
 
-void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_necessary)
+void prefetch_page_async(bufferpool* bf, uint64_t page_id, uint64_t allowed_dirty_eviction_count)
 {
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
@@ -835,7 +831,7 @@ void prefetch_page_async(bufferpool* bf, uint64_t page_id, int evict_dirty_if_ne
 	if(appp == NULL)
 		goto UNLOCKED_EXIT;
 
-	(*appp) = (async_prefetch_page_params){bf, page_id, evict_dirty_if_necessary};
+	(*appp) = (async_prefetch_page_params){bf, page_id, allowed_dirty_eviction_count};
 	if(!submit_job_executor(bf->cached_threadpool_executor, async_prefetch_page_job_func, appp, NULL, async_prefetch_page_job_on_cancellation_callback, BLOCKING))
 	{
 		free(appp);
