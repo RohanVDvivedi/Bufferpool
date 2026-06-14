@@ -214,9 +214,10 @@ void periodic_flush_job_function(void* bf_p)
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-	bf->periodic_flush_job_params = realloc(bf->periodic_flush_job_params, sizeof(flush_params) * flush_job_params_capacity);
-	if(bf->periodic_flush_job_params == NULL)
+	void* tmp = realloc(bf->periodic_flush_job_params, sizeof(flush_params) * flush_job_params_capacity);
+	if(tmp == NULL)
 		return;
+	bf->periodic_flush_job_params = tmp;
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
