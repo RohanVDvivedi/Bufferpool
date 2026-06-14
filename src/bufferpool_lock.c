@@ -533,7 +533,19 @@ int prefetch_page(bufferpool* bf, uint64_t page_id, uint64_t allowed_dirty_evict
 		if(!get_valid_frame_contents_on_frame_for_page_id(bf, fd, page_id, 0))
 			fd = NULL;
 		else
+		{
 			write_unlock(&(fd->frame_lock));
+
+			// if it is not locked or wanted on by anyone then insert it, in LRU lists
+			// this effectively bumps it to tail in which ever lru lists it should go into
+			if(!is_frame_desc_locked_or_waiting_to_be_locked(fd))
+			{
+				insert_frame_desc_in_lru_lists(bf, fd);
+
+				// wake up for any one who is waiting for a frame
+				pthread_cond_signal(&(bf->wait_for_frame));
+			}
+		}
 
 		break;
 	}
