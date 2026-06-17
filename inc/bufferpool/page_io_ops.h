@@ -1,6 +1,8 @@
 #ifndef PAGE_IO_OPS_H
 #define PAGE_IO_OPS_H
 
+#include<stdint.h>
+
 // page_io_ops is a structure accepted by the bufferpool, it is interface that defines how to read, write pages to underlying storage
 // it also instructs and makes the bufferpool aware about
 //  * page_size of each of the page
