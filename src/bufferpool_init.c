@@ -102,9 +102,7 @@ static void on_remove_all_from_page_id_to_frame_desc_hashmap_delete_frame_from_b
 
 void deinitialize_bufferpool(bufferpool* bf)
 {
-	// this sequence does the shutdown of the periodic job and deletes it
-	shutdown_periodic_job(bf->periodic_flush_job);
-	wait_for_pause_or_shutdown_of_periodic_job(bf->periodic_flush_job);
+	// does the shutdown of the periodic job and deletes it
 	delete_periodic_job(bf->periodic_flush_job);
 
 	shutdown_executor(bf->cached_threadpool_executor, 0);
