@@ -64,6 +64,7 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	if(NULL == (bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL, 0)))
 	{
+		pthread_cond_destroy(&(bf->wait_for_frame));
 		deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 		deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 		if(bf->has_internal_lock)
@@ -78,6 +79,7 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 		shutdown_executor(bf->cached_threadpool_executor, 1);
 		wait_for_all_executor_workers_to_complete(bf->cached_threadpool_executor);
 		delete_executor(bf->cached_threadpool_executor);
+		pthread_cond_destroy(&(bf->wait_for_frame));
 		deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 		deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 		if(bf->has_internal_lock)
