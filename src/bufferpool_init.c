@@ -144,6 +144,8 @@ void deinitialize_bufferpool(bufferpool* bf)
 	if(bf->periodic_flush_job_params)
 		free(bf->periodic_flush_job_params);
 
+	pthread_cond_destroy(&(bf->wait_for_frame));
+
 	if(bf->has_internal_lock)
 		pthread_mutex_destroy(&(bf->internal_lock));
 }
