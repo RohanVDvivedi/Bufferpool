@@ -18,7 +18,7 @@ typedef struct bufferpool bufferpool;
 struct bufferpool
 {
 	// if set to true, use internal global lock, else use external lock
-	int has_internal_lock : 1;
+	unsigned int has_internal_lock : 1;
 	union
 	{
 		pthread_mutex_t* external_lock;
