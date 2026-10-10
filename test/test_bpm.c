@@ -27,7 +27,6 @@
 #define PERIODIC_FLUSH_JOB_FRAMES_TO_FLUSH 2
 
 #define WAIT_FOR_FRAME_TIMEOUT 30000
-#define FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK 0
 #define ALLOWED_DIRTY_EVICTION_COUNT 100
 #define NOTIFY_MODIFICATIONS
 
@@ -55,7 +54,8 @@ bufferpool bpm;
 io_task io_tasks[COUNT_OF_IO_TASKS];
 
 int always_can_be_flushed_to_disk(void* flush_test_handle, uint64_t page_id, const void* frame);
-void nop_was_flushed_to_disk(void* flush_callback_handle, uint64_t page_id, const void* frame);
+void nop_was_written_to_disk(void* flush_callback_handle, uint64_t page_id, const void* frame);
+void nop_was_everything_flushed_to_disk(void* flush_callback_handle);
 page_io_ops get_block_file_page_io_ops(block_file* bfile, uint64_t page_size, uint64_t page_frame_alignment);
 
 void* io_task_execute(io_task* io_t_p);
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 
 	printf("block size = %zu\n", get_block_size_for_block_file(&bfile));
 
-	if(!initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, nop_was_flushed_to_disk, NULL, PERIODIC_FLUSH_JOB_PERIOD, PERIODIC_FLUSH_JOB_FRAMES_TO_FLUSH))
+	if(!initialize_bufferpool(&bpm, MAX_FRAMES_IN_BUFFER_POOL, NULL, get_block_file_page_io_ops(&bfile, PAGE_SIZE, PAGE_FRAME_ALIGNMENT), always_can_be_flushed_to_disk, nop_was_written_to_disk, nop_was_everything_flushed_to_disk, NULL, PERIODIC_FLUSH_JOB_PERIOD, PERIODIC_FLUSH_JOB_FRAMES_TO_FLUSH))
 	{
 		printf("failed to initialize bufferpool\n");
 		return -1;
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 		// we either get a page that has been zeroed out, or the page with its previous values set
 		// memset(frame, 0, PAGE_SIZE);
 		sprintf(frame, PAGE_DATA_FORMAT, i, 0UL);
-		release_writer_lock_on_page(&bpm, frame, 1, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		release_writer_lock_on_page(&bpm, frame, 1);
 	}
 	printf("writing 0s to all the pages of the heapfile -- completed\n\n\n");
 
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 			exit(-1);
 		}
 		printf("page_id = %"PRIu64" -> %s\n", page_id_test, ((const char*)(frame)));
-		int res = release_writer_lock_on_page(&bpm, frame, 0, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		int res = release_writer_lock_on_page(&bpm, frame, 0);
 		if(res == 0)
 		{
 			printf("failed to release write lock on frame %"PRIu64"\n", page_id_test);
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 			exit(-1);
 		}
 		printf("page_id = %"PRIu64" -> %s\n", page_id_test, ((const char*)(frame)));
-		int res = release_writer_lock_on_page(&bpm, frame, 0, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		int res = release_writer_lock_on_page(&bpm, frame, 0);
 		if(res == 0)
 		{
 			printf("failed to release write lock on frame %"PRIu64"\n", page_id_test);
@@ -336,7 +336,7 @@ void read_print(uint64_t page_id)
 		read_print_UNSAFE(page_id, frame);
 
 		// never set was_modified bit here
-		int res = release_writer_lock_on_page(&bpm, frame, 0, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		int res = release_writer_lock_on_page(&bpm, frame, 0);
 		if(!res)
 			printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 		else
@@ -380,7 +380,7 @@ void read_print_upgrade_write_print(uint64_t page_id)
 		int was_modified = 1;
 	#endif
 
-	res = release_writer_lock_on_page(&bpm, frame, was_modified, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	res = release_writer_lock_on_page(&bpm, frame, was_modified);
 	if(!res)
 		printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 	else
@@ -405,7 +405,7 @@ void write_print(uint64_t page_id)
 		int was_modified = 1;
 	#endif
 
-	int res = release_writer_lock_on_page(&bpm, frame, was_modified, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	int res = release_writer_lock_on_page(&bpm, frame, was_modified);
 	if(!res)
 		printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 	else
@@ -430,12 +430,12 @@ void write_print_downgrade_read_print(uint64_t page_id)
 		int was_modified = 1;
 	#endif
 
-	int res = downgrade_writer_lock_to_reader_lock(&bpm, frame, was_modified, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+	int res = downgrade_writer_lock_to_reader_lock(&bpm, frame, was_modified);
 	if(!res)
 	{
 		printf("(%ld) *** failed *** to downgrade write lock on %" PRIu64 "\n", pthread_self(), page_id);
 
-		res = release_writer_lock_on_page(&bpm, frame, was_modified, FORCE_FLUSH_WHILE_RELEASING_WRITE_LOCK);
+		res = release_writer_lock_on_page(&bpm, frame, was_modified);
 		if(!res)
 			printf("(%ld) *** failed *** to release write lock on %" PRIu64 "\n", pthread_self(), page_id);
 		else

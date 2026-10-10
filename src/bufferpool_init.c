@@ -12,7 +12,7 @@
 
 void periodic_flush_job_function(void* bf_p);
 
-int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, uint64_t periodic_flush_job_period_in_microseconds, uint64_t periodic_flush_job_frames_to_flush)
+int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_written_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_everything_flushed_to_disk)(void* flush_callback_handle), void* flush_callback_handle, uint64_t periodic_flush_job_period_in_microseconds, uint64_t periodic_flush_job_frames_to_flush)
 {
 	// validate basic parameters first
 	// max_frame_desc_count can not be 0, read_page must exist (else this buffer pool is useless) and page_size must not be 0
@@ -60,7 +60,8 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 
 	bf->flush_callback_handle = flush_callback_handle;
 	bf->can_be_flushed_to_disk = can_be_flushed_to_disk;
-	bf->was_flushed_to_disk = was_flushed_to_disk;
+	bf->was_written_to_disk = was_written_to_disk;
+	bf->was_everything_flushed_to_disk = was_everything_flushed_to_disk;
 
 	if(NULL == (bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL, 0)))
 	{

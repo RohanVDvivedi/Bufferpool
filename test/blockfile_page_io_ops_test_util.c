@@ -47,7 +47,12 @@ int always_can_be_flushed_to_disk(void* flush_callback_handle, uint64_t page_id,
 	return 1;
 }
 
-void nop_was_flushed_to_disk(void* flush_callback_handle, uint64_t page_id, const void* frame)
+void nop_was_written_to_disk(void* flush_callback_handle, uint64_t page_id, const void* frame)
+{
+	return ;
+}
+
+void nop_was_everything_flushed_to_disk(void* flush_callback_handle)
 {
 	return ;
 }

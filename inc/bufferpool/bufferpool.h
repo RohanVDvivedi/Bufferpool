@@ -49,7 +49,7 @@ struct bufferpool
 	// has_valid_frame_contents == 1 && is_dirty == 0
 	linkedlist clean_frame_descs_lru_list;
 	// has_valid_frame_contents == 1 && is_dirty == 1
-	// these frame descriptors need to be flushed before evicted, hence mjst pass can_be_flushed_to_disk(fd->page_id, fd->frame) check
+	// these frame descriptors need to be written/flushed before evicted, once they pass can_be_flushed_to_disk(fd->page_id, fd->frame) check
 	linkedlist dirty_frame_descs_lru_list;
 
 	// condition variable to wait on, for a frame to be available for a page
@@ -60,16 +60,12 @@ struct bufferpool
 
 	// a dirty page gets flushed to disk only if it passes the test for can_be_flushed_to_disk callback function
 	// USAGE -> can be used to flush pages only when the WAL log record matching their pageLSN is flushed to disk
-	// and once a dirty page is successfully, flushed to disk, then was_flushed_to_disk callback is called
-	// USAGE -> can be used to mark a page as not dirty, in the dirty page table
-	// USAGE -> was_flushed_to_disk callback is called atomically with clearing the dirty bit of the page frame
-	// Both of these functions will be called with the bufferpool's global lock and atleast a reader lock on the frame of the page, held
-	// a can_be_flushed_to_disk callback may not be followed by a was_flushed_to_disk callback, as the write IO may fail,
-	// Also global lock may be released in between the 2 callbacks, hence any state, between the calls protected by the global lock may not be trusted
-	// Even if you have a handle to the global lock, inside these callback functions, refrain from locking or unlocking the global lock, to avoid correct expected behaviour
+	// the other two callbacks are called when the page is written to disk and upon calling fsync (flush) on the disk
+	// all these 3 callbacks are called with global lock held, and page_lock (in read or write node) held if required by the callback
 	void* flush_callback_handle;
 	int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame);
-	void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame);
+	void (*was_written_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame); // implies only written not flushed to disk
+	void (*was_everything_flushed_to_disk)(void* flush_callback_handle); // all writes until this point are now permanent
 
 	//
 
@@ -84,13 +80,9 @@ struct bufferpool
 	uint64_t periodic_flush_job_params_capacity;
 };
 
-int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void* flush_callback_handle, uint64_t periodic_flush_job_period_in_microseconds, uint64_t periodic_flush_job_frames_to_flush);
+int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread_mutex_t* external_lock, page_io_ops page_io_functions, int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_written_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame), void (*was_everything_flushed_to_disk)(void* flush_callback_handle), void* flush_callback_handle, uint64_t periodic_flush_job_period_in_microseconds, uint64_t periodic_flush_job_frames_to_flush);
 
 void deinitialize_bufferpool(bufferpool* bf);
-
-// for the function returning int, 2nd bit will be set, if the page was force flushed to disk
-// this is applicable for only the functions that support force_flush like, downgrade_writer_lock_to_reader_lock and release_writer_lock_on_page function
-#define WAS_FORCE_FLUSHED 0b10
 
 // wait_for_frame_in_microseconds -> represents the time to wait, until a suitable frame is available for a page
 // wait_for_frame_in_microseconds == 0, if you do not want to wait
@@ -100,9 +92,9 @@ void* acquire_page_with_reader_lock(bufferpool* bf, uint64_t page_id, uint64_t w
 int release_reader_lock_on_page(bufferpool* bf, void* frame);
 
 void* acquire_page_with_writer_lock(bufferpool* bf, uint64_t page_id, uint64_t wait_for_frame_in_microseconds, uint64_t allowed_dirty_eviction_count, int to_be_overwritten);
-int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified, int force_flush);
+int release_writer_lock_on_page(bufferpool* bf, void* frame, int was_modified);
 
-int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_modified, int force_flush);
+int downgrade_writer_lock_to_reader_lock(bufferpool* bf, void* frame, int was_modified);
 int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 
 /*
@@ -116,8 +108,6 @@ int upgrade_reader_lock_to_writer_lock(bufferpool* bf, void* frame);
 
 		was_modified -> this bit must be set by the user, if the page was dirtied/modified by the user, dirty_bit = dirty_bit || was_modified
 
-		force_flush -> this is a suggestion to writing and flushing the page to disk, while releasing writer lock
-		            -> this is done only if the page is dirty and can_be_flushed_to_disk(page_id, frame) returns true
 */
 
 // the below function must be called, only with a write lock on the page held
