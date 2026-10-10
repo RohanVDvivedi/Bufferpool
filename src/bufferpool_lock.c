@@ -146,6 +146,10 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 		if(is_empty_linkedlist(&picked))
 			goto NOTHING_TO_FLUSH;
 
+		// we will just be writing we will not be flushing, so need this lock in shared mode
+		// and release only after all notifications for this IO (write) notifications has been sent
+		shared_lock(&(bf->disk_write_io_flush_lock), READ_PREFERRING, BLOCKING);
+
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 		// now perform write_IO on the picked frame_descs, and segregate them into write_successfull and write_failed linkedlists
@@ -203,6 +207,8 @@ static frame_desc* get_frame_desc_to_evict_from_invalid_frames_OR_LRUs(bufferpoo
 			// this is neccessary to insert the fd_to_return_back back into the lru list
 			handle_frame_desc_if_not_referenced(bf, fd_to_return_back);
 		}
+
+		shared_unlock(&(bf->disk_write_io_flush_lock));
 
 		// since we released lock in the middle to perform IO
 		// there is a possibility that someother thread wanting the same page might have somehow brough it from the disk

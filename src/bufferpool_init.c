@@ -62,6 +62,7 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 	bf->can_be_flushed_to_disk = can_be_flushed_to_disk;
 	bf->was_written_to_disk = was_written_to_disk;
 	bf->was_everything_flushed_to_disk = was_everything_flushed_to_disk;
+	initialize_rwlock(&(bf->disk_write_io_flush_lock), get_bufferpool_lock(bf));
 
 	if(NULL == (bf->cached_threadpool_executor = new_executor(CACHED_THREAD_POOL_EXECUTOR, 1024 /* max threads */, 1024, 1000ULL * 1000ULL /* wait for a second before you quit the thread */, NULL, NULL, NULL, 0)))
 	{
@@ -141,6 +142,8 @@ void deinitialize_bufferpool(bufferpool* bf)
 
 	deinitialize_hashmap(&(bf->page_id_to_frame_desc));
 	deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
+
+	deinitialize_rwlock(&(bf->disk_write_io_flush_lock));
 
 	if(bf->periodic_flush_job_params)
 		free(bf->periodic_flush_job_params);

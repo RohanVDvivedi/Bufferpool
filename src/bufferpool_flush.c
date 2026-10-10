@@ -120,6 +120,10 @@ static void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_par
 		}
 	}
 
+	// we will not just be writing we will be flushing too, so need this lock in exclusive mode
+	// and release only after all notifications for this IO (write + flush) notifications has been sent
+	exclusive_lock(&(bf->disk_write_io_flush_lock), BLOCKING);
+
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
 	// submit all the flush_job_params
@@ -169,6 +173,9 @@ static void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_par
 
 	if(flush_success)
 		bf->was_everything_flushed_to_disk(bf->flush_callback_handle);
+
+	// all notifications sent we are done
+	exclusive_unlock(&(bf->disk_write_io_flush_lock));
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 

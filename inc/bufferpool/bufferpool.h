@@ -8,6 +8,8 @@
 #include<boompar/promise.h>
 #include<boompar/periodic_job.h>
 
+#include<lockking/rwlock.h>
+
 #include<pthread.h>
 
 #include<stdint.h>
@@ -64,10 +66,12 @@ struct bufferpool
 	// all these 3 callbacks are called with global lock held, and page_lock (in read or write node) held if required by the callback
 	void* flush_callback_handle;
 	int (*can_be_flushed_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame);
-	void (*was_written_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame); // implies only written not flushed to disk
-	void (*was_everything_flushed_to_disk)(void* flush_callback_handle); // all writes until this point are now permanent
+	void (*was_written_to_disk)(void* flush_callback_handle, uint64_t page_id, const void* frame); // implies only written not flushed to disk, we hold atleast a shared mode disk_write_io_flush_lock between write io and this notification
+	void (*was_everything_flushed_to_disk)(void* flush_callback_handle); // all writes until this point are now permanent, we hold a exclusive mode disk_write_io_flush_lock between flush and this notification
 
-	//
+	// this is the lock, that prevents concurrent io, which the flush is in progress, this helps us delay the writes while flush is in progress,
+	// this gives us clear boundary to notify what writes went in this particular flush, so we hold it in atleast a shared mode for writeio_notification, and in exclusive mode for flush+notification
+	rwlock disk_write_io_flush_lock;
 
 	// this executor should be used for handling various internal parallel io tasks in the bufferpool
 	executor* cached_threadpool_executor;
