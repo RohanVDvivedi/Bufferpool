@@ -13,10 +13,10 @@ It is an implementation of a Buffer Pool Manager library in C, used for accessin
    * This also allows you to switch the underlying storage from (conventionally) SSD/HDD to some network storage accessed over TCP/UDP, very easily.
 
 *Information on ARIES support :*
- * This bufferpool implementation provides 2 callback functions can_be_flushed_to_disk and was_flushed_to_disk, both of which are passed page_id and read only frame pointer, on their designated calls.
+ * This bufferpool implementation provides 3 callback functions can_be_flushed_to_disk, was_written_to_disk (upon write syscall) and was_everything_flushed_to_disk (upon fsync syscall), all of which are passed page_id and read only frame pointer, on their designated calls.
  * The *can_be_flushed_to_disk* callback can be used to check, if the pageLSN of the dirty page, is greater than or equal to the flushedLSN of the write-ahead-log (WAL).
- * The *was_flushed_to_disk* callback can be used to remove a dirty page from the dirty page table, once it has been flushed to the disk, it is called atomically with the clearing of the dirty bit on the page frame inside the Bufferpool.
- * Both of the above functions are called with global lock and atleast a reader lock on the page frame held. *AND YOU MUST NOT RELEASE ANY OF THEM, FOR CORRECT OPERATION*
+ * The *was_written_to_disk* and *was_everything_flushed_to_disk* callback can be used to remove a dirty page from the dirty page table, once it has been flushed to the disk, it is called atomically with the clearing of the dirty bit on the page frame inside the Bufferpool.
+ * Both of the above functions are called with global lock, shared/exclusive disk io lock (for the latter 2 notification calls) and atleast a reader lock on the page frame held. *AND YOU MUST NOT RELEASE ANY OF THEM, FOR CORRECT OPERATION*
 
 ## Setup instructions
 **Install dependencies :**
