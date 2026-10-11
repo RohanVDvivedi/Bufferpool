@@ -23,12 +23,15 @@ struct page_io_ops
 	// all the below functions return 1 on success and 0 on failure
 
 	// read page from disk at page_id into the frame pointed by frame_dest
+	// no locks (not even disk_write_io_flush_lock) will be held for this io call
 	int (*read_page)(const void* page_io_ops_handle, void* frame_dest, uint64_t page_id, uint32_t page_size);
 
 	// write page contents pointed to by frame_src to the disk at page_id
+	// disk_write_io_flush_lock will be held in atleast shared mode until the notification is sent using was_written_to_disk()
 	int (*write_page)(const void* page_io_ops_handle, const void* frame_src, uint64_t page_id, uint32_t page_size);
 
 	// flush all write to underlying disk, all writes are assumed to be persistent after this call returns successfully
+	// disk_write_io_flush_lock will be held in exclusive mode until the notification is sent using was_everything_flushed_to_disk()
 	int (*flush_all_writes)(const void* page_io_ops_handle);
 };
 
