@@ -79,8 +79,7 @@ struct bufferpool
 	// below bufferpool attributes are only for periodic flush job
 	periodic_job* periodic_flush_job;
 
-	// below two attributes are of no use to you, they are internal to the periodic_flush_job, and are only accessed inside it
-	void* periodic_flush_job_params;
+	// below attribute is of no use to you, they are internal to the periodic_flush_job, and are only accessed inside it
 	uint64_t periodic_flush_job_params_capacity;
 };
 

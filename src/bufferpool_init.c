@@ -75,7 +75,6 @@ int initialize_bufferpool(bufferpool* bf, uint64_t max_frame_desc_count, pthread
 	}
 
 	bf->periodic_flush_job_params_capacity = periodic_flush_job_frames_to_flush;
-	bf->periodic_flush_job_params = NULL;
 	if(NULL == (bf->periodic_flush_job = new_periodic_job(periodic_flush_job_function, bf, periodic_flush_job_period_in_microseconds)))
 	{
 		shutdown_executor(bf->cached_threadpool_executor, 1);
@@ -144,9 +143,6 @@ void deinitialize_bufferpool(bufferpool* bf)
 	deinitialize_hashmap(&(bf->frame_ptr_to_frame_desc));
 
 	deinitialize_rwlock(&(bf->disk_write_io_flush_lock));
-
-	if(bf->periodic_flush_job_params)
-		free(bf->periodic_flush_job_params);
 
 	pthread_cond_destroy(&(bf->wait_for_frame));
 

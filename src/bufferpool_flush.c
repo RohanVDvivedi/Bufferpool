@@ -3,44 +3,6 @@
 #include<bufferpool/bufferpool_util.h>
 #include<bufferpool/frame_descriptor.h>
 
-typedef struct flush_params flush_params;
-struct flush_params
-{
-	frame_desc* fd;
-
-	bufferpool* bf;
-
-	promise completion;
-
-	int write_job_submission_success; // flag if write job was successfully submitted to the thread pool
-	int write_success; // flag if write job was successfull
-};
-
-void initialize_flush_params(flush_params* fp, bufferpool* bf, frame_desc* fd)
-{
-	fp->fd = fd;
-	fp->bf = bf;
-	initialize_promise(&(fp->completion));
-	fp->write_job_submission_success = 0;
-	fp->write_success = 0;
-}
-
-void deinitialize_flush_params(flush_params* fp)
-{
-	fp->fd = NULL;
-	fp->bf = NULL;
-	deinitialize_promise(&(fp->completion));
-	fp->write_job_submission_success = 0;
-	fp->write_success = 0;
-}
-
-void* write_io_job(void* flush_params_vp)
-{
-	flush_params* fp = (flush_params*) flush_params_vp;
-	fp->write_success = fp->bf->page_io_functions.write_page(fp->bf->page_io_functions.page_io_ops_handle, fp->fd->map.frame, fp->fd->map.page_id, fp->bf->page_io_functions.page_size);
-	return NULL;
-}
-
 // if the frame_desc fd, is not not references by any one, then
 // -> if you are over max_frame_desc_count and the frame is not dirty, then delete it
 // -> insert it to lru lists
@@ -80,8 +42,12 @@ static int handle_frame_desc_if_not_referenced(bufferpool* bf, frame_desc* fd)
 	return 0;
 }
 
-static void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_params* flush_job_params, uint64_t flush_job_params_capacity)
+static void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, uint64_t flush_job_params_capacity)
 {
+	// list of all frame descriptors picked to be cleaned from dirty_frame_descs_lru_list
+	linkedlist picked;
+	initialize_linkedlist(&picked, offsetof(frame_desc, embed_node_flush_lists));
+
 	// find out all the frame_descs that can be immediately flushed and put them in this array, to be used as parameters
 	uint64_t flush_job_params_count = 0;
 
@@ -109,8 +75,9 @@ static void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_par
 
 				fd->is_under_write_IO = 1;
 
-				// now create a flush job params for each one of them
-				initialize_flush_params(&(flush_job_params[flush_job_params_count++]), bf, fd);
+				// now insert it into the picked list, so that we can track which one is picked for io
+				insert_tail_in_linkedlist(&picked, fd);
+				flush_job_params_count++;
 			}
 			else
 				// this case implies, we are not allowed to flush the page to disk
@@ -120,55 +87,72 @@ static void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_par
 		}
 	}
 
+	// if no fd is picked for cleanup exit from here
+	if(is_empty_linkedlist(&picked))
+		return;
+
 	// we will not just be writing we will be flushing too, so need this lock in exclusive mode
 	// and release only after all notifications for this IO (write + flush) notifications has been sent
 	exclusive_lock(&(bf->disk_write_io_flush_lock), BLOCKING);
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 
-	// submit all the flush_job_params
-	for(uint64_t i = 0; i < flush_job_params_count; i++)
-		flush_job_params[i].write_job_submission_success = submit_job_executor(bf->cached_threadpool_executor, write_io_job, &(flush_job_params[i]), &(flush_job_params[i].completion), NULL, BLOCKING);
+	// now perform write_IO on the picked frame_descs, and segregate them into write_successfull and write_failed linkedlists
+	linkedlist write_successfull;
+	initialize_linkedlist(&write_successfull, offsetof(frame_desc, embed_node_flush_lists));
+	linkedlist write_failed;
+	initialize_linkedlist(&write_failed, offsetof(frame_desc, embed_node_flush_lists));
 
-	// this flag will be set if there is atleast 1 write_io_job succeeded
-	int flag_atleast_1_write_io_job_succeeded = 0;
-
-	// wait for all of them to finish
-	for(uint64_t i = 0; i < flush_job_params_count; i++)
+	// perform the write io on the picked pages, and segregate it on whether it succeeded or failed
+	while(!is_empty_linkedlist(&picked))
 	{
-		// wait for completion of each of this write_io_job-s, if it succeeded job submission previously
-		if(flush_job_params[i].write_job_submission_success)
-		{
-			get_promised_result(&(flush_job_params[i].completion));
+		// pop head to write from picked
+		frame_desc* fd_to_write = (frame_desc*) get_head_of_linkedlist(&picked);
+		remove_head_from_linkedlist(&picked);
 
-			// set this flag if this write_io_job succeeded
-			flag_atleast_1_write_io_job_succeeded = flag_atleast_1_write_io_job_succeeded || flush_job_params[i].write_success;
-		}
+		int write_success = bf->page_io_functions.write_page(bf->page_io_functions.page_io_ops_handle, fd_to_write->map.frame, fd_to_write->map.page_id, bf->page_io_functions.page_size);
+		if(write_success) // based on the result of the write segregate it in to different relevant linkedlists
+			insert_tail_in_linkedlist(&write_successfull, fd_to_write);
+		else
+			insert_tail_in_linkedlist(&write_failed, fd_to_write);
 	}
 
-	// after that flush all the writes, we flush only if there is atleast 1 write_io_job that succeeded
-	int flush_success = (!flag_atleast_1_write_io_job_succeeded) || bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
+	// flush only if there were writes that were successfull
+	int flush_success = 0;
+	if(!is_empty_linkedlist(&write_successfull))
+		flush_success = bf->page_io_functions.flush_all_writes(bf->page_io_functions.page_io_ops_handle);
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	// unlock them and set their dirty bit
-	for(uint64_t i = 0; i < flush_job_params_count; i++)
+	while(!is_empty_linkedlist(&write_failed))
 	{
-		frame_desc* fd = flush_job_params[i].fd;
+		frame_desc* fd_to_return_back = (frame_desc*) get_head_of_linkedlist(&write_failed);
+		remove_head_from_linkedlist(&write_failed);
 
-		// if both flush and write were successfull then clear it's dirty bit
-		if(flush_job_params[i].write_job_submission_success && flush_job_params[i].write_success)
+		fd_to_return_back->is_under_write_IO = 0;
+		read_unlock(&(fd_to_return_back->frame_lock));
+
+		// this is neccessary to insert the fd_to_return_back back into the lru list
+		handle_frame_desc_if_not_referenced(bf, fd_to_return_back);
+	}
+
+	while(!is_empty_linkedlist(&write_successfull))
+	{
+		frame_desc* fd_to_return_back = (frame_desc*) get_head_of_linkedlist(&write_successfull);
+		remove_head_from_linkedlist(&write_successfull);
+
+		// clear the dirty_bit
+		// also call the callback that signifies the write to disk for this frame
 		{
-			fd->is_dirty = 0;
-			bf->was_written_to_disk(bf->flush_callback_handle, fd->map.page_id, fd->map.frame);
+			fd_to_return_back->is_dirty = 0;
+			bf->was_written_to_disk(bf->flush_callback_handle, fd_to_return_back->map.page_id, fd_to_return_back->map.frame);
 		}
 
-		// release reader lock, and clear write IO bit
-		fd->is_under_write_IO = 0;
-		read_unlock(&(fd->frame_lock));
+		fd_to_return_back->is_under_write_IO = 0;
+		read_unlock(&(fd_to_return_back->frame_lock));
 
-		// this call is necesary, to destroy the frame_desc, or add it to lru lists, once it is clean
-		handle_frame_desc_if_not_referenced(bf, fd);
+		// this is neccessary to insert the fd_to_return_back back into the lru list
+		handle_frame_desc_if_not_referenced(bf, fd_to_return_back);
 	}
 
 	if(flush_success)
@@ -176,14 +160,6 @@ static void flush_all_possible_dirty_pages_UNSAFE_UTIL(bufferpool* bf, flush_par
 
 	// all notifications sent we are done
 	exclusive_unlock(&(bf->disk_write_io_flush_lock));
-
-	pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	// deinitialize flush params and release it's memory
-	for(uint64_t i = 0; i < flush_job_params_count; i++)
-		deinitialize_flush_params(&(flush_job_params[i]));
-
-	pthread_mutex_lock(get_bufferpool_lock(bf));
 }
 
 void blockingly_flush_all_possible_dirty_pages(bufferpool* bf)
@@ -191,24 +167,7 @@ void blockingly_flush_all_possible_dirty_pages(bufferpool* bf)
 	if(bf->has_internal_lock)
 		pthread_mutex_lock(get_bufferpool_lock(bf));
 
-	uint64_t flush_job_params_capacity = bf->total_frame_desc_count;
-
-	pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	flush_params* flush_job_params = malloc(sizeof(flush_params) * flush_job_params_capacity);
-	if(flush_job_params == NULL)
-		goto UNLOCKED_EXIT;
-
-	pthread_mutex_lock(get_bufferpool_lock(bf));
-
-	flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, flush_job_params, flush_job_params_capacity);
-
-	pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	free(flush_job_params);
-
-	UNLOCKED_EXIT:;
-	pthread_mutex_lock(get_bufferpool_lock(bf));
+	flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, bf->total_frame_desc_count);
 
 	if(bf->has_internal_lock)
 		pthread_mutex_unlock(get_bufferpool_lock(bf));
@@ -220,18 +179,7 @@ void periodic_flush_job_function(void* bf_p)
 
 	pthread_mutex_lock(get_bufferpool_lock(bf));
 
-		uint64_t flush_job_params_capacity = bf->periodic_flush_job_params_capacity;
-
-	pthread_mutex_unlock(get_bufferpool_lock(bf));
-
-	void* tmp = realloc(bf->periodic_flush_job_params, sizeof(flush_params) * flush_job_params_capacity);
-	if(tmp == NULL)
-		return;
-	bf->periodic_flush_job_params = tmp;
-
-	pthread_mutex_lock(get_bufferpool_lock(bf));
-
-		flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, bf->periodic_flush_job_params, flush_job_params_capacity);
+		flush_all_possible_dirty_pages_UNSAFE_UTIL(bf, bf->periodic_flush_job_params_capacity);
 
 	pthread_mutex_unlock(get_bufferpool_lock(bf));
 }
